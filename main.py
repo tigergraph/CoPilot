@@ -1,9 +1,11 @@
-from typing import Union
-from fastapi import FastAPI, Header
+from typing import Union, Annotated
+from fastapi import FastAPI, Header, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from pyTigerGraph import TigerGraphConnection
 import json
+
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
 
@@ -18,6 +20,8 @@ with open("./openai_llm_config.json", "r") as f:
 
 app = FastAPI()
 
+security = HTTPBasic()
+
 
 @app.get("/")
 def read_root():
@@ -25,17 +29,33 @@ def read_root():
 
 
 @app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, token: str = Header(default=None)):
+def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     with open("./db_config.json", "r") as config_file:
         config = json.load(config_file)
         
     conn = TigerGraphConnection(
         host=config["hostname"],
-        graphname = graphname
+        username = credentials.username,
+        password = credentials.password,
+        graphname = graphname,
     )
 
-    if token:
-        conn.apiToken = token
+    try:
+        apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    conn = TigerGraphConnection(
+        host=config["hostname"],
+        username = credentials.username,
+        password = credentials.password,
+        graphname = graphname,
+        apiToken = apiToken
+    )
 
     agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn)
 
