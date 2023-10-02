@@ -9,13 +9,13 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
 
-from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo
+
 
 class NaturalLanguageQuery(BaseModel):
     query:str
 
 
-with open("./openai_llm_config.json", "r") as f:
+with open("./azure_llm_config.json", "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()
@@ -57,6 +57,11 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         apiToken = apiToken
     )
 
-    agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn)
+    if llm_config["llm_service"] == "OpenAI_Davinci":
+        from llm_services import OpenAI_Davinci
+        agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn)
+    elif llm_config["llm_service"] == "AzureOpenAI_GPT35_Turbo":
+        from llm_services import AzureOpenAI_GPT35_Turbo
+        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config), conn)
 
     return agent.question_for_agent(query.query)

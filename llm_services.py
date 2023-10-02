@@ -1,5 +1,3 @@
-from langchain.llms import AzureOpenAI, OpenAI
-
 import os
 
 class LLM_Model():
@@ -29,6 +27,7 @@ class LLM_Model():
 class OpenAI_Davinci(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
+        from langchain.llms import OpenAI
         self.llm = OpenAI(temperature=0, model_name="text-davinci-003")
         self.prompt_path = "./prompts/open_ai_davinci-003/"
 
@@ -48,13 +47,15 @@ class OpenAI_Davinci(LLM_Model):
 class AzureOpenAI_GPT35_Turbo(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
+        from langchain.llms import AzureOpenAI
+        print(config)
         self.llm = AzureOpenAI(
-            deployment_name="llm-service",
-            model_name="gpt-35-turbo",
+            deployment_name="ml-service",
+            model_name="gpt-35-turbo-instruct",
             temperature=0
         )
 
-        self.prompt_path = "./prompts/azure_open_ai_gpt35_turbo/"
+        self.prompt_path = "./prompts/azure_open_ai_gpt35_turbo_instruct/"
 
     @property
     def map_question_schema_prompt(self):
