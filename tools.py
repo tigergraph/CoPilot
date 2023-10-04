@@ -3,6 +3,12 @@ from langchain.llms.base import LLM
 from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from pyTigerGraph import TigerGraphConnection
+import re
+
+class MapQuestionToSchemaException(Exception):
+    pass
+
 
 class MapQuestionToSchema(BaseTool):
     name = "MapQuestionToSchema"
@@ -30,6 +36,31 @@ class MapQuestionToSchema(BaseTool):
         restate_q = restate_chain.apply([{"vertices": [x + " Vertex" for x in self.conn.getVertexTypes()], # + [x + " Edge" for x in conn.getEdgeTypes()],
                                           "question": query,
                                           "edges": [x + " Edge" for x in self.conn.getEdgeTypes()]}])[0]["text"]
+
+        word_list = ['vertex', 'Vertex', 'Vertexes', 'vertexes', 'vertices', 'Vertices']
+
+        vertices = [x.lower() for x in self.conn.getVertexTypes()]
+
+        pattern = rf'(\w+)\s*(?:\b(?:{"|".join(word_list)})\b)'
+
+        result1 = re.findall(pattern, restate_q)
+
+        for word in result1:
+            if not(word.lower() in vertices):
+                raise MapQuestionToSchemaException("No "+word+" vertex in the graph schema. Please rephrase your question.")
+
+        word_list = ['edge', 'Edge', 'Edges', 'edges']
+
+        edges = [x.lower() for x in self.conn.getEdgeTypes()]
+
+        pattern = rf'(\w+)\s*(?:\b(?:{"|".join(word_list)})\b)'
+
+        result1 = re.findall(pattern, restate_q)
+
+        for word in result1:
+            if not(word.lower() in edges):
+                raise MapQuestionToSchemaException("No "+word+" edge in the graph schema. Please rephrase your question.")
+
         return restate_q
     
     async def _arun(self) -> str:

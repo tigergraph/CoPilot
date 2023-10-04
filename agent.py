@@ -19,7 +19,7 @@ class TigerGraphAgent():
                  GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt),
                  ExecuteFunction(self.conn)]
 
-        self.agent = initialize_agent(tools, self.llm.model, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+        self.agent = initialize_agent(tools, self.llm.model, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, return_intermediate_steps=True)
 
     def question_for_agent(self, question) -> str:
-        return self.agent.run(question)
+        return self.agent({"input": question})
