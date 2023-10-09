@@ -49,8 +49,8 @@ class AzureOpenAI_GPT35_Turbo(LLM_Model):
         super().__init__(config)
         from langchain.llms import AzureOpenAI
         self.llm = AzureOpenAI(
-            deployment_name="ml-service",
-            model_name="gpt-35-turbo-instruct",
+            deployment_name=config["completion_service"]["deployment_name"],
+            model_name=config["completion_service"]["model_name"],
             temperature=0
         )
 

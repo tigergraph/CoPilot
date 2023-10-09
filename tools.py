@@ -89,7 +89,12 @@ class GenerateFunction(BaseTool):
             template=self.prompt, input_variables=["question", "vertices", "queries", "edges"]
         )
         queries = self.conn.getInstalledQueries()
-        [queries[x]["parameters"].pop("read_committed") for x in queries] #remove read_committed
+        for query in queries:
+            queries[query]["parameters"].pop("read_committed")
+            try:
+                queries[query]["parameters"].pop("result_attribute")
+            except:
+                pass
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
                     "edges": self.conn.getEdgeTypes(), 

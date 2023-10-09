@@ -8,6 +8,8 @@ import json
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
+from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo
+from embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
 
 from tools import MapQuestionToSchemaException
 
@@ -30,6 +32,11 @@ app = FastAPI()
 
 security = HTTPBasic()
 
+if llm_config["llm_service"] == "OpenAI":
+    embedding = OpenAI_Embedding(llm_config)
+elif llm_config["llm_service"] == "Azure":
+    embedding = AzureOpenAI_Ada002(llm_config)
+
 
 @app.get("/")
 def read_root():
@@ -37,7 +44,7 @@ def read_root():
 
 @app.post("/{graphname}/register-custom-query")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    return query_info
+    return embedding.embed_doc(query_info.query_description)
 
 
 @app.post("/{graphname}/query")
@@ -69,11 +76,11 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         apiToken = apiToken
     )
 
-    if llm_config["llm_service"] == "OpenAI_Davinci":
-        from llm_services import OpenAI_Davinci
+    conn.customizeHeader(timeout=config["default_timeout"]*1000)
+
+    if llm_config["llm_service"] == "OpenAI":
         agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn)
-    elif llm_config["llm_service"] == "AzureOpenAI_GPT35_Turbo":
-        from llm_services import AzureOpenAI_GPT35_Turbo
+    elif llm_config["llm_service"] == "Azure":
         agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config), conn)
 
     resp = NaturalLanguageQueryResponse
