@@ -12,12 +12,6 @@ class EmbeddingModel():
     def get_embedding(self, question):
         return self.embeddings.embed_query(question)
 
-    def compute_hnsw(self):
-        pass
-
-    def upload_to_db(self):
-        pass
-
 
 class AzureOpenAI_Ada002(EmbeddingModel):
     def __init__(self, config):

@@ -10,6 +10,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from agent import TigerGraphAgent
 from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo
 from embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
+from embedding_stores import FAISS_EmbeddingStore
 
 from tools import MapQuestionToSchemaException
 
@@ -25,7 +26,7 @@ class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
     query_sources: List[Dict] = None
 
-with open("./azure_llm_config.json", "r") as f:
+with open("./openai_llm_config.json", "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()
@@ -33,19 +34,25 @@ app = FastAPI()
 security = HTTPBasic()
 
 if llm_config["llm_service"] == "OpenAI":
-    embedding = OpenAI_Embedding(llm_config)
+    embedding_service = OpenAI_Embedding(llm_config)
 elif llm_config["llm_service"] == "Azure":
-    embedding = AzureOpenAI_Ada002(llm_config)
+    embedding_service = AzureOpenAI_Ada002(llm_config)
 
+'''
+embedding_store = FAISS_EmbeddingStore()
+'''
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
+'''
 @app.post("/{graphname}/register-custom-query")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    return embedding.embed_doc(query_info.query_description)
-
+    vec = embedding_service.embed_doc(query_info.query_description)[0]
+    res = embedding_store.add_embeddings([(query_info.query_description, vec)], [{"name": query_info.query_name, "heavy_runtime": query_info.heavy_runtime_warning}])
+    return res
+'''
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
