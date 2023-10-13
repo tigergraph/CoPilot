@@ -45,20 +45,29 @@ class MapQuestionToSchema(BaseTool):
 
         result1 = re.findall(pattern, restate_q)
 
+        found = False
         for word in result1:
-            if not(word.lower() in vertices):
-                raise MapQuestionToSchemaException("No "+word+" vertex in the graph schema. Please rephrase your question.")
+            if word.lower() in vertices:
+                found = True
+
+        if not(found):
+            raise MapQuestionToSchemaException("No "+word+" vertex in the graph schema. Please rephrase your question.")
 
         word_list = ['edge', 'Edge', 'Edges', 'edges']
 
         edges = [x.lower() for x in self.conn.getEdgeTypes()]
 
-        pattern = rf'(\w+)\s*(?:\b(?:{"|".join(word_list)})\b)'
+        pattern2 = rf'(\w+)\s*(?:\b(?:{"|".join(word_list)})\b)'
 
-        result1 = re.findall(pattern, restate_q)
+        result2 = re.findall(pattern2, restate_q)
 
-        for word in result1:
-            if not(word.lower() in edges):
+        if len(result2) > 0:
+            found2 = False
+            for word in result2:
+                if word.lower() in edges:
+                    found2 = True
+
+            if not(found2):
                 raise MapQuestionToSchemaException("No "+word+" edge in the graph schema. Please rephrase your question.")
 
         return restate_q
