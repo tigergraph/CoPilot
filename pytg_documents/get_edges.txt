@@ -1,4 +1,4 @@
-`getEdges(sourceVertexType: str, sourceVertexId: str, edgeType: str = "", targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "", limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[dict, str, pd.DataFrame]
+`getEdges(sourceVertexType: str, sourceVertexId: str, edgeType: str = "", targetVertexType: str = "", targetVertexId: str = "", where: str = "", limit: Union[int, str] = None, sort: str = "", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[dict, str, pd.DataFrame]
 
 Retrieves edges of the given edge type originating from a specific source vertex.
 
@@ -15,21 +15,11 @@ Parameters:
 
     targetVertexId: The primary ID value of the target vertex instance.
 
-    select: Comma separated list of edge attributes to be retrieved or omitted.
-
     where: Comma separated list of conditions that are all applied on each edge’s attributes. The conditions are in logical conjunction (i.e. they are "AND’ed" together).
 
     sort: Comma separated list of attributes the results should be sorted by.
 
     limit: Maximum number of edge instances to be returned (after sorting).
-
-    fmt: Format of the results returned:
-
-        "py": Python objects
-
-        "json": JSON document
-
-        "df": pandas DataFrame
 
     withId: (When the output format is "df") Should the source and target vertex types and IDs be included in the dataframe?
 
