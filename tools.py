@@ -102,7 +102,7 @@ class GenerateFunction(BaseTool):
     
     def _run(self, question: str) -> str:
         PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2"]
+            template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
         )
         queries = self.conn.getInstalledQueries()
         for query in queries:
@@ -111,13 +111,14 @@ class GenerateFunction(BaseTool):
                 queries[query]["parameters"].pop("result_attribute")
             except:
                 pass
-        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=2)
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
         #"queries": [{queries[x]["alternative_endpoint"].split("/")[-1]: queries[x]["parameters"]} for x in queries],
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
                     "edges": self.conn.getEdgeTypes(), 
                     "doc1": docs[0].page_content,
-                    "doc2": docs[-1].page_content
+                    "doc2": docs[1].page_content,
+                    "doc3": docs[2].page_content
                   }]
 
         with open("./tmp.json", "w") as f:

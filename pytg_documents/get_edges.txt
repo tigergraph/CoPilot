@@ -1,4 +1,4 @@
-`getEdges(sourceVertexType: str, sourceVertexId: str, edgeType: str = "", targetVertexType: str = "", targetVertexId: str = "", where: str = "", limit: Union[int, str] = None, sort: str = "", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[dict, str, pd.DataFrame]
+`getEdges(sourceVertexType: str, sourceVertexId: str, edgeType: str = "", targetVertexType: str = "", targetVertexId: str = "", where: str = "", limit: Union[int, str] = None, sort: str = "", timeout: int = 0)` → Union[dict, str, pd.DataFrame]
 
 Retrieves edges of the given edge type originating from a specific source vertex.
 
@@ -20,10 +20,6 @@ Parameters:
     sort: Comma separated list of attributes the results should be sorted by.
 
     limit: Maximum number of edge instances to be returned (after sorting).
-
-    withId: (When the output format is "df") Should the source and target vertex types and IDs be included in the dataframe?
-
-    withType: (When the output format is "df") Should the edge type be included in the dataframe?
 
     timeout: Time allowed for successful execution (0 = no time limit, default).
 

@@ -26,7 +26,7 @@ class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
     query_sources: List[Dict] = None
 
-with open("./openai_llm_config.json", "r") as f:
+with open("./azure_llm_config.json", "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()

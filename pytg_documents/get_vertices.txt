@@ -1,4 +1,4 @@
-`getVertices(vertexType: str, where: str = "", limit: Union[int, str] = None, sort: str = "", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[dict, str, pd.DataFrame]
+`getVertices(vertexType: str, where: str = "", limit: Union[int, str] = None, sort: str = "", timeout: int = 0)` → Union[dict, str, pd.DataFrame]
 
 Retrieves vertices of the given vertex type.
 
@@ -12,10 +12,6 @@ Parameters:
     sort: Comma separated list of attributes the results should be sorted by. Must be used with limit.
 
     limit: Maximum number of vertex instances to be returned (after sorting). Must be used with sort.
-
-    withId: (When the output format is "df") should the vertex ID be included in the dataframe?
-
-    withType: (When the output format is "df") should the vertex type be included in the dataframe?
 
     timeout: Time allowed for successful execution (0 = no limit, default).
 

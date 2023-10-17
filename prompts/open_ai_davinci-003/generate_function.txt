@@ -5,4 +5,5 @@ Edge Types: {edges}
 Question: {question}
 First Doc String: {doc1}
 Second Doc String: {doc2}
+Third Doc String: {doc3}
 Python Call: conn.

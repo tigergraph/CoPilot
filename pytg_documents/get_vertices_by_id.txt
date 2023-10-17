@@ -1,14 +1,10 @@
-`getVerticesById(vertexType: str, vertexIds: Union[int, str, list], withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[list, str, pd.DataFrame]
+`getVerticesById(vertexType: str, vertexIds: Union[int, str, list], timeout: int = 0)` → Union[list, str, pd.DataFrame]
 
 Retrieves vertices of the given vertex type, identified by their ID.
 Parameters:
     vertexType: The name of the vertex type.
 
     vertexIds: A single vertex ID or a list of vertex IDs.
-
-    withId: (If the output format is "df") should the vertex ID be included in the dataframe?
-
-    withType: (If the output format is "df") should the vertex type be included in the dataframe?
 
     timeout: Time allowed for successful execution (0 = no limit, default).
 

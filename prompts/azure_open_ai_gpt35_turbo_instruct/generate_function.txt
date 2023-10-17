@@ -3,6 +3,7 @@ Documentation contains helpful Python docstrings for the various functions. Use 
 Vertex Types: {vertices}
 Edge Types: {edges}
 Question: {question}
-First Doc String: {doc1}
-Second Doc String: {doc2}
+First Docstring: {doc1}
+Second Docstring: {doc2}
+Third Docstring: {doc3}
 Python Call: conn.
