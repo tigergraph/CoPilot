@@ -1,0 +1,42 @@
+`getEdges(sourceVertexType: str, sourceVertexId: str, edgeType: str = "", targetVertexType: str = "", targetVertexId: str = "", select: str = "", where: str = "", limit: Union[int, str] = None, sort: str = "", fmt: str = "py", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[dict, str, pd.DataFrame]
+
+Retrieves edges of the given edge type originating from a specific source vertex.
+
+Only sourceVertexType and sourceVertexId are required. If targetVertexId is specified, then targetVertexType must also be specified. If targetVertexType is specified, then edgeType must also be specified.
+Parameters:
+
+    sourceVertexType: The name of the source vertex type.
+
+    sourceVertexId: The primary ID value of the source vertex instance.
+
+    edgeType: The name of the edge type.
+
+    targetVertexType: The name of the target vertex type.
+
+    targetVertexId: The primary ID value of the target vertex instance.
+
+    select: Comma separated list of edge attributes to be retrieved or omitted.
+
+    where: Comma separated list of conditions that are all applied on each edge’s attributes. The conditions are in logical conjunction (i.e. they are "AND’ed" together).
+
+    sort: Comma separated list of attributes the results should be sorted by.
+
+    limit: Maximum number of edge instances to be returned (after sorting).
+
+    fmt: Format of the results returned:
+
+        "py": Python objects
+
+        "json": JSON document
+
+        "df": pandas DataFrame
+
+    withId: (When the output format is "df") Should the source and target vertex types and IDs be included in the dataframe?
+
+    withType: (When the output format is "df") Should the edge type be included in the dataframe?
+
+    timeout: Time allowed for successful execution (0 = no time limit, default).
+
+Returns:
+
+The (selected) details of the (matching) edge instances (sorted, limited) as dictionary, JSON or pandas DataFrame.

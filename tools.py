@@ -4,7 +4,10 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from pyTigerGraph import TigerGraphConnection
+from embedding_services import EmbeddingModel
+from embedding_stores import EmbeddingStore
 import re
+import json
 
 class MapQuestionToSchemaException(Exception):
     pass
@@ -49,10 +52,10 @@ class MapQuestionToSchema(BaseTool):
         for word in result1:
             if word.lower() in vertices:
                 found = True
-
+        '''
         if not(found):
             raise MapQuestionToSchemaException("No "+word+" vertex in the graph schema. Please rephrase your question.")
-
+        '''
         word_list = ['edge', 'Edge', 'Edges', 'edges']
 
         edges = [x.lower() for x in self.conn.getEdgeTypes()]
@@ -66,10 +69,10 @@ class MapQuestionToSchema(BaseTool):
             for word in result2:
                 if word.lower() in edges:
                     found2 = True
-
+            '''
             if not(found2):
                 raise MapQuestionToSchemaException("No "+word+" edge in the graph schema. Please rephrase your question.")
-
+            '''
         return restate_q
     
     async def _arun(self) -> str:
@@ -86,16 +89,20 @@ class GenerateFunction(BaseTool):
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool =True
+    embedding_model: EmbeddingModel = None
+    embedding_store: EmbeddingStore = None
     
-    def __init__(self, conn, llm, prompt):
+    def __init__(self, conn, llm, prompt, embedding_model, embedding_store):
         super().__init__()
         self.conn = conn
         self.llm = llm
         self.prompt = prompt
+        self.embedding_model = embedding_model
+        self.embedding_store = embedding_store
     
     def _run(self, question: str) -> str:
         PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertices", "queries", "edges"]
+            template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2"]
         )
         queries = self.conn.getInstalledQueries()
         for query in queries:
@@ -104,12 +111,19 @@ class GenerateFunction(BaseTool):
                 queries[query]["parameters"].pop("result_attribute")
             except:
                 pass
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=2)
+        #"queries": [{queries[x]["alternative_endpoint"].split("/")[-1]: queries[x]["parameters"]} for x in queries],
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
                     "edges": self.conn.getEdgeTypes(), 
-                    "queries": [{queries[x]["alternative_endpoint"].split("/")[-1]: queries[x]["parameters"]} for x in queries]
+                    "doc1": docs[0].page_content,
+                    "doc2": docs[-1].page_content
                   }]
-        
+
+        with open("./tmp.json", "w") as f:
+            f.write(json.dumps(inputs, indent=2))
+            f.close()
+
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         return generated

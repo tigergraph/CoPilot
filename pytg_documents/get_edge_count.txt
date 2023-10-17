@@ -1,0 +1,16 @@
+`getEdgeCount(edgeType: str = "*", sourceVertexType: str = "", targetVertexType: str = "")` → dict
+
+Returns the number of edges of an edge type.
+
+This is a simplified version of getEdgeCountFrom(), to be used when the total number of edges of a given type is needed, regardless which vertex instance they are originated from. See documentation of getEdgeCountFrom above for more details.
+Parameters:
+
+    edgeType: The name of the edge type.
+
+    sourceVertexType: The name of the source vertex type.
+
+    targetVertexType: The name of the target vertex type.
+
+Returns:
+
+A dictionary of edge_type: edge_count pairs.

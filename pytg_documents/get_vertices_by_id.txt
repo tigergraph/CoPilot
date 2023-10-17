@@ -1,0 +1,21 @@
+`getVerticesById(vertexType: str, vertexIds: Union[int, str, list], select: str = "", fmt: str = "py", withId: bool = True, withType: bool = False, timeout: int = 0)` → Union[list, str, pd.DataFrame]
+
+Retrieves vertices of the given vertex type, identified by their ID.
+Parameters:
+    vertexType: The name of the vertex type.
+
+    vertexIds: A single vertex ID or a list of vertex IDs.
+
+    select: Comma separated list of vertex attributes to be retrieved.
+
+    fmt: Format of the results:
+    "py": Python objects (in a list) "json": JSON document "df": pandas DataFrame
+
+    withId: (If the output format is "df") should the vertex ID be included in the dataframe?
+
+    withType: (If the output format is "df") should the vertex type be included in the dataframe?
+
+    timeout: Time allowed for successful execution (0 = no limit, default).
+
+Returns:
+    The (selected) details of the (matching) vertex instances as dictionary, JSON or pandas DataFrame.

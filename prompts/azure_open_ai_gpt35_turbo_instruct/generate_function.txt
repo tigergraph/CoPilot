@@ -1,10 +1,8 @@
 Use the vertex types, edge types to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
-For example, if a count of vertices is asked for, use getVertexCount().
-If multiple entites are referred to in the question, use runInstalledQuery() when necessary.
-If there is not a natural answer to the question, ask a human for help.
-Parameters of queries to be replaced are denoted <INSERT_ID_HERE>.
+Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
 Vertex Types: {vertices}
 Edge Types: {edges}
-Queries: {queries}
 Question: {question}
+First Doc String: {doc1}
+Second Doc String: {doc2}
 Python Call: conn.

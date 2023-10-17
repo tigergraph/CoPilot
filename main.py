@@ -26,7 +26,7 @@ class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
     query_sources: List[Dict] = None
 
-with open("./openai_llm_config.json", "r") as f:
+with open("./azure_llm_config.json", "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()
@@ -38,21 +38,25 @@ if llm_config["llm_service"] == "OpenAI":
 elif llm_config["llm_service"] == "Azure":
     embedding_service = AzureOpenAI_Ada002(llm_config)
 
-'''
-embedding_store = FAISS_EmbeddingStore()
-'''
+
+embedding_store = FAISS_EmbeddingStore(embedding_service)
+
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-'''
+
 @app.post("/{graphname}/register-custom-query")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    vec = embedding_service.embed_doc(query_info.query_description)[0]
+    vec = embedding_service.embed_documents(query_info.query_description)[0]
     res = embedding_store.add_embeddings([(query_info.query_description, vec)], [{"name": query_info.query_name, "heavy_runtime": query_info.heavy_runtime_warning}])
     return res
-'''
+
+@app.post("/{graphname}/retrieve-docs")
+def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    return str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=2))
+
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
@@ -86,9 +90,9 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
     conn.customizeHeader(timeout=config["default_timeout"]*1000)
 
     if llm_config["llm_service"] == "OpenAI":
-        agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn)
+        agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn, embedding_service, embedding_store)
     elif llm_config["llm_service"] == "Azure":
-        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config), conn)
+        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config), conn, embedding_service, embedding_store)
 
     resp = NaturalLanguageQueryResponse
 

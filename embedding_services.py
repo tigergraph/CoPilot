@@ -1,15 +1,17 @@
 import os
+from typing import List
+from langchain.schema.embeddings import Embeddings
 
-class EmbeddingModel():
+class EmbeddingModel(Embeddings):
     def __init__(self, config):
         for auth_detail in config["authentication_configuration"].keys():
             os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
         self.embeddings = None
 
-    def embed_doc(self, doc):
-        return self.embeddings.embed_documents([doc])
+    def embed_documents(self, texts: List[str]) -> List[float]:
+        return self.embeddings.embed_documents(texts)
 
-    def get_embedding(self, question):
+    def embed_query(self, question:str) -> List[float]:
         return self.embeddings.embed_query(question)
 
 
