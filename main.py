@@ -1,7 +1,7 @@
 from typing import Union, Annotated, List, Dict
 from fastapi import FastAPI, Header, Depends, HTTPException, status
 from pydantic import BaseModel
-
+import os
 from pyTigerGraph import TigerGraphConnection
 import json
 
@@ -26,7 +26,9 @@ class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
     query_sources: List[Dict] = None
 
-with open("./azure_llm_config.json", "r") as f:
+LLM_SERVICE = os.getenv("LLM_CONFIG")
+
+with open(LLM_SERVICE, "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()
@@ -44,7 +46,8 @@ embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "World",
+            "llm_service": llm_config["llm_service"]}
 
 
 @app.post("/{graphname}/register-custom-query")
