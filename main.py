@@ -9,8 +9,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
 from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo
-from embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
-from embedding_stores import FAISS_EmbeddingStore
+from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
+from embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from tools import MapQuestionToSchemaException
 

@@ -6,8 +6,8 @@ from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, Callback
 from typing import Optional, Type
 
 from tools import MapQuestionToSchema, GenerateFunction, ExecuteFunction
-from embedding_services import EmbeddingModel
-from embedding_stores import EmbeddingStore
+from embedding_utils.embedding_services import EmbeddingModel
+from embedding_utils.embedding_stores import EmbeddingStore
 
 from llm_services import LLM_Model
 

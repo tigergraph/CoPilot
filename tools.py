@@ -4,8 +4,8 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from pyTigerGraph import TigerGraphConnection
-from embedding_services import EmbeddingModel
-from embedding_stores import EmbeddingStore
+from embedding_utils.embedding_services import EmbeddingModel
+from embedding_utils.embedding_stores import EmbeddingStore
 import re
 import json
 
