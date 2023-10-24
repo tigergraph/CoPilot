@@ -4,14 +4,7 @@ from fastapi.testclient import TestClient
 import json
 import wandb
 
-USE_WANDB = False
-
-if USE_WANDB:
-    run = wandb.init(project="llm-eval-sweep")
-    columns = ["Dataset", "Question", "True Answer", "True Function Call",
-               "Retrieved Natural Language Answer", "Retrieved Answer",
-               "Answer Source", "Answer Correct"]
-    run = wandb.init(project="llm-eval-sweep")
+USE_WANDB = True
 
 class CommonTests():
     pass
@@ -28,20 +21,18 @@ def test_generator(dataset, row, username, password):
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
         self.assertEqual(resp.status_code, 200)
         answer = list(resp.json()["query_sources"][0].values())[-1]
-        
         if USE_WANDB:
-            table = wandb.Table(columns=columns)
-            table.add_data(
+            self.table.add_data(
+                    self.llm_service,
                     dataset,
                     question,
                     true_answer,
                     function_call,
                     resp.json()["natural_language_response"], 
-                    answer,
+                    str(answer),
                     list(resp.json()["query_sources"][0].keys())[-1],
                     (true_answer == str(answer))
             )
-            run.log({"qa_results": table})
         self.assertEqual(true_answer, str(answer))
     
     return test_name, test
