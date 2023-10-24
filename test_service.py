@@ -4,7 +4,10 @@ from fastapi.testclient import TestClient
 import json
 import wandb
 
-USE_WANDB = True
+with open("./configs/testing_config.json") as f:
+    config = json.load(f)
+
+USE_WANDB = config["use_wandb"]
 
 class CommonTests():
     pass
@@ -16,6 +19,7 @@ def test_generator(dataset, row, username, password):
     question = row["Question"]
     true_answer = row["Answer"]
     function_call = row["Function Call"]
+    question_theme = row["Question Theme"]
 
     def test(self):
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
@@ -25,6 +29,7 @@ def test_generator(dataset, row, username, password):
             self.table.add_data(
                     self.llm_service,
                     dataset,
+                    question_theme,
                     question,
                     true_answer,
                     function_call,
@@ -34,7 +39,6 @@ def test_generator(dataset, row, username, password):
                     (true_answer == str(answer))
             )
         self.assertEqual(true_answer, str(answer))
-    
     return test_name, test
 
 with open("./configs/db_config.json", "r") as config_file:

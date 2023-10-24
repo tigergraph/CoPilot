@@ -7,7 +7,7 @@ import wandb
 USE_WANDB = True
 
 if USE_WANDB:
-    columns = ["LLM_Service", "Dataset", "Question", "True Answer", "True Function Call",
+    columns = ["LLM_Service", "Dataset", "Question Theme", "Question", "True Answer", "True Function Call",
                "Retrieved Natural Language Answer", "Retrieved Answer",
                "Answer Source", "Answer Correct"]
 
@@ -15,15 +15,13 @@ if USE_WANDB:
 class TestWithOpenAI(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        os.environ["LLM_CONFIG"] = "./configs/openai_llm_config.json"
+        from main import app
+        cls.client = TestClient(app)
         if USE_WANDB:
             cls.wandbLogger = wandb.init(project="llm-eval-sweep")
             cls.llm_service = "open_ai_davinci-003"
             cls.table = wandb.Table(columns=columns)
-    
-    def setUp(self):
-        os.environ["LLM_CONFIG"] = "./configs/azure_llm_config.json"
-        from main import app
-        self.client = TestClient(app)
 
     def test_config_read(self):
         resp = self.client.get("/")
