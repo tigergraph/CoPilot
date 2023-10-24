@@ -2,10 +2,19 @@ import pandas as pd
 import os
 from fastapi.testclient import TestClient
 import json
+import wandb
+
+USE_WANDB = False
+
+if USE_WANDB:
+    run = wandb.init(project="llm-eval-sweep")
+    columns = ["Dataset", "Question", "True Answer", "True Function Call",
+               "Retrieved Natural Language Answer", "Retrieved Answer",
+               "Answer Source", "Answer Correct"]
+    run = wandb.init(project="llm-eval-sweep")
 
 class CommonTests():
     pass
-
 
 def test_generator(dataset, row, username, password):
     test_name = "test_"+dataset+"_"+str(row.name)
@@ -16,10 +25,23 @@ def test_generator(dataset, row, username, password):
     function_call = row["Function Call"]
 
     def test(self):
-        print(question)
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
         self.assertEqual(resp.status_code, 200)
-        answer = list(resp.json()["query_sources"][0].values())[0]
+        answer = list(resp.json()["query_sources"][0].values())[-1]
+        
+        if USE_WANDB:
+            table = wandb.Table(columns=columns)
+            table.add_data(
+                    dataset,
+                    question,
+                    true_answer,
+                    function_call,
+                    resp.json()["natural_language_response"], 
+                    answer,
+                    list(resp.json()["query_sources"][0].keys())[-1],
+                    (true_answer == str(answer))
+            )
+            run.log({"qa_results": table})
         self.assertEqual(true_answer, str(answer))
     
     return test_name, test
