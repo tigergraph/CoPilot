@@ -1,8 +1,8 @@
 Question	Schema Mapped Question	Function Call	Answer
-How many papers are there?	How many Paper Vertexes are there?	getVertexCount(vertexType="Paper")	
-How many papers have a y attribute of 1?	How many Paper Vertexes are there with a y attribute of 1?	getVertexCount(vertexType="Paper", where="y=1")	
-How many citations are there?	How many CITES Edges are there?	getEdgeCount(edgeType="CITES")	
-How many papers has author 20 wrote?	How many Paper Vertexes has Author Vertexes 30 WROTE Edges?	getEdgeCountFrom(sourceVertexType="Author", sourceVertexId="20", edgeType="WROTE", targetVertexType="Paper")	
-What papers has author 30 wrote?	What Paper Vertexes has Author Vertexes 30 WROTE Edges?	getEdges(sourceVertexType="Author", sourceVertexId="30", edgeType="WROTE", targetVertexType="Paper")	
-How many universities are there?	How many Institution Vertexes are there?	getVertexCount(vertexType="Paper")	
-How many topics are there?	How many FieldOfStudy Vertexes are there?	getVertexCount(vertexType="FieldOfStudy")	
+How many papers are there?	How many Paper Vertexes are there?	getVertexCount(vertexType="Paper")	736389
+How many papers where y is equal to 1?	How many Paper Vertexes are there with a y attribute of 1?	getVertexCount('Paper', where='y=1')	30902
+How many citations are there?	How many CITES Edges are there?	getEdgeCount(edgeType="CITES")	5416271
+How many papers has author 20 wrote?	How many Paper Vertexes has Author Vertexes 30 WROTE Edges?	getEdgeCountFrom(sourceVertexType="Author", sourceVertexId="20", edgeType="WROTE")	38
+What papers has author 30 wrote?	What Paper Vertexes has Author Vertexes 30 WROTE Edges?	getEdges(sourceVertexType="Author", sourceVertexId="30", edgeType="WROTE", targetVertexType="Paper")	[{"e_type": "WROTE","directed": true,"from_id": "30","from_type": "Author","to_id": "431327","to_type": "Paper","attributes": {}},{"e_type": "WROTE","directed": true,"from_id": "30","from_type": "Author","to_id": "366332","to_type": "Paper","attributes": {}},{"e_type": "WROTE","directed": true,"from_id": "30","from_type": "Author","to_id": "142586","to_type": "Paper","attributes": {}},{"e_type": "WROTE","directed": true,"from_id": "30","from_type": "Author","to_id": "360139","to_type": "Paper","attributes": {}}]
+How many universities are there?	How many Institution Vertexes are there?	getVertexCount(vertexType="Institution")	8740
+How many topics are there?	How many FieldOfStudy Vertexes are there?	getVertexCount(vertexType="FieldOfStudy")	59965

@@ -1,6 +1,5 @@
 from typing import Union, Annotated, List, Dict
 from fastapi import FastAPI, Header, Depends, HTTPException, status
-from pydantic import BaseModel
 import os
 from pyTigerGraph import TigerGraphConnection
 import json
@@ -13,18 +12,7 @@ from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedd
 from embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from tools import MapQuestionToSchemaException
-
-class NaturalLanguageQuery(BaseModel):
-    query:str
-
-class GSQLQueryInfo(BaseModel):
-    query_name: str
-    query_description: str
-    heavy_runtime_warning: bool = False
-
-class NaturalLanguageQueryResponse(BaseModel):
-    natural_language_response: str
-    query_sources: List[Dict] = None
+from schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 
@@ -63,7 +51,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    with open("./db_config.json", "r") as config_file:
+    with open("./configs/db_config.json", "r") as config_file:
         config = json.load(config_file)
         
     conn = TigerGraphConnection(
