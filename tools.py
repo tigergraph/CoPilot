@@ -121,10 +121,6 @@ class GenerateFunction(BaseTool):
                     "doc3": docs[2].page_content
                   }]
 
-        with open("./tmp.json", "w") as f:
-            f.write(json.dumps(inputs, indent=2))
-            f.close()
-
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         return generated
