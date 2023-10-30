@@ -7,7 +7,7 @@ import wandb
 USE_WANDB = True
 
 if USE_WANDB:
-    columns = ["LLM_Service", "Dataset",  "Question Theme", "Question", "True Answer", "True Function Call",
+    columns = ["LLM_Service", "Dataset", "Question Type", "Question Theme", "Question", "True Answer", "True Function Call",
                "Retrieved Natural Language Answer", "Retrieved Answer",
                "Answer Source", "Answer Correct", "Response Time (seconds)"]
 
@@ -20,20 +20,11 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
         cls.client = TestClient(app)
         cls.llm_service = "open_ai_davinci-003"
         if USE_WANDB:
-            cls.config = {
-                "llm_service": cls.llm_service
-            }
-            cls.wandbLogger = wandb.init(project="llm-eval-sweep")
             cls.table = wandb.Table(columns=columns)
 
     def test_config_read(self):
         resp = self.client.get("/")
         self.assertEqual(resp.json()["llm_service"], "OpenAI")
-
-    @classmethod
-    def tearDownClass(cls):
-        if USE_WANDB:
-            cls.wandbLogger.log({"qa_results": cls.table})
 
 if __name__ == "__main__":
     unittest.main()
