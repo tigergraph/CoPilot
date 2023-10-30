@@ -9,7 +9,7 @@ USE_WANDB = True
 if USE_WANDB:
     columns = ["LLM_Service", "Dataset", "Question Theme", "Question", "True Answer", "True Function Call",
                "Retrieved Natural Language Answer", "Retrieved Answer",
-               "Answer Source", "Answer Correct"]
+               "Answer Source", "Answer Correct", "Response Time (seconds)"]
 
 
 class TestWithAzure(CommonTests, unittest.TestCase):
@@ -18,9 +18,12 @@ class TestWithAzure(CommonTests, unittest.TestCase):
         os.environ["LLM_CONFIG"] = "./configs/azure_llm_config.json"
         from main import app
         cls.client = TestClient(app)
+        cls.llm_service = "azure_gpt3.5_turbo_instruct"
+        cls.config = {
+            "llm-service": cls.llm_service
+        }
         if USE_WANDB:
-            cls.wandbLogger = wandb.init(project="llm-eval-sweep")
-            cls.llm_service = "azure_gpt3.5_turbo_instruct"
+            cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
             cls.table = wandb.Table(columns=columns)
 
     def test_config_read(self):

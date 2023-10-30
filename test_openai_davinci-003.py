@@ -7,9 +7,9 @@ import wandb
 USE_WANDB = True
 
 if USE_WANDB:
-    columns = ["LLM_Service", "Dataset", "Question Theme", "Question", "True Answer", "True Function Call",
+    columns = ["LLM_Service", "Dataset",  "Question Theme", "Question", "True Answer", "True Function Call",
                "Retrieved Natural Language Answer", "Retrieved Answer",
-               "Answer Source", "Answer Correct"]
+               "Answer Source", "Answer Correct", "Response Time (seconds)"]
 
 
 class TestWithOpenAI(CommonTests, unittest.TestCase):
@@ -18,9 +18,12 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
         os.environ["LLM_CONFIG"] = "./configs/openai_llm_config.json"
         from main import app
         cls.client = TestClient(app)
+        cls.llm_service = "open_ai_davinci-003"
         if USE_WANDB:
+            cls.config = {
+                "llm_service": cls.llm_service
+            }
             cls.wandbLogger = wandb.init(project="llm-eval-sweep")
-            cls.llm_service = "open_ai_davinci-003"
             cls.table = wandb.Table(columns=columns)
 
     def test_config_read(self):

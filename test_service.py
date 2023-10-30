@@ -3,6 +3,7 @@ import os
 from fastapi.testclient import TestClient
 import json
 import wandb
+import time
 
 with open("./configs/testing_config.json") as f:
     config = json.load(f)
@@ -22,7 +23,9 @@ def test_generator(dataset, row, username, password):
     question_theme = row["Question Theme"]
 
     def test(self):
+        t1 = time.time()
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
+        t2 = time.time()
         self.assertEqual(resp.status_code, 200)
         answer = list(resp.json()["query_sources"][0].values())[-1]
         if USE_WANDB:
@@ -36,7 +39,8 @@ def test_generator(dataset, row, username, password):
                     resp.json()["natural_language_response"], 
                     str(answer),
                     list(resp.json()["query_sources"][0].keys())[-1],
-                    (true_answer == str(answer))
+                    (true_answer == str(answer)),
+                    t2-t1
             )
         self.assertEqual(true_answer, str(answer))
     return test_name, test
