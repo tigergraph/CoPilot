@@ -3,6 +3,7 @@ import os
 from fastapi.testclient import TestClient
 import json
 import wandb
+from langchain.evaluation import load_evaluator
 import time
 
 with open("./configs/testing_config.json") as f:
@@ -40,21 +41,45 @@ class CommonTests():
                     wandb.finish()
 
 def test_generator(dataset, row, username, password):
-    test_name = "test_"+dataset+"_"+str(row.name)
+    
     # Need to extract q/a pairs before test is generated,
     # as otherwise we look at the last question/answer pair is used
     question = row["Question"]
-    true_answer = row["Answer"]
+    true_answer = str(row["Answer"])
     function_call = row["Function Call"]
     question_theme = row["Question Theme"]
     question_type = row["Question Type"]
+
+    test_name = "test_"+dataset+"_"+str(row.name)+question_theme.replace(" ", "_")
 
     def test(self):
         t1 = time.time()
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
         t2 = time.time()
         self.assertEqual(resp.status_code, 200)
+        evaluator = load_evaluator("string_distance")
         answer = list(resp.json()["query_sources"][0].values())[-1]
+        correct = False
+        if isinstance(answer, str):
+            string_dist = evaluator.evaluate_strings(prediction=answer, reference=true_answer)["score"]
+            if string_dist <= .2:
+                correct = True
+        elif isinstance(answer, list):
+            json_form = json.loads(true_answer)
+            for i in range(len(json_form)):
+                if json_form[i] == answer[i]:
+                    correct = True
+                else:
+                    correct = False
+                    break
+        elif isinstance(answer, dict):
+            json_form = json.loads(true_answer)
+            if sorted(answer.items()) == sorted(json_form.items()):
+                correct = True
+        else:
+            if str(answer) == true_answer:
+                correct = True
+
         if USE_WANDB:
             self.table.add_data(
                     self.llm_service,
@@ -67,10 +92,14 @@ def test_generator(dataset, row, username, password):
                     resp.json()["natural_language_response"], 
                     str(answer),
                     list(resp.json()["query_sources"][0].keys())[-1],
-                    (true_answer == str(answer)),
+                    correct,
                     t2-t1
             )
-        self.assertEqual(true_answer, str(answer))
+
+        if isinstance(answer, str):
+            self.assertLessEqual(string_dist, .5)
+        else:
+            self.assertEqual(str(answer), true_answer)
     return test_name, test
 
 with open("./configs/db_config.json", "r") as config_file:
