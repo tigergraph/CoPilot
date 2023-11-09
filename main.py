@@ -7,7 +7,7 @@ import json
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
-from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo
+from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo, AWS_SageMaker_Endpoint
 from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
 from embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
@@ -23,10 +23,10 @@ app = FastAPI()
 
 security = HTTPBasic()
 
-if llm_config["llm_service"] == "OpenAI":
-    embedding_service = OpenAI_Embedding(llm_config)
-elif llm_config["llm_service"] == "Azure":
-    embedding_service = AzureOpenAI_Ada002(llm_config)
+if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai":
+    embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
+elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":
+    embedding_service = AzureOpenAI_Ada002(llm_config["embedding_service"])
 
 
 embedding_store = FAISS_EmbeddingStore(embedding_service)
@@ -34,8 +34,7 @@ embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World",
-            "llm_service": llm_config["llm_service"]}
+    return {"config": llm_config}
 
 
 @app.post("/{graphname}/register-custom-query")
@@ -80,10 +79,14 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
 
     conn.customizeHeader(timeout=config["default_timeout"]*1000)
 
-    if llm_config["llm_service"] == "OpenAI":
-        agent = TigerGraphAgent(OpenAI_Davinci(llm_config), conn, embedding_service, embedding_store)
-    elif llm_config["llm_service"] == "Azure":
-        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config), conn, embedding_service, embedding_store)
+    if llm_config["completion_service"]["llm_service"].lower() == "openai":
+        agent = TigerGraphAgent(OpenAI_Davinci(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+    elif llm_config["completion_service"]["llm_service"].lower() == "azure":
+        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+    elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
+        agent = TigerGraphAgent(AWS_SageMaker_Endpoint(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+    else:
+        raise Exception("LLM Completion Service Not Supported")
 
     resp = NaturalLanguageQueryResponse
 

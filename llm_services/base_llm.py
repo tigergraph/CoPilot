@@ -2,8 +2,6 @@ import os
 
 class LLM_Model():
     def __init__(self, config):
-        for auth_detail in config["authentication_configuration"].keys():
-            os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
         self.llm = None
     
     def _read_prompt_file(self, path):

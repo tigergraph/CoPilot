@@ -1,12 +1,15 @@
 from llm_services import LLM_Model
+import os
 
 class AzureOpenAI_GPT35_Turbo(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
+        for auth_detail in config["authentication_configuration"].keys():
+            os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
         from langchain.llms import AzureOpenAI
         self.llm = AzureOpenAI(
-            deployment_name=config["completion_service"]["deployment_name"],
-            model_name=config["completion_service"]["model_name"],
+            deployment_name=config["deployment_name"],
+            model_name=config["model_name"],
             temperature=0
         )
 

@@ -19,7 +19,7 @@ class AzureOpenAI_Ada002(EmbeddingModel):
     def __init__(self, config):
         super().__init__(config)
         from langchain.embeddings import OpenAIEmbeddings
-        self.embeddings = OpenAIEmbeddings(deployment=config["embedding_service"]["deployment"])
+        self.embeddings = OpenAIEmbeddings(deployment=config["deployment"])
 
 
 class OpenAI_Embedding(EmbeddingModel):
@@ -38,5 +38,5 @@ class AWS_Bedrock_Embedding(EmbeddingModel):
     def __init__(self, config):
         super().__init__(config)
         from langchain.embeddings import BedrockEmbeddings
-        self.embeddings = BedrockEmbeddings(credentials_profile_name = config["embedding_service"]["credentials_profile_name"],
-                                            region_name = config["embedding_service"]["region_name"])
+        self.embeddings = BedrockEmbeddings(credentials_profile_name = config["credentials_profile_name"],
+                                            region_name = config["region_name"])
