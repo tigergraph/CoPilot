@@ -24,7 +24,7 @@ class TestWithAzure(CommonTests, unittest.TestCase):
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["completion_service"]["llm_service"], "azure")
+        self.assertEqual(resp.json()["config"]["completion_service"]["llm_service"], "azure")
 
 if __name__ == "__main__":
     unittest.main()
