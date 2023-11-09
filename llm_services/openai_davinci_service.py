@@ -1,4 +1,4 @@
-from base_llm import LLM_Model
+from llm_services import LLM_Model
 
 class OpenAI_Davinci(LLM_Model):
     def __init__(self, config):

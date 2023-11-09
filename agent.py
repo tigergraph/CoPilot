@@ -1,11 +1,6 @@
-from langchain.agents import AgentType, initialize_agent, load_tools
+from langchain.agents import AgentType, initialize_agent
 
-from langchain.llms import AzureOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
-from typing import Optional, Type
-
-from tools import MapQuestionToSchema, GenerateFunction, ExecuteFunction
+from tools import ExecuteFunction, GenerateFunction, MapQuestionToSchema
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 
@@ -26,7 +21,8 @@ class TigerGraphAgent():
                                       agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                                       verbose=True,
                                       return_intermediate_steps=True,
-                                      max_iterations=5,
+                                      max_iterations=4,
+                                      early_stopping_method="generate",
                                       agent_kwargs={
                                         "prefix": """DIRECTLY TRANSFER THE OBSERVATION INTO ACTION INPUTS AS NECESSARY.
                                                      BE VERBOSE IN ACTION INPUTS AND THOUGHTS. NEVER CALL MULTIPLE FUNCTIONS.

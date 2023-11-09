@@ -1,4 +1,4 @@
-from base_llm import LLM_Model
+from llm_services import LLM_Model
 
 class AzureOpenAI_GPT35_Turbo(LLM_Model):
     def __init__(self, config):
