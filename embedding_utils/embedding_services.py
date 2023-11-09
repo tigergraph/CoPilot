@@ -27,3 +27,16 @@ class OpenAI_Embedding(EmbeddingModel):
         super().__init__(config)
         from langchain.embeddings import OpenAIEmbeddings
         self.embeddings = OpenAIEmbeddings()
+
+class VertexAI_PaLM_Embedding(EmbeddingModel):
+    def __init__(self, config):
+        super().__init__(config)
+        from langchain.embeddings import VertexAIEmbeddings
+        self.embeddings = VertexAIEmbeddings()
+
+class AWS_Bedrock_Embedding(EmbeddingModel):
+    def __init__(self, config):
+        super().__init__(config)
+        from langchain.embeddings import BedrockEmbeddings
+        self.embeddings = BedrockEmbeddings(credentials_profile_name = config["embedding_service"]["credentials_profile_name"],
+                                            region_name = config["embedding_service"]["region_name"])

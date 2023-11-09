@@ -58,7 +58,12 @@ def test_generator(dataset, row, username, password):
         t2 = time.time()
         self.assertEqual(resp.status_code, 200)
         evaluator = load_evaluator("string_distance")
-        answer = list(resp.json()["query_sources"][0].values())[-1]
+        try:
+            answer = list(resp.json()["query_sources"][0].values())[-1]
+            query_source = list(resp.json()["query_sources"][0].keys())[-1]
+        except:
+            answer = ""
+            query_source = ""
         correct = False
         if isinstance(answer, str):
             string_dist = evaluator.evaluate_strings(prediction=answer, reference=true_answer)["score"]
@@ -66,16 +71,22 @@ def test_generator(dataset, row, username, password):
                 correct = True
         elif isinstance(answer, list):
             json_form = json.loads(true_answer)
-            for i in range(len(json_form)):
-                if json_form[i] == answer[i]:
-                    correct = True
-                else:
-                    correct = False
-                    break
+            try:
+                for i in range(len(json_form)):
+                    if json_form[i] == answer[i]:
+                        correct = True
+                    else:
+                        correct = False
+                        break
+            except:
+                correct = False
         elif isinstance(answer, dict):
-            json_form = json.loads(true_answer)
-            if sorted(answer.items()) == sorted(json_form.items()):
-                correct = True
+            try:
+                json_form = json.loads(true_answer)
+                if sorted(answer.items()) == sorted(json_form.items()):
+                    correct = True
+            except:
+                correct = False
         else:
             if str(answer) == true_answer:
                 correct = True
@@ -91,7 +102,7 @@ def test_generator(dataset, row, username, password):
                     function_call,
                     resp.json()["natural_language_response"], 
                     str(answer),
-                    list(resp.json()["query_sources"][0].keys())[-1],
+                    query_source,
                     correct,
                     t2-t1
             )
