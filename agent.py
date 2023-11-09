@@ -9,7 +9,7 @@ from tools import MapQuestionToSchema, GenerateFunction, ExecuteFunction
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 
-from llm_services import LLM_Model
+from llm_services.base_llm import LLM_Model
 
 class TigerGraphAgent():
     def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnection", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):
