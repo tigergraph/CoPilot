@@ -9,7 +9,7 @@ USE_WANDB = True
 if USE_WANDB:
     columns = ["LLM_Service", "Dataset", "Question Type", "Question Theme", "Question", "True Answer", "True Function Call",
                "Retrieved Natural Language Answer", "Retrieved Answer",
-               "Answer Source", "Answer Correct", "Response Time (seconds)"]
+               "Answer Source", "Answer Correct", "Answered Question", "Response Time (seconds)"]
 
 
 class TestWithLlama(CommonTests, unittest.TestCase):
