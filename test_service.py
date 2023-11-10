@@ -7,10 +7,7 @@ from langchain.evaluation import load_evaluator
 import time
 from pygit2 import Repository
 
-with open("./configs/testing_config.json") as f:
-    config = json.load(f)
-
-USE_WANDB = config["use_wandb"]
+USE_WANDB = True
 
 class CommonTests():
     @classmethod
