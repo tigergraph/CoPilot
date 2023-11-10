@@ -1,6 +1,6 @@
 from langchain.agents import AgentType, initialize_agent
 
-from tools import GenerateFunction, MapQuestionToSchema
+from tools import GenerateFunction, MapQuestionToSchema, ExecuteFunction
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 
@@ -13,7 +13,8 @@ class TigerGraphAgent():
         self.llm = llm_provider
 
         tools = [MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt),
-                 GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)]
+                 GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store),
+                 ExecuteFunction(self.conn)]
 
         self.agent = initialize_agent(tools,
                                       self.llm.model,

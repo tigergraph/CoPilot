@@ -9,7 +9,7 @@ from embedding_utils.embedding_stores import EmbeddingStore
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
-    description = "Generates and executes a pyTigerGraph function call on the database"
+    description = "Generate a pyTigerGraph function call on the database"
     conn: "TigerGraphConnection" = None
     llm: LLM = None
     prompt: str = None
