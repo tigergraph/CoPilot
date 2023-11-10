@@ -1,8 +1,6 @@
 from langchain.tools import BaseTool
 from langchain.tools.base import ToolException
 from pyTigerGraph import TigerGraphConnection
-from embedding_utils.embedding_services import EmbeddingModel
-from embedding_utils.embedding_stores import EmbeddingStore
 
 class ExecuteFunction(BaseTool):
     name = "ExecuteFunction"
