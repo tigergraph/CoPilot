@@ -9,7 +9,7 @@ from embedding_utils.embedding_stores import EmbeddingStore
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
-    description = "Generate a pyTigerGraph function call"
+    description = "Generates and executes a pyTigerGraph function call on the database"
     conn: "TigerGraphConnection" = None
     llm: LLM = None
     prompt: str = None
@@ -37,7 +37,6 @@ class GenerateFunction(BaseTool):
             except:
                 pass
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
-        #"queries": [{queries[x]["alternative_endpoint"].split("/")[-1]: queries[x]["parameters"]} for x in queries],
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
                     "edges": self.conn.getEdgeTypes(), 
@@ -48,7 +47,13 @@ class GenerateFunction(BaseTool):
 
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
-        return generated
+        try:
+            loc = {}
+            exec("res = conn."+generated, {"conn": self.conn}, loc)
+            return loc["res"]
+        except:
+            raise ToolException("The function {} did not execute directly. Please rephrase your question and try again".format(function))
+
 
     async def _arun(self) -> str:
         """Use the tool asynchronously."""

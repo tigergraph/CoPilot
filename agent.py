@@ -1,6 +1,6 @@
 from langchain.agents import AgentType, initialize_agent
 
-from tools import ExecuteFunction, GenerateFunction, MapQuestionToSchema
+from tools import GenerateFunction, MapQuestionToSchema
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 
@@ -13,20 +13,18 @@ class TigerGraphAgent():
         self.llm = llm_provider
 
         tools = [MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt),
-                 GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store),
-                 ExecuteFunction(self.conn)]
+                 GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)]
 
         self.agent = initialize_agent(tools,
                                       self.llm.model,
                                       agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                                       verbose=True,
                                       return_intermediate_steps=True,
-                                      max_iterations=4,
+                                      max_iterations=5,
                                       early_stopping_method="generate",
                                       agent_kwargs={
                                         "prefix": """DIRECTLY TRANSFER THE OBSERVATION INTO ACTION INPUTS AS NECESSARY.
                                                      BE VERBOSE IN ACTION INPUTS AND THOUGHTS. NEVER CALL MULTIPLE FUNCTIONS.
-                                                     ALWAYS DIRECTLY PASS THE OUTPUT OF GenerateFunction AS INPUT TO ExecuteFunction.
                                                      NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS."""
                                       })
 
