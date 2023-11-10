@@ -1,20 +1,15 @@
 from llm_services import LLM_Model
 
-
-# TODO: FINISH IMPLEMENTATION
-
-
 class GoogleVertexAI(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
         from langchain.llms import VertexAI
         self.llm = VertexAI(
-            deployment_name=config["completion_service"]["deployment_name"],
-            model_name=config["completion_service"]["model_name"],
-            temperature=0
+            model_name=config["llm_model"],
+            **config["model_kwargs"]
         )
 
-        self.prompt_path = "./prompts/gcp_vertexai_palm/"
+        self.prompt_path = config["prompt_path"]
 
     @property
     def map_question_schema_prompt(self):

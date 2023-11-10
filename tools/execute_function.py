@@ -4,7 +4,7 @@ from pyTigerGraph import TigerGraphConnection
 
 class ExecuteFunction(BaseTool):
     name = "ExecuteFunction"
-    description = "Execute a pyTigerGraph function"
+    description = "Execute a pyTigerGraph function, always use the output of GenerateFunction as input to this tool."
     conn: "TigerGraphConnection" = None
     handle_tool_error: bool =True
     

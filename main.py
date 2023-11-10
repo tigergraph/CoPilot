@@ -7,8 +7,8 @@ import json
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
-from llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint
-from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
+from llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
+from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
 from embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from tools import MapQuestionToSchemaException
@@ -27,6 +27,10 @@ if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai
     embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":
     embedding_service = AzureOpenAI_Ada002(llm_config["embedding_service"])
+elif llm_config["embedding_service"]["embedding_model_service"].lower() == "vertexai":
+    embedding_service = VertexAI_PaLM_Embedding(llm_config["embedding_service"])
+else:
+    raise Exception("Embedding service not implemented")
 
 
 embedding_store = FAISS_EmbeddingStore(embedding_service)
@@ -85,6 +89,8 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         agent = TigerGraphAgent(AzureOpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
         agent = TigerGraphAgent(AWS_SageMaker_Endpoint(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
+        agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     else:
         raise Exception("LLM Completion Service Not Supported")
 
