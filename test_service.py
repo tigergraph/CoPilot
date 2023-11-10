@@ -28,11 +28,13 @@ class CommonTests():
                     cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]
                     acc = (final_df["Answer Correct"].sum())/final_df["Answer Correct"].shape[0]
+                    not_wrong_perc = (final_df["Answer Correct"].sum() + (final_df["Answered Question"] == False).sum())/final_df["Answer Correct"].shape[0]
                     avg_resp_time = final_df["Response Time (seconds)"].mean()
                     cls.wandbLogger.log({"LLM Service": cls.llm_service,
                                         "Question Type": q_type,
                                         "Dataset": dataset,
                                         "Accuracy": acc,
+                                        "Not Wrong Percent": not_wrong_perc,
                                         "Average Response Time (seconds)": avg_resp_time,
                                         "Number of Questions": final_df["Answer Correct"].shape[0]}, commit=True)
                     tmp_table = wandb.Table(dataframe=final_df)
@@ -60,9 +62,11 @@ def test_generator(dataset, row, username, password):
         try:
             answer = list(resp.json()["query_sources"][0].values())[-1]
             query_source = list(resp.json()["query_sources"][0].keys())[-1]
+            question_answered = resp.json()["answered_question"]
         except:
             answer = ""
             query_source = ""
+            question_answered = resp.json()["answered_question"]
         correct = False
         if isinstance(answer, str):
             string_dist = evaluator.evaluate_strings(prediction=answer, reference=true_answer)["score"]
@@ -103,6 +107,7 @@ def test_generator(dataset, row, username, password):
                     str(answer),
                     query_source,
                     correct,
+                    question_answered,
                     t2-t1
             )
 
