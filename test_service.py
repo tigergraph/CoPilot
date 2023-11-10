@@ -5,6 +5,7 @@ import json
 import wandb
 from langchain.evaluation import load_evaluator
 import time
+from pygit2 import Repository
 
 with open("./configs/testing_config.json") as f:
     config = json.load(f)
@@ -24,7 +25,8 @@ class CommonTests():
                     cls.config = {
                         "llm_service": cls.llm_service,
                         "question_type": q_type,
-                        "dataset": dataset
+                        "dataset": dataset,
+                        "branch": Repository('.').head.shorthand
                     }
                     cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]
