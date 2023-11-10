@@ -1,7 +1,7 @@
 from llm_services import LLM_Model
 import os
 
-class AzureOpenAI_GPT35_Turbo(LLM_Model):
+class AzureOpenAI(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
         for auth_detail in config["authentication_configuration"].keys():
@@ -9,11 +9,11 @@ class AzureOpenAI_GPT35_Turbo(LLM_Model):
         from langchain.llms import AzureOpenAI
         self.llm = AzureOpenAI(
             deployment_name=config["deployment_name"],
-            model_name=config["model_name"],
-            temperature=0
+            model_name=config["llm_model"],
+            temperature=config["model_kwargs"]["temperature"]
         )
 
-        self.prompt_path = "./prompts/azure_open_ai_gpt35_turbo_instruct/"
+        self.prompt_path = config["prompt_path"]
 
     @property
     def map_question_schema_prompt(self):

@@ -7,7 +7,7 @@ import json
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from agent import TigerGraphAgent
-from llm_services import OpenAI_Davinci, AzureOpenAI_GPT35_Turbo, AWS_SageMaker_Endpoint
+from llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint
 from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding
 from embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
@@ -80,9 +80,9 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
     conn.customizeHeader(timeout=config["default_timeout"]*1000)
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
-        agent = TigerGraphAgent(OpenAI_Davinci(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+        agent = TigerGraphAgent(OpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
-        agent = TigerGraphAgent(AzureOpenAI_GPT35_Turbo(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+        agent = TigerGraphAgent(AzureOpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
         agent = TigerGraphAgent(AWS_SageMaker_Endpoint(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     else:
