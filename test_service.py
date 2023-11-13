@@ -111,10 +111,7 @@ def test_generator(dataset, row, username, password):
                     t2-t1
             )
 
-        if isinstance(answer, str):
-            self.assertLessEqual(string_dist, .5)
-        else:
-            self.assertEqual(str(answer), true_answer)
+        self.assertEqual(correct, True)
     return test_name, test
 
 with open("./configs/db_config.json", "r") as config_file:
