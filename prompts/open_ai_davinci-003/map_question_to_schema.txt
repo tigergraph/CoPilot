@@ -1,5 +1,6 @@
 Replace the entites mentioned in the question to one of these choices: {vertices}.
 Replace the relationships mentioned in the question to one of these choices: {edges}.
+If there are synonyms, make sure to output the cannonical form found in the choices above.
 Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same.
 If there are no replacements to be made, restate the question.
 Example: How many universities are there?
@@ -8,5 +9,5 @@ Example: What is the schema?
 Response: What is the schema?
 Example: How many transactions are there?
 Response: How many TRANSACTION Edges are there?
+{format_instructions}
 QUESTION: {question}
-RESTATED: 

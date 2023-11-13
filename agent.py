@@ -33,4 +33,4 @@ class TigerGraphAgent():
             resp = self.agent({"input": question})
             return resp
         except Exception as e:
-            return "Error occured with message: "+str(type(e).__name__) + " - " + str(e)
+            raise e

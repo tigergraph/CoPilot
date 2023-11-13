@@ -3,9 +3,19 @@ from langchain.llms.base import LLM
 from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from typing import List, Dict
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
+
+class MapQuestionToSchemaResponse(BaseModel):
+    question: str = Field(description="The question restated in terms of the graph schema")
+    target_vertices: List[str] = Field(description="The list of vertices mentioned in the question. If there are no vertices mentioned, then use an empty list.")
+    target_vertex_attributes: Dict[str, List[str]] = Field(description="The dictionary of vertex attributes mentioned in the question, formated in {'vertex_type': ['vertex_attribute_1', 'vertex_attribute_2']}")
+    target_edges: List[str] = Field(description="The list of edges mentioned in the question. ")
+    target_edge_attributes: Dict[str, List[str]] = Field(description="The dictionary of edge attributes mentioned in the question, formated in {'edge_type': ['edge_attribute_1', 'edge_attribute_2']}")
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
@@ -29,13 +39,6 @@ class GenerateFunction(BaseTool):
         PROMPT = PromptTemplate(
             template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
         )
-        queries = self.conn.getInstalledQueries()
-        for query in queries:
-            queries[query]["parameters"].pop("read_committed")
-            try:
-                queries[query]["parameters"].pop("result_attribute")
-            except:
-                pass
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
@@ -52,7 +55,7 @@ class GenerateFunction(BaseTool):
             exec("res = conn."+generated, {"conn": self.conn}, loc)
             return loc["res"]
         except:
-            raise ToolException("The function {} did not execute directly. Please rephrase your question and try again".format(function))
+            raise ToolException("The function {} did not execute directly. Please rephrase your question and try again".format(generated))
 
 
     async def _arun(self) -> str:
