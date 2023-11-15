@@ -98,17 +98,18 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
 
     try:
         steps = agent.question_for_agent(query.query)
-        query_sources = [{x[0].tool_input:x[-1]} for x in steps["intermediate_steps"] if x[0].tool=="GenerateFunction"]
-
+        function_call = steps["intermediate_steps"][-1][-1].split("Function ")[1].split(" produced")[0]
+        res = steps["intermediate_steps"][-1][-1].split("the result ")[-1]
         resp.natural_language_response = steps["output"]
-        resp.query_sources = query_sources
+        resp.query_sources = {"function_call": function_call,
+                              "result": json.loads(res)}
         resp.answered_question = True
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = str(e)
-        resp.query_sources = [{}]
+        resp.query_sources = {}
         resp.answered_question = False
     except Exception as e:
         resp.natural_language_response = str(e)
-        resp.query_sources = [{}]
+        resp.query_sources = {}
         resp.answered_question = False
     return resp

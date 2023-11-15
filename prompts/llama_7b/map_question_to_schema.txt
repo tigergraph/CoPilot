@@ -8,5 +8,5 @@ Example: What is the schema?
 Response: What is the schema?
 Example: How many transactions are there?
 Response: How many TRANSACTION Edges are there?
+{format_instructions}
 QUESTION: {question}
-RESTATED: 
