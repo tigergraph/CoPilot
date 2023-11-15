@@ -60,8 +60,8 @@ def test_generator(dataset, row, username, password):
         self.assertEqual(resp.status_code, 200)
         evaluator = load_evaluator("string_distance")
         try:
-            answer = list(resp.json()["query_sources"][0].values())[-1]
-            query_source = list(resp.json()["query_sources"][0].keys())[-1]
+            answer = resp.json()["query_sources"]["result"]
+            query_source = resp.json()["query_sources"]["function_call"]
             question_answered = resp.json()["answered_question"]
         except:
             answer = ""

@@ -12,4 +12,4 @@ class GSQLQueryInfo(BaseModel):
 class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
     answered_question: bool
-    query_sources: List[Dict] = None
+    query_sources: Dict = None

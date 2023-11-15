@@ -6,26 +6,22 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from typing import List, Dict
+from schemas import MapQuestionToSchemaResponse
+from typing import List, Dict, Type, Optional
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 
-class MapQuestionToSchemaResponse(BaseModel):
-    question: str = Field(description="The question restated in terms of the graph schema")
-    target_vertices: List[str] = Field(description="The list of vertices mentioned in the question. If there are no vertices mentioned, then use an empty list.")
-    target_vertex_attributes: Dict[str, List[str]] = Field(description="The dictionary of vertex attributes mentioned in the question, formated in {'vertex_type': ['vertex_attribute_1', 'vertex_attribute_2']}")
-    target_edges: List[str] = Field(description="The list of edges mentioned in the question. ")
-    target_edge_attributes: Dict[str, List[str]] = Field(description="The dictionary of edge attributes mentioned in the question, formated in {'edge_type': ['edge_attribute_1', 'edge_attribute_2']}")
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
-    description = "Generates and executes a function call on the database."
+    description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."
     conn: "TigerGraphConnection" = None
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool =True
     embedding_model: EmbeddingModel = None
     embedding_store: EmbeddingStore = None
+    args_schema: Type[MapQuestionToSchemaResponse] = MapQuestionToSchemaResponse
     
     def __init__(self, conn, llm, prompt, embedding_model, embedding_store):
         super().__init__()
@@ -35,7 +31,13 @@ class GenerateFunction(BaseTool):
         self.embedding_model = embedding_model
         self.embedding_store = embedding_store
     
-    def _run(self, question: str) -> str:
+    def _run(self, question: str,
+                   target_vertex_types: List[str] = [],
+                   target_vertex_attributes: Dict[str, List[str]] = {},
+                   target_vertex_ids: Dict[str, List[str]] = {},
+                   target_edge_types: List[str] = [],
+                   target_edge_attributes: Dict[str, List[str]] = {}) -> str:
+
         PROMPT = PromptTemplate(
             template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
         )
@@ -53,9 +55,9 @@ class GenerateFunction(BaseTool):
         try:
             loc = {}
             exec("res = conn."+generated, {"conn": self.conn}, loc)
-            return loc["res"]
+            return "Function {} produced the result {}".format(generated, loc["res"])
         except:
-            raise ToolException("The function {} did not execute directly. Please rephrase your question and try again".format(generated))
+            raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 
     async def _arun(self) -> str:

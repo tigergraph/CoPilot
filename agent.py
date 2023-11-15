@@ -1,4 +1,5 @@
 from langchain.agents import AgentType, initialize_agent
+from typing import List, Union
 
 from tools import GenerateFunction, MapQuestionToSchema
 from embedding_utils.embedding_services import EmbeddingModel
@@ -12,12 +13,15 @@ class TigerGraphAgent():
 
         self.llm = llm_provider
 
-        tools = [MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt),
-                 GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)]
+        self.mq2s = MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt)
+        self.gen_func = GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)
 
+        tools = [self.mq2s, self.gen_func]
+        
+        
         self.agent = initialize_agent(tools,
                                       self.llm.model,
-                                      agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+                                      agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
                                       verbose=True,
                                       return_intermediate_steps=True,
                                       max_iterations=5,
@@ -28,7 +32,7 @@ class TigerGraphAgent():
                                                      NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS."""
                                       })
 
-    def question_for_agent(self, question) -> str:
+    def question_for_agent(self, question):
         try:
             resp = self.agent({"input": question})
             return resp
