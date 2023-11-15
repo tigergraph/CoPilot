@@ -41,7 +41,16 @@ class GenerateFunction(BaseTool):
         PROMPT = PromptTemplate(
             template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
         )
-        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
+
+        lookup_question = question + "\n"
+        if target_vertex_types != []:
+            lookup_question += "using vertices: "+str(target_vertex_types) + "\n"
+        if target_edge_types != []:
+            lookup_question += "using edges: "+str(target_edge_types)
+
+        print(lookup_question)
+
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
                     "vertices": self.conn.getVertexTypes(), 
                     "edges": self.conn.getEdgeTypes(), 

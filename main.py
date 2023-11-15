@@ -102,7 +102,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         res = steps["intermediate_steps"][-1][-1].split("the result ")[-1]
         resp.natural_language_response = steps["output"]
         resp.query_sources = {"function_call": function_call,
-                              "result": json.loads(res)}
+                              "result": res}
         resp.answered_question = True
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = str(e)
