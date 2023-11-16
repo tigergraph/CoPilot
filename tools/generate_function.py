@@ -39,21 +39,23 @@ class GenerateFunction(BaseTool):
                    target_edge_attributes: Dict[str, List[str]] = {}) -> str:
 
         PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
+            template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
+                                                   "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
         )
 
-        lookup_question = question + "\n"
+        lookup_question = question + " "
         if target_vertex_types != []:
-            lookup_question += "using vertices: "+str(target_vertex_types) + "\n"
+            lookup_question += "using vertices: "+str(target_vertex_types) + " "
         if target_edge_types != []:
             lookup_question += "using edges: "+str(target_edge_types)
 
-        print(lookup_question)
-
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
-                    "vertices": self.conn.getVertexTypes(), 
-                    "edges": self.conn.getEdgeTypes(), 
+                    "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
+                    "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
+                    "vertex_attributes": target_vertex_attributes,
+                    "vertex_ids": target_vertex_ids,
+                    "edge_attributes": target_edge_attributes,
                     "doc1": docs[0].page_content,
                     "doc2": docs[1].page_content,
                     "doc3": docs[2].page_content
@@ -65,7 +67,8 @@ class GenerateFunction(BaseTool):
             loc = {}
             exec("res = conn."+generated, {"conn": self.conn}, loc)
             return "Function {} produced the result {}".format(generated, loc["res"])
-        except:
+        except Exception as e:
+            print(e)
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 

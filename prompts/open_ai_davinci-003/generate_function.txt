@@ -1,7 +1,10 @@
-Use the vertex types, edge types to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+Use the information below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
-Vertex Types: {vertices}
-Edge Types: {edges}
+Vertex Types: {vertex_types}
+Vertex Attributes: {vertex_attributes}
+Vertex IDs: {vertex_ids}
+Edge Types: {edge_types}
+Edge Attributes: {edge_attributes}
 Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
