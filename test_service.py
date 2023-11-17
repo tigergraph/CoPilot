@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import json
 import wandb
 from langchain.evaluation import load_evaluator
+from langchain.chat_models import ChatOpenAI
 import time
 from pygit2 import Repository
 
@@ -97,6 +98,21 @@ def test_generator(dataset, row, username, password):
                 correct = True
         elif isinstance(answer, float):
             if answer == float(true_answer):
+                correct = True
+
+        if question_answered and not(correct): # final LLM evaluation
+            test_llm_config = json.load(open("./configs/test_evaluation_model_config.json"))
+            llm = ChatOpenAI(**test_llm_config)
+            
+            evaluator = load_evaluator("labeled_score_string", llm=llm)
+
+            eval_result = evaluator.evaluate_strings(
+                prediction=str(answer)+" answered by this function call: " +str(query_source),
+                reference=str(true_answer)+" answered by this function call: "+str(function_call),
+                input=question
+            )
+
+            if eval_result["score"] >= 7:
                 correct = True
 
         if USE_WANDB:
