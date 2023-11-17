@@ -29,7 +29,8 @@ class TigerGraphAgent():
                                       agent_kwargs={
                                         "prefix": """DIRECTLY TRANSFER THE OBSERVATION INTO ACTION INPUTS AS NECESSARY.
                                                      BE VERBOSE IN ACTION INPUTS AND THOUGHTS. NEVER CALL MULTIPLE FUNCTIONS.
-                                                     NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS."""
+                                                     NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS.
+                                                     ALWAYS USE THE MapQuestionToSchema TOOL BEFORE GenerateFunction."""
                                       })
 
     def question_for_agent(self, question):

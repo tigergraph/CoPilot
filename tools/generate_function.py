@@ -10,7 +10,8 @@ from schemas import MapQuestionToSchemaResponse
 from typing import List, Dict, Type, Optional
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
-
+from .validate_against_schema import validate_schema, MapQuestionToSchemaException
+import json
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
@@ -43,6 +44,15 @@ class GenerateFunction(BaseTool):
                                                    "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
         )
 
+        try:
+            validate_schema(self.conn,
+                            target_vertex_types, 
+                            target_edge_types,
+                            target_vertex_attributes, 
+                            target_edge_attributes)
+        except MapQuestionToSchemaException as e:
+            return e
+
         lookup_question = question + " "
         if target_vertex_types != []:
             lookup_question += "using vertices: "+str(target_vertex_types) + " "
@@ -63,10 +73,14 @@ class GenerateFunction(BaseTool):
 
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
+
+        #TODO: Check if the generated function is within the function/installed query library to prevent prompt injection hacking.
+
+
         try:
             loc = {}
             exec("res = conn."+generated, {"conn": self.conn}, loc)
-            return "Function {} produced the result {}".format(generated, loc["res"])
+            return "Function {} produced the result {}".format(generated, json.dumps(loc["res"]))
         except Exception as e:
             print(e)
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
@@ -77,4 +91,4 @@ class GenerateFunction(BaseTool):
         raise NotImplementedError("custom_search does not support async")
         
     def _handle_error(error:ToolException) -> str:
-        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please ask for human input if they asked their question correctly."
+        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure the question is mapped to the schema correctly"

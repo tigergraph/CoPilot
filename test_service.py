@@ -65,16 +65,10 @@ def test_generator(dataset, row, username, password):
             question_answered = resp.json()["answered_question"]
         except:
             answer = ""
-            query_source = ""
+            query_source = str(resp.json()["query_sources"])
             question_answered = resp.json()["answered_question"]
-        try:
-            answer = json.loads(answer.replace("'", '"'))
-        except json.JSONDecodeError:
-            answer = answer
         correct = False
-        print(answer)
         if isinstance(answer, str):
-            print("evaluating as string")
             string_dist = evaluator.evaluate_strings(prediction=answer, reference=true_answer)["score"]
             if string_dist <= .2:
                 correct = True
@@ -87,18 +81,22 @@ def test_generator(dataset, row, username, password):
                     else:
                         correct = False
                         break
-            except:
+            except Exception as e:
                 correct = False
         elif isinstance(answer, dict):
-            print("evaluating as dict")
             try:
                 json_form = json.loads(true_answer)
                 if sorted(answer.items()) == sorted(json_form.items()):
                     correct = True
-            except:
+                else:
+                    correct = False
+            except Exception as e:
                 correct = False
-        else:
-            if str(answer) == true_answer:
+        elif isinstance(answer, int):
+            if answer == int(true_answer):
+                correct = True
+        elif isinstance(answer, float):
+            if answer == float(true_answer):
                 correct = True
 
         if USE_WANDB:

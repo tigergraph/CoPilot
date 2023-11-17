@@ -8,11 +8,9 @@ from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from schemas import MapQuestionToSchemaResponse
 from typing import List, Dict
+from .validate_against_schema import validate_schema, MapQuestionToSchemaException
 import re
 
-
-class MapQuestionToSchemaException(Exception):
-    pass
 
 
 class MapQuestionToSchema(BaseTool):
@@ -47,30 +45,21 @@ class MapQuestionToSchema(BaseTool):
 
         parsed_q = parser.invoke(restate_q)
 
-        vertices = self.conn.getVertexTypes()
-        edges = self.conn.getEdgeTypes()
-        for v in parsed_q.target_vertex_types:
-            if v in vertices:
-                attrs = [x["AttributeName"] for x in self.conn.getVertexType(v)["Attributes"]]
-                for attr in parsed_q.target_vertex_attributes.get(v, []):
-                    if attr not in attrs:
-                        raise MapQuestionToSchemaException(attr + " is not found for " + v + " in the data schema. Please rephrase your question and try again.")
-            else:
-                raise MapQuestionToSchemaException(v + " is not found in the data schema. Please rephrase your question and try again.")
 
-        for e in parsed_q.target_edge_types:
-            if e in edges:
-                attrs = [x["AttributeName"] for x in self.conn.getEdgeType(e)["Attributes"]]
-                for attr in parsed_q.target_edge_attributes.get(e, []):
-                    if attr not in attrs:
-                        raise MapQuestionToSchemaException(attr + " is not found for " + e + " in the data schema. Please rephrase your question and try again.")
-            else:
-                raise MapQuestionToSchemaException(v + " is not found in the data schema. Please rephrase your question and try again.")
+        try:
+            validate_schema(self.conn,
+                            parsed_q.target_vertex_types, 
+                            parsed_q.target_edge_types,
+                            parsed_q.target_vertex_attributes, 
+                            parsed_q.target_edge_attributes)
+        except MapQuestionToSchemaException as e:
+            raise e
+    
         return parsed_q
     
     async def _arun(self) -> str:
         """Use the tool asynchronously."""
         raise NotImplementedError("custom_search does not support async")
         
-    #def _handle_error(self, error:ToolException) -> str:
-    #    return  "The following errors occurred during tool execution:" + error.args[0]+ "Please ask for human input if they asked their question correctly."
+    def _handle_error(self, error:MapQuestionToSchemaException) -> str:
+        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure to map the question to the schema"
