@@ -24,13 +24,14 @@ class TigerGraphAgent():
                                       agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
                                       verbose=True,
                                       return_intermediate_steps=True,
-                                      max_iterations=5,
+                                      max_iterations=7,
                                       early_stopping_method="generate",
+                                      handle_parsing_errors=True,
                                       agent_kwargs={
                                         "prefix": """DIRECTLY TRANSFER THE OBSERVATION INTO ACTION INPUTS AS NECESSARY.
-                                                     BE VERBOSE IN ACTION INPUTS AND THOUGHTS. NEVER CALL MULTIPLE FUNCTIONS.
+                                                     BE VERBOSE IN ACTION INPUTS AND THOUGHTS.
                                                      NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS.
-                                                     ALWAYS USE THE MapQuestionToSchema TOOL BEFORE GenerateFunction."""
+                                                     ALWAYS USE THE MapQuestionToSchema TOOL BEFORE GenerateFunction.'"""
                                       })
 
     def question_for_agent(self, question):

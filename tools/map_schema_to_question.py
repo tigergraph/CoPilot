@@ -61,5 +61,5 @@ class MapQuestionToSchema(BaseTool):
         """Use the tool asynchronously."""
         raise NotImplementedError("custom_search does not support async")
         
-    def _handle_error(self, error:MapQuestionToSchemaException) -> str:
-        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure to map the question to the schema"
+    #def _handle_error(self, error:MapQuestionToSchemaException) -> str:
+    #    return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure to map the question to the schema"

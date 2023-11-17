@@ -7,7 +7,7 @@ from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from schemas import MapQuestionToSchemaResponse
-from typing import List, Dict, Type, Optional
+from typing import List, Dict, Type, Optional, Union
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
 from .validate_against_schema import validate_schema, MapQuestionToSchemaException
@@ -43,6 +43,9 @@ class GenerateFunction(BaseTool):
             template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
                                                    "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
         )
+
+        if target_vertex_types == [] and target_edge_types == []:
+            return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
 
         try:
             validate_schema(self.conn,
@@ -90,5 +93,5 @@ class GenerateFunction(BaseTool):
         """Use the tool asynchronously."""
         raise NotImplementedError("custom_search does not support async")
         
-    def _handle_error(error:ToolException) -> str:
-        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure the question is mapped to the schema correctly"
+    #def _handle_error(error:Union[ToolException, MapQuestionToSchemaException]) -> str:
+    #    return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure the question is mapped to the schema correctly"

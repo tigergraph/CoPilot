@@ -101,7 +101,9 @@ def test_generator(dataset, row, username, password):
                 correct = True
 
         if question_answered and not(correct): # final LLM evaluation
-            test_llm_config = json.load(open("./configs/test_evaluation_model_config.json"))
+            fp = open("./configs/test_evaluation_model_config.json")
+            test_llm_config = json.load(fp)
+            fp.close()
             llm = ChatOpenAI(**test_llm_config)
             
             evaluator = load_evaluator("labeled_score_string", llm=llm)
