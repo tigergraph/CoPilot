@@ -18,8 +18,8 @@ class EmbeddingModel(Embeddings):
 class AzureOpenAI_Ada002(EmbeddingModel):
     def __init__(self, config):
         super().__init__(config)
-        from langchain.embeddings import OpenAIEmbeddings
-        self.embeddings = OpenAIEmbeddings(deployment=config["deployment"])
+        from langchain.embeddings import AzureOpenAIEmbeddings
+        self.embeddings = AzureOpenAIEmbeddings(deployment=config["deployment"])
 
 
 class OpenAI_Embedding(EmbeddingModel):
