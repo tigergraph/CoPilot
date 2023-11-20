@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import json
 import wandb
 from langchain.evaluation import load_evaluator
+from langchain.chat_models import ChatOpenAI
 import time
 from pygit2 import Repository
 
@@ -65,7 +66,7 @@ def test_generator(dataset, row, username, password):
             question_answered = resp.json()["answered_question"]
         except:
             answer = ""
-            query_source = ""
+            query_source = str(resp.json()["query_sources"])
             question_answered = resp.json()["answered_question"]
         correct = False
         if isinstance(answer, str):
@@ -81,17 +82,39 @@ def test_generator(dataset, row, username, password):
                     else:
                         correct = False
                         break
-            except:
+            except Exception as e:
                 correct = False
         elif isinstance(answer, dict):
             try:
                 json_form = json.loads(true_answer)
                 if sorted(answer.items()) == sorted(json_form.items()):
                     correct = True
-            except:
+                else:
+                    correct = False
+            except Exception as e:
                 correct = False
-        else:
-            if str(answer) == true_answer:
+        elif isinstance(answer, int):
+            if answer == int(true_answer):
+                correct = True
+        elif isinstance(answer, float):
+            if answer == float(true_answer):
+                correct = True
+
+        if question_answered and not(correct): # final LLM evaluation
+            fp = open("./configs/test_evaluation_model_config.json")
+            test_llm_config = json.load(fp)
+            fp.close()
+            llm = ChatOpenAI(**test_llm_config)
+            
+            evaluator = load_evaluator("labeled_score_string", llm=llm)
+
+            eval_result = evaluator.evaluate_strings(
+                prediction=str(answer)+" answered by this function call: " +str(query_source),
+                reference=str(true_answer)+" answered by this function call: "+str(function_call),
+                input=question
+            )
+
+            if eval_result["score"] >= 7:
                 correct = True
 
         if USE_WANDB:

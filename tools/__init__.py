@@ -1,3 +1,4 @@
 from .generate_function import GenerateFunction
 from .map_schema_to_question import MapQuestionToSchema
-from .map_schema_to_question import MapQuestionToSchemaException
+from .validate_against_schema import MapQuestionToSchemaException
+from .validate_against_schema import validate_schema

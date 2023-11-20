@@ -7,10 +7,11 @@ from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from schemas import MapQuestionToSchemaResponse
-from typing import List, Dict, Type, Optional
+from typing import List, Dict, Type, Optional, Union
 from embedding_utils.embedding_services import EmbeddingModel
 from embedding_utils.embedding_stores import EmbeddingStore
-
+from .validate_against_schema import validate_schema, MapQuestionToSchemaException
+import json
 
 class GenerateFunction(BaseTool):
     name = "GenerateFunction"
@@ -39,12 +40,35 @@ class GenerateFunction(BaseTool):
                    target_edge_attributes: Dict[str, List[str]] = {}) -> str:
 
         PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertices", "edges", "doc1", "doc2", "doc3"]
+            template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
+                                                   "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
         )
-        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
+
+        if target_vertex_types == [] and target_edge_types == []:
+            return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
+
+        try:
+            validate_schema(self.conn,
+                            target_vertex_types, 
+                            target_edge_types,
+                            target_vertex_attributes, 
+                            target_edge_attributes)
+        except MapQuestionToSchemaException as e:
+            return e
+
+        lookup_question = question + " "
+        if target_vertex_types != []:
+            lookup_question += "using vertices: "+str(target_vertex_types) + " "
+        if target_edge_types != []:
+            lookup_question += "using edges: "+str(target_edge_types)
+
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
-                    "vertices": self.conn.getVertexTypes(), 
-                    "edges": self.conn.getEdgeTypes(), 
+                    "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
+                    "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
+                    "vertex_attributes": target_vertex_attributes,
+                    "vertex_ids": target_vertex_ids,
+                    "edge_attributes": target_edge_attributes,
                     "doc1": docs[0].page_content,
                     "doc2": docs[1].page_content,
                     "doc3": docs[2].page_content
@@ -52,11 +76,16 @@ class GenerateFunction(BaseTool):
 
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
+
+        #TODO: Check if the generated function is within the function/installed query library to prevent prompt injection hacking.
+
+
         try:
             loc = {}
             exec("res = conn."+generated, {"conn": self.conn}, loc)
-            return "Function {} produced the result {}".format(generated, loc["res"])
-        except:
+            return "Function {} produced the result {}".format(generated, json.dumps(loc["res"]))
+        except Exception as e:
+            print(e)
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 
@@ -64,5 +93,5 @@ class GenerateFunction(BaseTool):
         """Use the tool asynchronously."""
         raise NotImplementedError("custom_search does not support async")
         
-    def _handle_error(error:ToolException) -> str:
-        return  "The following errors occurred during tool execution:" + error.args[0]+ "Please ask for human input if they asked their question correctly."
+    #def _handle_error(error:Union[ToolException, MapQuestionToSchemaException]) -> str:
+    #    return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure the question is mapped to the schema correctly"
