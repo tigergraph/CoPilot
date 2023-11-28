@@ -1,0 +1,14 @@
+The PageRank algorithm measures the influence of each vertex on every other vertex. PageRank influence is defined recursively: a vertex’s influence is based on the influence of the vertices which refer to it. A vertex’s influence tends to increase if either of these conditions are met:
+* It has more referring vertices
+* Its referring vertices have higher influence
+
+A common way of interpreting PageRank value is through the Random Network Surfer model. A vertex’s PageRank score is proportional to the probability that a random network surfer will be at that vertex at any given time. A vertex with a high PageRank score is a vertex that is frequently visited, assuming that vertices are visited according to the following Random Surfer scheme:
+* Assume a person travels or surfs across a network’s structure, moving from vertex to vertex.
+* The surfer can start anywhere. This start-anywhere property is part of the magic of PageRank, meaning the score is a truly fundamental property of the graph structure itself.
+* Each round, the surfer randomly picks one of the outward connections from the surfer’s current location. The surfer repeats this random walk for a long time.
+* There is a small probability that the surfer’s next step will be a random vertex instead of a connected vertex. This probability is expressed in the algorithm as (1 - damping).
+
+To run this algorithm, use `runInstalledQuery('tg_pagerank', params={'v_type': 'INSERT_V_TYPE_HERE', 'e_type': 'INSERT_E_TYPE_HERE', 'top_k': INSERT_TOP_K_HERE})`, where the parameters are:
+* 'v_type': The vertex type to run the algorithm on.
+* 'e_type': The edge type to run the algorithm on.
+* 'top_k': The number of top scoring vertices to return to the user.
