@@ -6,9 +6,10 @@ class OpenAI(LLM_Model):
         super().__init__(config)
         for auth_detail in config["authentication_configuration"].keys():
             os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
-        from langchain.llms import OpenAI
-        self.llm = OpenAI(temperature=config["model_kwargs"]["temperature"],
-                          model_name=config["llm_model"])
+        
+        from langchain.chat_models import ChatOpenAI
+        self.llm = ChatOpenAI(temperature=config["model_kwargs"]["temperature"],
+                              model_name=config["llm_model"])
         self.prompt_path = config["prompt_path"]
 
     @property
