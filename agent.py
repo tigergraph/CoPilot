@@ -24,7 +24,7 @@ class TigerGraphAgent():
                                       agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
                                       verbose=True,
                                       return_intermediate_steps=True,
-                                      max_iterations=7,
+                                      #max_iterations=7,
                                       early_stopping_method="generate",
                                       handle_parsing_errors=True,
                                       agent_kwargs={
