@@ -1,0 +1,4 @@
+The author_field_of_study query traverses from an Author Vertex to FieldOfStudy Vertices through the Papers that the particular Author has written.
+To run the query, use `runInstalledQuery('author_field_of_study', params={'auth_id': AUTHOR_ID_HERE})`
+
+Replace `AUTHOR_ID_HERE` with the appropriate author id mentioned in the question.

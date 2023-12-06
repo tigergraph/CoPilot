@@ -1,0 +1,6 @@
+CREATE DISTRIBUTED QUERY author_fields_of_study(VERTEX<Author> auth_id) FOR GRAPH OGB_MAG { 
+  start = {auth_id};
+  
+  res = SELECT fs FROM start:s -()- :mid -()- FieldOfStudy:fs;
+  PRINT res;
+}

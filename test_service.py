@@ -42,7 +42,7 @@ class CommonTests():
                     cls.wandbLogger.log({"qa_results": tmp_table})
                     wandb.finish()
 
-def test_generator(dataset, row, username, password):
+def question_test_generator(dataset, row, username, password):
     
     # Need to extract q/a pairs before test is generated,
     # as otherwise we look at the last question/answer pair is used
@@ -52,7 +52,7 @@ def test_generator(dataset, row, username, password):
     question_theme = row["Question Theme"]
     question_type = row["Question Type"]
 
-    test_name = "test_"+dataset+"_"+str(row.name)+question_theme.replace(" ", "_")
+    test_name = "test_question_"+dataset+"_"+str(row.name)+question_theme.replace(" ", "_")
 
     def test(self):
         t1 = time.time()
@@ -137,13 +137,47 @@ def test_generator(dataset, row, username, password):
         self.assertEqual(correct, True)
     return test_name, test
 
+
+def query_registration_test_generator(dataset, username, password, query_name, query_description, heavy_runtime):
+    
+    # Need to extract q/a pairs before test is generated,
+    # as otherwise we look at the last question/answer pair is used
+
+    test_name = "test_insert_"+dataset+"_"+query_name
+
+    def test(self):
+        resp = self.client.post("/"+dataset+"/register-custom-query",
+                                json={"query_name": query_name,
+                                      "query_description": query_description.replace("\n", " "),
+                                      "heavy_runtime_warning": heavy_runtime}, 
+                                auth=(username, password))
+        self.assertEqual(resp.status_code, 200)
+        id = resp.json()[0]
+        self.assertIsInstance(id, str)
+    return test_name, test
+
 with open("./configs/db_config.json", "r") as config_file:
     config = json.load(config_file)
 
+def get_query_and_prompt(suite, query):
+    heavy_runtime = False
+    with open("./test_questions/"+suite+"/"+query+"/"+query+"_prompt.txt") as f:
+        query_desc = f.read()
+    return query_desc, heavy_runtime
+
 for suite in ["OGB_MAG"]:
+    queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x))]
+
+    prompts = [(q, get_query_and_prompt(suite, q)) for q in queries]
+
+    registration_tests = [query_registration_test_generator(suite, config["username"], config["password"], q[0], q[1][0], q[1][1]) for q in prompts]
+
+    for rt in registration_tests:
+        setattr(CommonTests, rt[0], rt[1])
+
     questions = "./test_questions/"+suite+"/"+suite+"Questions.tsv"
     questions = pd.read_csv(questions, delimiter="\t")
     
-    tests = list(questions.apply(lambda x: test_generator(suite, x, config["username"], config["password"]), axis = 1))
+    tests = list(questions.apply(lambda x: question_test_generator(suite, x, config["username"], config["password"]), axis = 1))
     for test in tests:
         setattr(CommonTests, test[0], test[1])
