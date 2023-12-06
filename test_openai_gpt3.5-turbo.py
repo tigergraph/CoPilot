@@ -18,7 +18,7 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
         os.environ["LLM_CONFIG"] = "./configs/openai_llm_config.json"
         from main import app
         cls.client = TestClient(app)
-        cls.llm_service = "open_ai_davinci-003"
+        cls.llm_service = "openai_gpt-3.5-turbo-1106"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
