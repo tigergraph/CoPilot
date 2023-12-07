@@ -62,7 +62,7 @@ class GenerateFunction(BaseTool):
         if target_edge_types != []:
             lookup_question += "using edges: "+str(target_edge_types)
 
-        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
                     "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
                     "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
