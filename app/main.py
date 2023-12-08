@@ -54,7 +54,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    with open("./configs/db_config.json", "r") as config_file:
+    with open("../configs/db_config.json", "r") as config_file:
         config = json.load(config_file)
         
     conn = TigerGraphConnection(
