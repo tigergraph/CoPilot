@@ -20,7 +20,7 @@ distro==1.8.0
 docker-pycreds==0.4.0
 emoji==2.8.0
 exceptiongroup==1.1.3
-faiss==1.7.4
+#faiss==1.7.4
 faiss-cpu==1.7.4
 fastapi==0.103.1
 filetype==1.2.0
@@ -56,9 +56,6 @@ langdetect==1.0.9
 langsmith==0.0.64
 lxml==4.9.3
 marshmallow==3.20.1
-mkl-fft @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs_af8wl3mjfu/croot/mkl_fft_1695058185839/work
-mkl-random @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs_0fq2s894lk/croot/mkl_random_1695059822529/work
-mkl-service==2.4.0
 multidict==6.0.4
 mypy-extensions==1.0.0
 nltk==3.8.1

@@ -15,6 +15,7 @@ from app.tools import MapQuestionToSchemaException
 from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
+DB_CONFIG = os.getenv("DB_CONFIG")
 
 with open(LLM_SERVICE, "r") as f:
     llm_config = json.load(f)
@@ -54,7 +55,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    with open("./configs/db_config.json", "r") as config_file:
+    with open(DB_CONFIG, "r") as config_file:
         config = json.load(config_file)
         
     conn = TigerGraphConnection(
