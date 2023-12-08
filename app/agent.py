@@ -1,11 +1,11 @@
 from langchain.agents import AgentType, initialize_agent
 from typing import List, Union
 
-from tools import GenerateFunction, MapQuestionToSchema
-from embedding_utils.embedding_services import EmbeddingModel
-from embedding_utils.embedding_stores import EmbeddingStore
+from app.tools import GenerateFunction, MapQuestionToSchema
+from app.embedding_utils.embedding_services import EmbeddingModel
+from app.embedding_utils.embedding_stores import EmbeddingStore
 
-from llm_services.base_llm import LLM_Model
+from app.llm_services.base_llm import LLM_Model
 
 class TigerGraphAgent():
     def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnection", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):

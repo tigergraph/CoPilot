@@ -1,17 +1,12 @@
-from llm_services import LLM_Model
-import os
+from app.llm_services import LLM_Model
 
-class AzureOpenAI(LLM_Model):
+class GoogleVertexAI(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
-        for auth_detail in config["authentication_configuration"].keys():
-            os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
-        from langchain.llms import AzureOpenAI
-        self.llm = AzureOpenAI(
-            azure_deployment=config["azure_deployment"],
-            openai_api_version=config["openai_api_version"],
+        from langchain.llms import VertexAI
+        self.llm = VertexAI(
             model_name=config["llm_model"],
-            temperature=config["model_kwargs"]["temperature"]
+            **config["model_kwargs"]
         )
 
         self.prompt_path = config["prompt_path"]

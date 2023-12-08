@@ -6,10 +6,10 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from schemas import MapQuestionToSchemaResponse
+from app.schemas import MapQuestionToSchemaResponse
 from typing import List, Dict, Type, Optional, Union
-from embedding_utils.embedding_services import EmbeddingModel
-from embedding_utils.embedding_stores import EmbeddingStore
+from app.embedding_utils.embedding_services import EmbeddingModel
+from app.embedding_utils.embedding_stores import EmbeddingStore
 from .validate_against_schema import validate_schema, MapQuestionToSchemaException
 import json
 

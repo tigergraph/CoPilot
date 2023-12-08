@@ -16,7 +16,7 @@ class TestWithVertexAI(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         os.environ["LLM_CONFIG"] = "./configs/gcp_palm_config.json"
-        from main import app
+        from app.main import app
         cls.client = TestClient(app)
         cls.llm_service = "gcp-text-bison"
         if USE_WANDB:

@@ -6,15 +6,16 @@ import json
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from agent import TigerGraphAgent
-from llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
-from embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
-from embedding_utils.embedding_stores import FAISS_EmbeddingStore
+from app.agent import TigerGraphAgent
+from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
+from app.embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
+from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
-from tools import MapQuestionToSchemaException
-from schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
+from app.tools import MapQuestionToSchemaException
+from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
+DB_CONFIG = os.getenv("DB_CONFIG")
 
 with open(LLM_SERVICE, "r") as f:
     llm_config = json.load(f)
@@ -54,7 +55,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    with open("./configs/db_config.json", "r") as config_file:
+    with open(DB_CONFIG, "r") as config_file:
         config = json.load(config_file)
         
     conn = TigerGraphConnection(

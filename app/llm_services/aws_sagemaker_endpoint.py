@@ -1,4 +1,4 @@
-from llm_services import LLM_Model
+from app.llm_services import LLM_Model
 from langchain.llms.sagemaker_endpoint import LLMContentHandler
 import json
 from typing import Dict

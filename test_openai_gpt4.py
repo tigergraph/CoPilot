@@ -16,7 +16,7 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         os.environ["LLM_CONFIG"] = "./configs/openai_gpt4_config.json"
-        from main import app
+        from app.main import app
         cls.client = TestClient(app)
         cls.llm_service = "openai_gpt-4-0613"
         if USE_WANDB:
