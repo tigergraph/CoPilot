@@ -1,4 +1,4 @@
-from llm_services import LLM_Model
+from app.llm_services import LLM_Model
 
 class GoogleVertexAI(LLM_Model):
     def __init__(self, config):

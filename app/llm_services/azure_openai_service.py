@@ -1,4 +1,4 @@
-from llm_services import LLM_Model
+from app.llm_services import LLM_Model
 import os
 
 class AzureOpenAI(LLM_Model):
