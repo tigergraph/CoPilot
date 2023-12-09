@@ -94,11 +94,17 @@ def question_test_generator(dataset, row, username, password):
             except Exception as e:
                 correct = False
         elif isinstance(answer, int):
-            if answer == int(true_answer):
-                correct = True
+            try:
+                if answer == int(true_answer):
+                    correct = True
+            except TypeError:
+                correct = False
         elif isinstance(answer, float):
-            if answer == float(true_answer):
-                correct = True
+            try:
+                if answer == float(true_answer):
+                    correct = True
+            except TypeError:
+                correct = False
 
         if question_answered and not(correct): # final LLM evaluation
             fp = open("./configs/test_evaluation_model_config.json")
