@@ -1,5 +1,5 @@
 from typing import Iterable, Tuple, List
-from embedding_utils.embedding_services import EmbeddingModel
+from app.embedding_utils.embedding_services import EmbeddingModel
 
 class EmbeddingStore():
     def __init__(self):
@@ -19,7 +19,7 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         from langchain.vectorstores import FAISS
         from langchain.document_loaders import DirectoryLoader
 
-        loader = DirectoryLoader("./pytg_documents/", glob="*.txt")
+        loader = DirectoryLoader("./app/pytg_documents/", glob="*.txt")
         docs = loader.load()
 
         self.faiss = FAISS.from_documents(docs, embedding_service)
