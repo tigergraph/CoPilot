@@ -44,7 +44,7 @@ def read_root():
 
 @app.post("/{graphname}/register-custom-query")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    vec = embedding_service.embed_documents(query_info.query_description)[0]
+    vec = embedding_service.embed_query(query_info.query_description)
     res = embedding_store.add_embeddings([(query_info.query_description, vec)], [{"name": query_info.query_name, "heavy_runtime": query_info.heavy_runtime_warning}])
     return res
 
