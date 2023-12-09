@@ -97,13 +97,13 @@ def question_test_generator(dataset, row, username, password):
             try:
                 if answer == int(true_answer):
                     correct = True
-            except TypeError:
+            except ValueError:
                 correct = False
         elif isinstance(answer, float):
             try:
                 if answer == float(true_answer):
                     correct = True
-            except TypeError:
+            except ValueError:
                 correct = False
 
         if question_answered and not(correct): # final LLM evaluation
