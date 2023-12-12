@@ -10,7 +10,7 @@ from app.schemas import MapQuestionToSchemaResponse
 from typing import List, Dict, Type, Optional, Union
 from app.embedding_utils.embedding_services import EmbeddingModel
 from app.embedding_utils.embedding_stores import EmbeddingStore
-from .validate_against_schema import validate_schema, MapQuestionToSchemaException
+from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException
 import json
 
 class GenerateFunction(BaseTool):
@@ -77,8 +77,7 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
 
-        #TODO: Check if the generated function is within the function/installed query library to prevent prompt injection hacking.
-
+        generated = validate_function_call(self.conn, generated, docs)
 
         try:
             loc = {}
