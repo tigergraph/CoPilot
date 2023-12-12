@@ -8,7 +8,7 @@ from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from app.schemas import MapQuestionToSchemaResponse
 from typing import List, Dict
-from .validate_against_schema import validate_schema, MapQuestionToSchemaException
+from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re
 
 
