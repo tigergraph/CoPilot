@@ -5,9 +5,10 @@ class NaturalLanguageQuery(BaseModel):
     query:str
 
 class GSQLQueryInfo(BaseModel):
-    query_name: str
-    query_description: str
-    heavy_runtime_warning: bool = False
+    function_header: str
+    description: str
+    docstring: str
+    param_types: dict = {}
 
 class NaturalLanguageQueryResponse(BaseModel):
     natural_language_response: str
