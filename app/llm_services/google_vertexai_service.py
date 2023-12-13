@@ -6,6 +6,7 @@ class GoogleVertexAI(LLM_Model):
         from langchain.llms import VertexAI
         self.llm = VertexAI(
             model_name=config["llm_model"],
+            max_output_tokens=1000,
             **config["model_kwargs"]
         )
 

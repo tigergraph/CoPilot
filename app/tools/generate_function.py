@@ -10,7 +10,7 @@ from app.schemas import MapQuestionToSchemaResponse
 from typing import List, Dict, Type, Optional, Union
 from app.embedding_utils.embedding_services import EmbeddingModel
 from app.embedding_utils.embedding_stores import EmbeddingStore
-from .validate_against_schema import validate_schema, MapQuestionToSchemaException
+from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException
 import json
 
 class GenerateFunction(BaseTool):
@@ -62,7 +62,7 @@ class GenerateFunction(BaseTool):
         if target_edge_types != []:
             lookup_question += "using edges: "+str(target_edge_types)
 
-        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(question), top_k=3)
+        docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
                     "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
                     "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
@@ -77,8 +77,10 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
 
-        #TODO: Check if the generated function is within the function/installed query library to prevent prompt injection hacking.
-
+        try:
+            generated = validate_function_call(self.conn, generated, docs)
+        except InvalidFunctionCallException as e:
+            return e
 
         try:
             loc = {}

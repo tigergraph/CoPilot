@@ -17,9 +17,21 @@ class EmbeddingStore():
 class FAISS_EmbeddingStore(EmbeddingStore):
     def __init__(self, embedding_service: EmbeddingModel):
         from langchain.vectorstores import FAISS
-        from langchain.document_loaders import DirectoryLoader
+        from langchain.document_loaders import DirectoryLoader, JSONLoader
 
-        loader = DirectoryLoader("./app/pytg_documents/", glob="*.txt")
+        def metadata_func(record: dict, metadata: dict) -> dict:
+            metadata["function_header"] = record.get("function_header")
+            metadata["description"] = record.get("description")
+            metadata["param_types"] = record.get("param_types")
+
+            return metadata
+
+        loader = DirectoryLoader("./app/pytg_documents/", 
+                                 glob="*.json",
+                                 loader_cls=JSONLoader,
+                                 loader_kwargs = {'jq_schema':'.', 
+                                                  'content_key': 'docstring',
+                                                  'metadata_func': metadata_func})
         docs = loader.load()
 
         self.faiss = FAISS.from_documents(docs, embedding_service)

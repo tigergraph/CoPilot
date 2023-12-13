@@ -9,6 +9,7 @@ import time
 from pygit2 import Repository
 
 USE_WANDB = True
+EPS = 0.001
 
 class CommonTests():
     @classmethod
@@ -55,6 +56,38 @@ def question_test_generator(dataset, row, username, password):
     test_name = "test_question_"+dataset+"_"+str(row.name)+question_theme.replace(" ", "_")
 
     def test(self):
+        def json_are_equal(obj1, obj2, epsilon=EPS):
+            # Check if the types are the same
+            if type(obj1) != type(obj2):
+                return False
+            
+            # Check for lists
+            if isinstance(obj1, list):
+                if len(obj1) != len(obj2):
+                    return False
+                for i in range(len(obj1)):
+                    if not json_are_equal(obj1[i], obj2[i], epsilon):
+                        return False
+                return True
+            
+            # Check for dictionaries
+            elif isinstance(obj1, dict):
+                if set(obj1.keys()) != set(obj2.keys()):
+                    return False
+                for key in obj1:
+                    if not json_are_equal(obj1[key], obj2[key], epsilon):
+                        return False
+                return True
+            
+            # Check for floats with epsilon
+            elif isinstance(obj1, float):
+                return abs(obj1 - obj2) < epsilon
+            
+            # Check for other types
+            else:
+                return obj1 == obj2
+
+
         t1 = time.time()
         resp = self.client.post("/"+dataset+"/query", json={"query": question}, auth=(username, password))
         t2 = time.time()
@@ -76,29 +109,27 @@ def question_test_generator(dataset, row, username, password):
         elif isinstance(answer, list):
             json_form = json.loads(true_answer)
             try:
-                for i in range(len(json_form)):
-                    if json_form[i] == answer[i]:
-                        correct = True
-                    else:
-                        correct = False
-                        break
+               correct = json_are_equal(answer, json_form)
             except Exception as e:
                 correct = False
         elif isinstance(answer, dict):
+            json_form = json.loads(true_answer)
             try:
-                json_form = json.loads(true_answer)
-                if sorted(answer.items()) == sorted(json_form.items()):
-                    correct = True
-                else:
-                    correct = False
+                correct = json_are_equal(answer, json_form)
             except Exception as e:
                 correct = False
         elif isinstance(answer, int):
-            if answer == int(true_answer):
-                correct = True
+            try:
+                if answer == int(true_answer):
+                    correct = True
+            except ValueError:
+                correct = False
         elif isinstance(answer, float):
-            if answer == float(true_answer):
-                correct = True
+            try:
+                if abs(answer - float(true_answer)) <= EPS:
+                    correct = True
+            except ValueError:
+                correct = False
 
         if question_answered and not(correct): # final LLM evaluation
             fp = open("./configs/test_evaluation_model_config.json")
