@@ -28,9 +28,10 @@ def validate_schema(conn, v_types, e_types, v_attrs, e_attrs):
 
 def validate_function_call(conn, generated_call: str, retrieved_docs: list) -> str:
     # handle installed queries
+    generated_call = generated_call.strip()
     valid_headers = [doc.metadata.get("function_header") for doc in retrieved_docs]
     if "runInstalledQuery(" == generated_call[:18]:
-        query_name = generated_call.split(",")[0].split("runInstalledQuery(")[1]
+        query_name = generated_call.split(",")[0].split("runInstalledQuery(")[1].strip("'")
         if query_name in valid_headers:
             return generated_call
         else:
