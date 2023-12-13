@@ -10,7 +10,10 @@ from app.schemas import MapQuestionToSchemaResponse
 from typing import List, Dict
 from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re
+import logging
+from app.log import req_id_cv
 
+logger = logging.getLogger(__name__)
 
 
 class MapQuestionToSchema(BaseTool):
@@ -23,13 +26,14 @@ class MapQuestionToSchema(BaseTool):
     
     def __init__(self, conn, llm, prompt):
         super().__init__()
+        logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema instantiated")
         self.conn = conn
         self.llm = llm
         self.prompt = prompt
         
     def _run(self, query: str) -> str:
         """Use the tool."""
-
+        logger.info(f"request_id={req_id_cv.get()} ENTRY MapQuestionToSchema._run()")
         parser = PydanticOutputParser(pydantic_object=MapQuestionToSchemaResponse)
 
         RESTATE_QUESTION_PROMPT = PromptTemplate(
@@ -43,8 +47,11 @@ class MapQuestionToSchema(BaseTool):
                                           "question": query,
                                           "edges": self.conn.getEdgeTypes()}])[0]["text"]
 
+        logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
+        
         parsed_q = parser.invoke(restate_q)
 
+        logger.debug_pii(f"request_id={req_id_cv.get()} MapQuestionToSchema parsed for question={query} into normalized_form={parsed_q}")
 
         try:
             validate_schema(self.conn,
@@ -53,8 +60,9 @@ class MapQuestionToSchema(BaseTool):
                             parsed_q.target_vertex_attributes, 
                             parsed_q.target_edge_attributes)
         except MapQuestionToSchemaException as e:
+            logger.warn(f"request_id={req_id_cv.get()} WARN MapQuestionToSchema to validate schema")
             raise e
-    
+        logger.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
         return parsed_q
     
     async def _arun(self) -> str:

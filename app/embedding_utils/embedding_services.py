@@ -1,6 +1,10 @@
 import os
 from typing import List
 from langchain.schema.embeddings import Embeddings
+import logging
+from app.log import req_id_cv
+
+logger = logging.getLogger(__name__)
 
 class EmbeddingModel(Embeddings):
     def __init__(self, config):
@@ -9,10 +13,17 @@ class EmbeddingModel(Embeddings):
         self.embeddings = None
 
     def embed_documents(self, texts: List[str]) -> List[float]:
-        return self.embeddings.embed_documents(texts)
+        logger.info(f"request_id={req_id_cv.get()} ENTRY embed_documents()")
+        docs = self.embeddings.embed_documents(texts)
+        logger.info(f"request_id={req_id_cv.get()} EXIT embed_documents()")
+        return docs
 
     def embed_query(self, question:str) -> List[float]:
-        return self.embeddings.embed_query(question)
+        logger.info(f"request_id={req_id_cv.get()} ENTRY embed_query()")
+        logger.debug_pii(f"request_id={req_id_cv.get()} embed_query() embedding question={question}")
+        query_embedding = self.embeddings.embed_query(question)
+        logger.info(f"request_id={req_id_cv.get()} EXIT embed_query()")
+        return query_embedding
 
 
 class AzureOpenAI_Ada002(EmbeddingModel):
