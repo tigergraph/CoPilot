@@ -169,7 +169,7 @@ def question_test_generator(dataset, row, username, password):
     return test_name, test
 
 
-def query_registration_test_generator(dataset, username, password, query_name, query_description, heavy_runtime):
+def query_registration_test_generator(dataset, username, password, query_name, query_json):
     
     # Need to extract q/a pairs before test is generated,
     # as otherwise we look at the last question/answer pair is used
@@ -177,10 +177,8 @@ def query_registration_test_generator(dataset, username, password, query_name, q
     test_name = "test_insert_"+dataset+"_"+query_name
 
     def test(self):
-        resp = self.client.post("/"+dataset+"/register-custom-query",
-                                json={"query_name": query_name,
-                                      "query_description": query_description.replace("\n", " "),
-                                      "heavy_runtime_warning": heavy_runtime}, 
+        resp = self.client.post("/"+dataset+"/registercustomquery",
+                                json=json.loads(query_json), 
                                 auth=(username, password))
         self.assertEqual(resp.status_code, 200)
         id = resp.json()[0]
@@ -191,17 +189,16 @@ with open("./configs/db_config.json", "r") as config_file:
     config = json.load(config_file)
 
 def get_query_and_prompt(suite, query):
-    heavy_runtime = False
-    with open("./test_questions/"+suite+"/"+query+"/"+query+"_prompt.txt") as f:
+    with open("./test_questions/"+suite+"/"+query+"/"+query+"_prompt.json") as f:
         query_desc = f.read()
-    return query_desc, heavy_runtime
+    return query_desc
 
 for suite in ["OGB_MAG"]:
     queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x))]
 
     prompts = [(q, get_query_and_prompt(suite, q)) for q in queries]
 
-    registration_tests = [query_registration_test_generator(suite, config["username"], config["password"], q[0], q[1][0], q[1][1]) for q in prompts]
+    registration_tests = [query_registration_test_generator(suite, config["username"], config["password"], q[0], q[1]) for q in prompts]
 
     for rt in registration_tests:
         setattr(CommonTests, rt[0], rt[1])

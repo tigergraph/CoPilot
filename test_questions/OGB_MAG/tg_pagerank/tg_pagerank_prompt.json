@@ -1,0 +1,10 @@
+{
+    "function_header": "tg_pagerank",
+    "description": "Determines the importance or influence of each vertex based on its connections to other vertices.",
+    "docstring":"The PageRank algorithm measures the influence of each vertex on every other vertex. PageRank influence is defined recursively: a vertex’s influence is based on the influence of the vertices which refer to it. A vertex’s influence tends to increase if either of these conditions are met:\n* It has more referring vertices\n* Its referring vertices have higher influence\nTo run this algorithm, use `runInstalledQuery('tg_pagerank', params={'v_type': 'INSERT_V_TYPE_HERE', 'e_type': 'INSERT_E_TYPE_HERE', 'top_k': INSERT_TOP_K_HERE})`, where the parameters are:\n* 'v_type': The vertex type to run the algorithm on.\n* 'e_type': The edge type to run the algorithm on.\n* 'top_k': The number of top scoring vertices to return to the user.",
+    "param_types": {
+        "v_type": "str",
+        "e_type": "str",
+        "top_k": "int"
+    }
+}
