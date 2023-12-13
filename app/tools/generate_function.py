@@ -77,7 +77,10 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
 
-        generated = validate_function_call(self.conn, generated, docs)
+        try:
+            generated = validate_function_call(self.conn, generated, docs)
+        except InvalidFunctionCallException as e:
+            return e
 
         try:
             loc = {}
