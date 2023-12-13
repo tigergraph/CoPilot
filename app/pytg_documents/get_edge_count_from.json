@@ -8,5 +8,6 @@
         "edgeType": "str",
         "targetVertexType": "str",
         "targetVertexId": "Union[str, int]"
-    }
+    },
+    "custom_query": false
 }

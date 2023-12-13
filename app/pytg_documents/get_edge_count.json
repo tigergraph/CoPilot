@@ -6,5 +6,6 @@
         "edgeType": "str",
         "sourceVertexType": "str",
         "targetVertexType": "str"
-    }
+    },
+    "custom_query": false
 }

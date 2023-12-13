@@ -39,18 +39,24 @@ embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 @app.get("/")
 def read_root():
-    return {"config": llm_config}
+    return {"config": llm_config["model_name"]}
 
 
-@app.post("/{graphname}/register-custom-query")
+@app.post("/{graphname}/registercustomquery")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    vec = embedding_service.embed_query(query_info.query_description)
-    res = embedding_store.add_embeddings([(query_info.query_description, vec)], [{"name": query_info.query_name, "heavy_runtime": query_info.heavy_runtime_warning}])
+    vec = embedding_service.embed_query(query_info.docstring)
+    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                          "description": query_info.description,
+                                                                          "param_types": query_info.param_types,
+                                                                          "custom_query": True}])
     return res
 
-@app.post("/{graphname}/retrieve-docs")
-def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    return str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=2))
+# TODO: RUD of CRUD with custom queries
+
+@app.post("/{graphname}/retrievedocs")
+def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
+    # TODO: Better polishing of this response
+    return str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
 
 
 @app.post("/{graphname}/query")

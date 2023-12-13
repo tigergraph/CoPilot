@@ -23,6 +23,7 @@ class FAISS_EmbeddingStore(EmbeddingStore):
             metadata["function_header"] = record.get("function_header")
             metadata["description"] = record.get("description")
             metadata["param_types"] = record.get("param_types")
+            metadata["custom_query"] = record.get("custom_query")
 
             return metadata
 

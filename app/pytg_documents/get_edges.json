@@ -11,5 +11,6 @@
         "where": "str",
         "limit": "Union[int, str]",
         "sort": "str"
-    }
+    },
+    "custom_query": false
 }
