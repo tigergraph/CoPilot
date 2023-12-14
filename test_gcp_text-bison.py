@@ -24,7 +24,7 @@ class TestWithVertexAI(CommonTests, unittest.TestCase):
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"]["completion_service"]["llm_service"], "vertexai")
+        self.assertEqual(resp.json()["config"], "GCP-text-bison")
 
 if __name__ == "__main__":
     unittest.main()
