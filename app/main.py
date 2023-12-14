@@ -97,22 +97,23 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         graphname = graphname,
     )
 
-    try:
-        apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+    if config["getToken"]:
+        try:
+            apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Basic"},
+            )
 
-    conn = TigerGraphConnection(
-        host=config["hostname"],
-        username = credentials.username,
-        password = credentials.password,
-        graphname = graphname,
-        apiToken = apiToken
-    )
+        conn = TigerGraphConnection(
+            host=config["hostname"],
+            username = credentials.username,
+            password = credentials.password,
+            graphname = graphname,
+            apiToken = apiToken
+        )
 
     conn.customizeHeader(timeout=config["default_timeout"]*1000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
