@@ -1,5 +1,6 @@
 #!/bin/sh
 export DB_CONFIG=configs/db_config.json
+export LOGLEVEL=INFO
 export LLM_CONFIG=configs/azure_llm_config.json
 python test_azure_gpt3.5_turbo_instruct.py
 export LLM_CONFIG=configs/openai_gpt3.5-turbo_config.json

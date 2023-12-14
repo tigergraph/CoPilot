@@ -1,5 +1,6 @@
 import logging
 import contextvars
+import os
 
 def addLoggingLevel(levelName, levelNum, methodName=None):
     if not methodName:
@@ -25,6 +26,8 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
     setattr(logging, methodName, logToRoot)
 
 addLoggingLevel("DEBUG_PII", logging.DEBUG - 5)
-logging.basicConfig(level=logging.DEBUG_PII)
+
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
+logging.basicConfig(level=LOGLEVEL)
 
 req_id_cv = contextvars.ContextVar("req_id", default=None)
