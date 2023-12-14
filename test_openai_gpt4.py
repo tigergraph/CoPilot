@@ -24,7 +24,7 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"]["completion_service"]["llm_service"], "openai")
+        self.assertEqual(resp.json()["config"], "GPT-4")
 
 if __name__ == "__main__":
     unittest.main()

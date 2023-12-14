@@ -1,5 +1,9 @@
 from app.llm_services import LLM_Model
 import os
+import logging
+from app.log import req_id_cv
+
+logger = logging.getLogger(__name__)
 
 class AzureOpenAI(LLM_Model):
     def __init__(self, config):
@@ -7,6 +11,7 @@ class AzureOpenAI(LLM_Model):
         for auth_detail in config["authentication_configuration"].keys():
             os.environ[auth_detail] = config["authentication_configuration"][auth_detail]
         from langchain.llms import AzureOpenAI
+        model_name = config["llm_model"]
         self.llm = AzureOpenAI(
             azure_deployment=config["azure_deployment"],
             openai_api_version=config["openai_api_version"],
@@ -15,6 +20,7 @@ class AzureOpenAI(LLM_Model):
         )
 
         self.prompt_path = config["prompt_path"]
+        logger.info(f"request_id={req_id_cv.get()} instantiated AzureOpenAI model_name={model_name}")
 
     @property
     def map_question_schema_prompt(self):

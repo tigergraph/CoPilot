@@ -1,5 +1,9 @@
 from typing import Iterable, Tuple, List
 from app.embedding_utils.embedding_services import EmbeddingModel
+import logging
+from app.log import req_id_cv
+
+logger = logging.getLogger(__name__)
 
 class EmbeddingStore():
     def __init__(self):
@@ -38,13 +42,24 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         self.faiss = FAISS.from_documents(docs, embedding_service)
 
     def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]):
-        return self.faiss.add_embeddings(embeddings, metadatas)
+        logger.info(f"request_id={req_id_cv.get()} ENTRY add_embeddings()")
+        added = self.faiss.add_embeddings(embeddings, metadatas)
+        logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
+        return added
 
     def remove_embeddings(self, ids):
-        return self.faiss.delete(ids)
+        logger.info(f"request_id={req_id_cv.get()} ENTRY remove_embeddings()")
+        deleted = self.faiss.delete(ids)
+        logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
+        return deleted
 
     def retrieve_similar(self, query_embedding, top_k=10):
-        return self.faiss.similarity_search_by_vector(query_embedding, top_k)
+        logger.info(f"request_id={req_id_cv.get()} ENTRY retrieve_similar()")
+        similar = self.faiss.similarity_search_by_vector(query_embedding, top_k)
+        sim_ids = [doc.metadata.get("function_header") for doc in similar]
+        logger.debug(f"request_id={req_id_cv.get()} retrieve_similar() retrieved={sim_ids}")
+        logger.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
+        return similar
 
 class TG_EmbeddingStore(EmbeddingStore):
     def __init__(self):

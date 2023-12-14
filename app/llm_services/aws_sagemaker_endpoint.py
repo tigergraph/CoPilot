@@ -3,7 +3,10 @@ from langchain.llms.sagemaker_endpoint import LLMContentHandler
 import json
 from typing import Dict
 import boto3
+import logging
+from app.log import req_id_cv
 
+logger = logging.getLogger(__name__)
 
 class ContentHandler(LLMContentHandler):
     content_type = "application/json"
@@ -35,6 +38,7 @@ class AWS_SageMaker_Endpoint(LLM_Model):
             region_name=config["authentication_configuration"]["region_name"],
         )
 
+        model_name = config["endpoint_name"]
         self.llm = SagemakerEndpoint(
             endpoint_name=config["endpoint_name"],
             client=client,
@@ -44,6 +48,7 @@ class AWS_SageMaker_Endpoint(LLM_Model):
         )
 
         self.prompt_path = config["prompt_path"]
+        logger.info(f"request_id={req_id_cv.get()} instantiated AWS_SageMaker_Endpoint model_name={model_name}")
 
     @property
     def map_question_schema_prompt(self):
