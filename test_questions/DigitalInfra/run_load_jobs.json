@@ -1,0 +1,21 @@
+    [{
+        "filePath": "$digital_infra_source:s3://tigergraph-public-data/digital_infra_demo/xsmall/MSMetricsUpdate_0.csv",
+        "fileTag": "ContainerMetricData",
+        "jobName": "load_digital_infra"
+    },
+    {
+        "filePath": "$digital_infra_source:s3://tigergraph-public-data/digital_infra_demo/xsmall/MSMetricsUpdate_1.csv",
+        "fileTag": "ContainerMetricData",
+        "jobName": "load_digital_infra"
+    },
+    {
+        "filePath": "$digital_infra_source:s3://tigergraph-public-data/digital_infra_demo/xsmall/NodeMetricsUpdate_0.csv",
+        "fileTag": "NodeMetricData",
+        "jobName": "load_digital_infra"
+    },
+    {
+        "filePath": "$digital_infra_source:s3://tigergraph-public-data/digital_infra_demo/xsmall/CallGraph_0.csv",
+        "fileTag": "CallData",
+        "jobName": "load_digital_infra"
+    }
+]
