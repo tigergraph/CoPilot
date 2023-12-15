@@ -193,8 +193,8 @@ def get_query_and_prompt(suite, query):
         query_desc = f.read()
     return query_desc
 
-for suite in ["OGB_MAG"]:
-    queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x))]
+for suite in ["OGB_MAG", "DigitalInfra"]:
+    queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x)) and x != "gsql"]
 
     prompts = [(q, get_query_and_prompt(suite, q)) for q in queries]
 
