@@ -13,6 +13,20 @@ from app.log import req_id_cv
 logger = logging.getLogger(__name__)
 
 class TigerGraphAgent():
+    """TigerGraph Agent Class
+    
+    The TigerGraph Agent Class combines the various dependencies needed for a AI Agent to reason with data in a TigerGraph database.
+
+    Args:
+        llm_provider (LLM_Model):
+            a LLM_Model class that connects to an external LLM API service.
+        db_connection (TigerGraphConnection):
+            a PyTigerGraph TigerGraphConnection object instantiated to interact with the desired database/graph and authenticated with correct roles.
+        embedding_model (EmbeddingModel):
+            a EmbeddingModel class that connects to an external embedding API service.
+        embedding_store (EmbeddingStore):
+            a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
+    """
     def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnection", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):
         self.conn = db_connection
 
@@ -39,7 +53,15 @@ class TigerGraphAgent():
                                       })
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
 
-    def question_for_agent(self, question):
+    def question_for_agent(self, question: str):
+        """Question for Agent.
+
+        Ask the agent a question to be answered by the database. Returns the agent resoposne or raises an exception.
+
+        Args:
+            question (str): 
+                The question to ask the agent
+        """
         logger.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
         logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
         try:
