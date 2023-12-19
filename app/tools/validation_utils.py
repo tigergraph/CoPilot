@@ -1,3 +1,9 @@
+""" Validation Utilities
+
+    Utilities to validate the generated output of LLMs.
+    Used to verify that the tools correctly mapped questions to valid schema elements, as well as generated valid function calls.
+"""
+
 import logging
 from app.log import req_id_cv
 

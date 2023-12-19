@@ -18,6 +18,9 @@ from app.log import req_id_cv
 logger = logging.getLogger(__name__)
 
 class GenerateFunction(BaseTool):
+    """ GenerateFunction Tool.
+        Tool to generate and execute the appropriate function call for the question.
+    """
     name = "GenerateFunction"
     description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."
     conn: "TigerGraphConnection" = None
@@ -29,6 +32,19 @@ class GenerateFunction(BaseTool):
     args_schema: Type[MapQuestionToSchemaResponse] = MapQuestionToSchemaResponse
     
     def __init__(self, conn, llm, prompt, embedding_model, embedding_store):
+        """ Initialize GenerateFunction.
+            Args:
+                conn (TigerGraphConnection):
+                    pyTigerGraph TigerGraphConnection connection to the appropriate database/graph with correct permissions
+                llm (LLM_Model):
+                    LLM_Model class to interact with an external LLM API.
+                prompt (str):
+                    prompt to use with the LLM_Model. Varies depending on LLM service.
+                embedding_model (EmbeddingModel):
+                    The model used to generate embeddings for function retrieval.
+                embedding_store (EmbeddingStore):
+                    The embedding store to retrieve functions from.
+        """
         super().__init__()
         logger.debug(f"request_id={req_id_cv.get()} GenerateFunction instantiated")
         self.conn = conn
@@ -43,6 +59,21 @@ class GenerateFunction(BaseTool):
                    target_vertex_ids: Dict[str, List[str]] = {},
                    target_edge_types: List[str] = [],
                    target_edge_attributes: Dict[str, List[str]] = {}) -> str:
+        """ Run the tool.
+            Args:
+                question (str):
+                    The question to answer with the database.
+                target_vertex_types (List[str]):
+                    The list of vertex types the question mentions.
+                target_vertex_attributes (Dict[str, List[str]]):
+                    The dictionary of vertex attributes the question mentions, in the form {"vertex_type": ["attr1", "attr2"]}
+                target_vertex_ids (Dict[str, List[str]):
+                    The dictionary of vertex ids the question mentions, in the form of {"vertex_type": ["v_id1", "v_id2"]}
+                target_edge_types (List[str]):
+                    The list of edge types the question mentions.
+                target_edge_attributes (Dict[str, List[str]]):
+                    The dictionary of edge attributes the question mentions, in the form {"edge_type": ["attr1", "attr2"]}
+        """
         logger.info(f"request_id={req_id_cv.get()} ENTRY GenerateFunction._run()")
         PROMPT = PromptTemplate(
             template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",

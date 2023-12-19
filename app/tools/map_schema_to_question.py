@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 class MapQuestionToSchema(BaseTool):
+    """ MapQuestionToSchema Tool.
+        Tool to map questions to their datatypes in the database. Should be exectued before GenerateFunction.
+    """
     name = "MapQuestionToSchema"
     description = "Always run first to map the query to the graph's schema. NEVER EXECUTE GenerateFunction before using MapQuestionToSchema"
     conn: "TigerGraphConnection" = None
@@ -25,6 +28,15 @@ class MapQuestionToSchema(BaseTool):
     handle_tool_error: bool = True
     
     def __init__(self, conn, llm, prompt):
+        """ Initialize MapQuestionToSchema.
+            Args:
+                conn (TigerGraphConnection):
+                    pyTigerGraph TigerGraphConnection connection to the database.
+                llm (LLM_Model):
+                    LLM_Model class to interact with an external LLM API.
+                prompt (str):
+                    prompt to use with the LLM_Model. Varies depending on LLM service.
+        """
         super().__init__()
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema instantiated")
         self.conn = conn
@@ -32,7 +44,11 @@ class MapQuestionToSchema(BaseTool):
         self.prompt = prompt
         
     def _run(self, query: str) -> str:
-        """Use the tool."""
+        """ Run the tool.
+            Args:
+                query (str):
+                    The user's question.
+        """
         logger.info(f"request_id={req_id_cv.get()} ENTRY MapQuestionToSchema._run()")
         parser = PydanticOutputParser(pydantic_object=MapQuestionToSchemaResponse)
 
