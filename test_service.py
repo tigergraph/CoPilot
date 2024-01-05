@@ -194,7 +194,7 @@ def get_query_and_prompt(suite, query):
     return query_desc
 
 for suite in ["OGB_MAG"]:
-    queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x))]
+    queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x)) and not(x == "tmp")]
 
     prompts = [(q, get_query_and_prompt(suite, q)) for q in queries]
 
