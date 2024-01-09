@@ -216,4 +216,3 @@ class CommonTests():
                     tmp_table = wandb.Table(dataframe=final_df)
                     cls.wandbLogger.log({"qa_results": tmp_table})
                     wandb.finish()
-
