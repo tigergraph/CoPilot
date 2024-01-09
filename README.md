@@ -182,3 +182,69 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 
 # prints: {'natural_language_response': 'The top 5 most cited papers are:\n\n1. [Title of paper with Vertex_ID 428523]\n2. [Title of paper with Vertex_ID 384889]\n3. [Title of paper with Vertex_ID 377502]\n4. [Title of paper with Vertex_ID 61855]\n5. [Title of paper with Vertex_ID 416200]', 'answered_question': True, 'query_sources': {'function_call': "runInstalledQuery('tg_pagerank', params={'v_type': 'Paper', 'e_type': 'CITES', 'top_k': 5})", 'result': [{'@@top_scores_heap': [{'Vertex_ID': '428523', 'score': 392.8731}, {'Vertex_ID': '384889', 'score': 251.8021}, {'Vertex_ID': '377502', 'score': 149.1018}, {'Vertex_ID': '61855', 'score': 129.7406}, {'Vertex_ID': '416200', 'score': 129.2286}]}]}}
 ```
+
+# Testing
+
+This documentation outlines the steps to run the provided shell script for testing different language model services. The script takes command-line arguments to specify the language model service, schema, and the usage of Weights and Biases (WandB) logging.
+
+## Prerequisites
+
+1. **Python**: Ensure that Python is installed on your system.
+
+2. **Dependencies**: Make sure to install the necessary Python packages by running the following command in your terminal:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+
+3. **Configuration Files**: Prepare the required JSON configuration files for each language model service. The configuration files should be appropriately named and contain the necessary parameters for the corresponding language model.
+
+## Usage
+
+Run the provided shell script with the following format:
+
+```bash
+./run_tests.sh [llm_service] [schema] [use_wandb]
+```
+
+- `llm_service`: Specify the language model service to test. Possible values are:
+  - `azure_gpt35`
+  - `openai_gpt35`
+  - `openai_gpt4`
+  - `gcp_textbison`
+  - `all` (to execute all services)
+
+- `schema` (Optional): Specify the schema for testing. Default is set to `all`.
+
+- `use_wandb` (Optional): Specify whether to use Weights and Biases for logging. Default is set to `true`.
+
+## Examples
+
+1. Run tests for Azure GPT-3.5 Turbo with default settings:
+
+    ```bash
+    ./run_tests.sh azure_gpt35
+    ```
+
+2. Run tests for OpenAI GPT-4 with a specific schema:
+
+    ```bash
+    ./run_tests.sh openai_gpt4 OGB_MAG
+    ```
+
+3. Run tests for all language model services without Weights and Biases logging:
+
+    ```bash
+    ./run_tests.sh all all false
+    ```
+
+## Notes
+
+- If the specified `llm_service` is not recognized, the script will exit with an error message.
+
+- Ensure that the required Python scripts and configuration files are correctly located according to the script's expectations.
+
+- It is recommended to review and update the `script_mapping` array in the shell script if new language model services or configurations are added. Each entry in this array should consist of a Python script name followed by the corresponding configuration file.
+
+- Adjust the `LOGLEVEL` and other environment variables in the script as needed for debugging or customization.
