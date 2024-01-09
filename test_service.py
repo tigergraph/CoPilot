@@ -170,7 +170,7 @@ class CommonTests():
             schemas = [schema]
 
         for suite in schemas:
-            queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x)) and not(x == "tmp")]
+            queries = [x for x in os.listdir('./test_questions/'+suite+"/") if not(os.path.isfile('./test_questions/'+suite+"/"+x)) and not(x == "tmp") and not(x == "gsql")]
 
             prompts = [(q, get_query_and_prompt(suite, q)) for q in queries]
 
