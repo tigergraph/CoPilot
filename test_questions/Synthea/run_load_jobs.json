@@ -1,0 +1,96 @@
+    [{
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/allergies.csv",
+        "fileTag": "AllergiesData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/careplans.csv",
+        "fileTag": "CareplanData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/conditions.csv",
+        "fileTag": "ConditionsData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/demographics.csv",
+        "fileTag": "LocationData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/devices.csv",
+        "fileTag": "DeviceData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/encounters.csv",
+        "fileTag": "EncounterData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/imaging_studies.csv",
+        "fileTag": "ImagingData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/immunizations.csv",
+        "fileTag": "ImmunizationData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/medications.csv",
+        "fileTag": "MedicationData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/normalizedSymptoms.csv",
+        "fileTag": "SymptomData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/observations.csv",
+        "fileTag": "ObservationData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/organizations.csv",
+        "fileTag": "OrganizationData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/patients.csv",
+        "fileTag": "PatientData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/payer_transistions.csv",
+        "fileTag": "PayerTransistionData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/payers.csv",
+        "fileTag": "PayerData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/procedures.csv",
+        "fileTag": "ProcedureData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/providers.csv",
+        "fileTag": "ProviderData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/zipcodes.csv",
+        "fileTag": "ZipData",
+        "jobName": "load_synthea"
+    },
+    {
+        "filePath": "$synthea_source:s3://tigergraph-public-data/Synthea/notes-tab.tsv",
+        "fileTag": "PatientNoteData",
+        "jobName": "load_synthea_notes"
+    }
+]
