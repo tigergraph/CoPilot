@@ -1,5 +1,5 @@
 #!/bin/sh
-export DB_CONFIG=configs/db_config.json
+export DB_CONFIG=../configs/db_config.json
 export LOGLEVEL=INFO
 
 # Set default values
@@ -65,7 +65,7 @@ case "$llm_service" in
         ;;
     "all")
         echo "Executing all services..."
-        for service_script in "${!script_mapping[@]}"; do
+        for service_script in "${script_mapping[@]}"; do
             execute_service "$service_script"
         done
         ;;

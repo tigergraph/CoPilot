@@ -102,7 +102,7 @@ class CommonTests():
                         correct = False
 
                 if question_answered and not(correct): # final LLM evaluation
-                    fp = open("./configs/test_evaluation_model_config.json")
+                    fp = open("../configs/test_evaluation_model_config.json")
                     test_llm_config = json.load(fp)
                     fp.close()
                     llm = ChatOpenAI(**test_llm_config)
