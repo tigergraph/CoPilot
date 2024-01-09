@@ -10,7 +10,6 @@ import sys
 class TestWithAzure(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        os.environ["LLM_CONFIG"] = "./configs/azure_llm_config.json"
         from app.main import app
         cls.client = TestClient(app)
         cls.llm_service = "azure_gpt3.5_turbo_instruct"

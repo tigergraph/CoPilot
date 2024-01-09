@@ -24,10 +24,10 @@ fi
 
 # Define the mapping of Python script names to JSON config file names
 script_mapping=(
-    "test_azure_gpt35_turbo_instruct.py configs/azure_llm_config.json"
-    "test_openai_gpt35-turbo.py configs/openai_gpt3.5-turbo_config.json"
-    "test_openai_gpt4.py configs/openai_gpt4_config.json"
-    "test_gcp_text-bison.py configs/gcp_text-bison_config.json"
+    "test_azure_gpt35_turbo_instruct.py ../configs/azure_llm_config.json"
+    "test_openai_gpt35-turbo.py ../configs/openai_gpt3.5-turbo_config.json"
+    "test_openai_gpt4.py ../configs/openai_gpt4_config.json"
+    "test_gcp_text-bison.py ../configs/gcp_text-bison_config.json"
 )
 
 # Function to execute a service

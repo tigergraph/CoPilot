@@ -7,19 +7,18 @@ import parse_test_config
 import sys
 
 
-class TestWithVertexAI(CommonTests, unittest.TestCase):
+class TestWithOpenAI(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        os.environ["LLM_CONFIG"] = "./configs/gcp_palm_config.json"
         from app.main import app
         cls.client = TestClient(app)
-        cls.llm_service = "gcp-text-bison"
+        cls.llm_service = "openai_gpt-3.5-turbo-1106"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "GCP-text-bison")
+        self.assertEqual(resp.json()["config"], "OpenAI-GPT3.5-Turbo")
 
 if __name__ == "__main__":
     parser = parse_test_config.create_parser()

@@ -155,7 +155,7 @@ class CommonTests():
                 self.assertIsInstance(id, str)
             return test_name, test
 
-        with open("./configs/db_config.json", "r") as config_file:
+        with open("../configs/db_config.json", "r") as config_file:
             config = json.load(config_file)
 
         def get_query_and_prompt(suite, query):
