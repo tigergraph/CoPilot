@@ -25,12 +25,10 @@ if __name__ == "__main__":
     parser = parse_test_config.create_parser()
 
     args = parser.parse_known_args()[0]
-    print(args)
 
     USE_WANDB = args.wandb
 
     schema = args.schema
-    print(schema)
 
     if USE_WANDB:
         columns = ["LLM_Service", "Dataset", "Question Type", "Question Theme", "Question", "True Answer", "True Function Call",

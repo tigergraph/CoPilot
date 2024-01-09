@@ -8,12 +8,12 @@ from langchain.chat_models import ChatOpenAI
 import time
 from pygit2 import Repository
 
-USE_WANDB = True
 EPS = 0.001
 
 class CommonTests():
     @classmethod
-    def setUpClass(cls, schema="all"):
+    def setUpClass(cls, schema="all", use_wandb=True):
+        cls.USE_WANDB = use_wandb
         def question_test_generator(dataset, row, username, password):
             # Need to extract q/a pairs before test is generated,
             # as otherwise we look at the last question/answer pair is used
@@ -118,7 +118,7 @@ class CommonTests():
                     if eval_result["score"] >= 7:
                         correct = True
 
-                if USE_WANDB:
+                if cls.USE_WANDB:
                     self.table.add_data(
                             self.llm_service,
                             dataset,
@@ -188,7 +188,7 @@ class CommonTests():
 
     @classmethod
     def tearDownClass(cls):
-        if USE_WANDB:
+        if cls.USE_WANDB:
             df = cls.table.get_dataframe()
             q_types = list(df["Question Type"].unique())
             for q_type in q_types:
