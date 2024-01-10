@@ -185,66 +185,18 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 
 # Testing
 
-This documentation outlines the steps to run the provided shell script for testing different language model services. The script takes command-line arguments to specify the language model service, schema, and the usage of Weights and Biases (WandB) logging.
+## Test in Docker Container (Easiest)
 
-## Prerequisites
+```sh
+docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
 
-1. **Python**: Ensure that Python is installed on your system.
-
-2. **Dependencies**: Make sure to install the necessary Python packages by running the following command in your terminal:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
+docker run -d -v $(pwd)/configs/:/code/configs -i --name nlqs-tests nlqs-tests:0.1
 
 
-3. **Configuration Files**: Prepare the required JSON configuration files for each language model service. The configuration files should be appropriately named and contain the necessary parameters for the corresponding language model.
-
-## Usage
-
-Run the provided shell script with the following format:
-
-```bash
-./run_tests.sh [llm_service] [schema] [use_wandb]
+docker exec -d nlqs-tests cd tests && conda run -n py39 ./run_tests.sh all DigitalInfra
 ```
 
-- `llm_service`: Specify the language model service to test. Possible values are:
-  - `azure_gpt35`
-  - `openai_gpt35`
-  - `openai_gpt4`
-  - `gcp_textbison`
-  - `all` (to execute all services)
-
-- `schema` (Optional): Specify the schema for testing. Default is set to `all`.
-
-- `use_wandb` (Optional): Specify whether to use Weights and Biases for logging. Default is set to `true`.
-
-## Examples
-
-1. Run tests for Azure GPT-3.5 Turbo with default settings:
-
-    ```bash
-    ./run_tests.sh azure_gpt35
-    ```
-
-2. Run tests for OpenAI GPT-4 with a specific schema:
-
-    ```bash
-    ./run_tests.sh openai_gpt4 OGB_MAG
-    ```
-
-3. Run tests for all language model services without Weights and Biases logging:
-
-    ```bash
-    ./run_tests.sh all all false
-    ```
-
-## Notes
-
-- If the specified `llm_service` is not recognized, the script will exit with an error message.
-
-- Ensure that the required Python scripts and configuration files are correctly located according to the script's expectations.
-
-- It is recommended to review and update the `script_mapping` array in the shell script if new language model services or configurations are added. Each entry in this array should consist of a Python script name followed by the corresponding configuration file.
-
-- Adjust the `LOGLEVEL` and other environment variables in the script as needed for debugging or customization.
+If you want to use Weights And Biases, the environment variable needs to be set inside the container:
+```sh
+export WANDB_API_KEY=KEY HERE
+```

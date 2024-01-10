@@ -23,18 +23,22 @@ if [ "$#" -ge 3 ]; then
 fi
 
 # Define the mapping of Python script names to JSON config file names
-script_mapping=(
-    "test_azure_gpt35_turbo_instruct.py ../configs/azure_llm_config.json"
-    "test_openai_gpt35-turbo.py ../configs/openai_gpt3.5-turbo_config.json"
-    "test_openai_gpt4.py ../configs/openai_gpt4_config.json"
-    "test_gcp_text-bison.py ../configs/gcp_text-bison_config.json"
-)
+azure_gpt35_script="test_azure_gpt35_turbo_instruct.py"
+azure_gpt35_config="../configs/azure_llm_config.json"
+    
+openai_gpt35_script="test_openai_gpt35-turbo.py"
+openai_gpt35_config="../configs/openai_gpt3.5-turbo_config.json"
+
+openai_gpt4_script="test_openai_gpt4.py"
+openai_gpt4_config="../configs/openai_gpt4_config.json"
+
+gcp_textbison_script="test_gcp_text-bison.py"
+gcp_textbison_config="../configs/gcp_text-bison_config.json"
 
 # Function to execute a service
 execute_service() {
-    local script_and_config=($1)
-    local service="${script_and_config[0]}"
-    local config_file="${script_and_config[1]}"
+    local service="$1"
+    local config_file="$2"
 
     # Export the path to the config file as an environment variable
     export LLM_CONFIG="$config_file"
@@ -52,21 +56,21 @@ execute_service() {
 # Check the value of llm_service and execute the corresponding Python script(s)
 case "$llm_service" in
     "azure_gpt35")
-        execute_service "${script_mapping[0]}"
+        execute_service "$azure_gpt35_script" "$azure_gpt35_config"
         ;;
     "openai_gpt35")
-        execute_service "${script_mapping[1]}"
+        execute_service "$openai_gpt35_script" "$openai_gpt35_config"
         ;;
     "openai_gpt4")
-        execute_service "${script_mapping[2]}"
+        execute_service "$openai_gpt4_script" "$openai_gpt4_config"
         ;;
     "gcp_textbison")
-        execute_service "${script_mapping[3]}"
+        execute_service "$gcp_textbison_script" "$gcp_textbison_config"
         ;;
     "all")
         echo "Executing all services..."
-        for service_script in "${script_mapping[@]}"; do
-            execute_service "$service_script"
+        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config"; do
+            execute_service $service_script_pair
         done
         ;;
     *)

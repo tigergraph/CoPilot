@@ -118,7 +118,7 @@ class CommonTests():
                     if eval_result["score"] >= 7:
                         correct = True
 
-                if cls.USE_WANDB:
+                if self.USE_WANDB:
                     self.table.add_data(
                             self.llm_service,
                             dataset,
