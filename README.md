@@ -64,7 +64,14 @@ In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited 
 }
 ```
 ### GCP
-Follow the GCP authentication information found here: https://cloud.google.com/docs/authentication/application-default-credentials#GAC
+Follow the GCP authentication information found here: https://cloud.google.com/docs/authentication/application-default-credentials#GAC and create a Service Account with VertexAI credentials. Then add the following to the docker run command:
+
+```sh
+-v $(pwd)/configs/SERVICE_ACCOUNT_CREDS.json:/code/configs/SERVICE_ACCOUNT_CREDS.json -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/SERVICE_ACCOUNT_CREDS.json
+```
+
+And your JSON config should follow as:
+
 ```json
 {
     "model_name": "GCP-text-bison",
@@ -190,13 +197,14 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 ```sh
 docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
 
-docker run -d -v $(pwd)/configs/:/code/configs -i --name nlqs-tests nlqs-tests:0.1
+docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -i --name nlqs-tests nlqs-tests:0.1
 
 
-docker exec -d nlqs-tests cd tests && conda run -n py39 ./run_tests.sh all DigitalInfra
+docker exec nlqs-tests bash -c "cd tests && conda run -n py39 ./run_tests.sh all DigitalInfra"
 ```
 
-If you want to use Weights And Biases, the environment variable needs to be set inside the container:
+If you want to use Weights And Biases, your API key needs to be set in an environment variable on the host machine. 
+
 ```sh
 export WANDB_API_KEY=KEY HERE
 ```
