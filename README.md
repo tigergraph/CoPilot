@@ -194,17 +194,43 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 
 ## Test in Docker Container (Easiest)
 
+If you want to use Weights And Biases, your API key needs to be set in an environment variable on the host machine. 
+
+```sh
+export WANDB_API_KEY=KEY HERE
+```
+
+Make sure that all your LLM service provider configuration files are working properly. The configs will be mounted for the container to access.
+
 ```sh
 docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
 
 docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -i --name nlqs-tests nlqs-tests:0.1
 
 
-docker exec nlqs-tests bash -c "cd tests && conda run -n py39 ./run_tests.sh all DigitalInfra"
+docker exec nlqs-tests bash -c "conda run -n py39 ./run_tests.sh all all"
 ```
 
-If you want to use Weights And Biases, your API key needs to be set in an environment variable on the host machine. 
+## Test Script Options
 
-```sh
-export WANDB_API_KEY=KEY HERE
-```
+To edit what tests are executed, one can pass arguments to the `./run_tests.sh` script. Currently, one can configure what LLM service to use (defaults to all), what schemas to test against (defaults to all), and whether or not to use Weights and Biases for logging (defaults to true). Instructions of the options are found below:
+
+### Configure LLM Service
+The first parameter to `run_tests.sh` is what LLMs to test against. Defaults to `all`. The options are:
+
+* `all` - run tests against all LLMs
+* `azure_gpt35` - run tests against GPT-3.5 hosted on Azure
+* `openai_gpt35` - run tests against GPT-3.5 hosted on OpenAI
+* `openai_gpt4` - run tests on GPT-4 hosted on OpenAI
+* `gcp_textbison` - run tests on text-bison hosted on GCP
+
+### Configure Testing Graphs
+The second parameter to `run_tests.sh` is what graphs to test against. Defaults to `all`. The options are:
+
+* `all` - run tests against all available graphs
+* `OGB_MAG` - The academic paper dataset provided by: https://ogb.stanford.edu/docs/nodeprop/#ogbn-mag.
+* `DigtialInfra` - Digital infrastructure digital twin dataset
+* `Synthea` - Synthetic health dataset
+
+### Configure Weights and Biases
+If you wish to log the test results to Weights and Biases (and have the correct credentials setup above), the final parameter to `run_tests.sh` automatically defaults to true. If you wish to disable Weights and Biases logging, use `false`.
