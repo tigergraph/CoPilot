@@ -208,7 +208,7 @@ docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
 docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -i --name nlqs-tests nlqs-tests:0.1
 
 
-docker exec nlqs-tests bash -c "conda run -n py39 ./run_tests.sh all all"
+docker exec nlqs-tests bash -c "conda run -n py39 -v -v ./run_tests.sh all all"
 ```
 
 ## Test Script Options
