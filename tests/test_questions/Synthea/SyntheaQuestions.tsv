@@ -1,0 +1,3 @@
+Question Type	Question Theme	Question	Schema Mapped Question	Function Call	Answer
+COUNT VERTEX	COUNT(Conditions)	How many conditions are there?	How many Conditions Vertexes are there?	getVertexCount("Conditions")	10128
+COUNT VERTEX	COUNT(Providers)	How many providers are there?	How many Providers Vertexes are there?	getVertexCount("Providers")	1436
