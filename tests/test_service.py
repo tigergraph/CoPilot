@@ -6,7 +6,7 @@ import wandb
 from langchain.evaluation import load_evaluator
 from langchain.chat_models import ChatOpenAI
 import time
-from pygit2 import Repository
+from pygit2 import Repository, Commit
 
 EPS = 0.001
 
@@ -199,7 +199,8 @@ class CommonTests():
                         "llm_service": cls.llm_service,
                         "question_type": q_type,
                         "dataset": dataset,
-                        "branch": Repository('.').head.shorthand
+                        "branch": Repository('.').head.shorthand,
+                        "commit_hash": Repository('.').head.peel(Commit).id.hex
                     }
                     cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]

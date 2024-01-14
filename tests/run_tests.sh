@@ -79,5 +79,5 @@ case "$llm_service" in
         ;;
 esac
 
-
+python create_wandb_report.py
 
