@@ -157,7 +157,7 @@ from pyTigerGraph import TigerGraphConnection
 conn = TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
 
 ### ==== CONFIGURE INQUIRYAI HOST ====
-conn.ai.configureInquiryAIHost("http://localhost:8000")
+conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
 
 ### ==== RETRIEVE TOP-K DOCS FROM LIBRARY ====
 # `top_k` parameter optional
@@ -188,6 +188,30 @@ conn.ai.registerCustomQuery(pr_prompt["function_header"], pr_prompt["description
 print(conn.ai.query("What are the 5 most influential papers by citations?"))
 
 # prints: {'natural_language_response': 'The top 5 most cited papers are:\n\n1. [Title of paper with Vertex_ID 428523]\n2. [Title of paper with Vertex_ID 384889]\n3. [Title of paper with Vertex_ID 377502]\n4. [Title of paper with Vertex_ID 61855]\n5. [Title of paper with Vertex_ID 416200]', 'answered_question': True, 'query_sources': {'function_call': "runInstalledQuery('tg_pagerank', params={'v_type': 'Paper', 'e_type': 'CITES', 'top_k': 5})", 'result': [{'@@top_scores_heap': [{'Vertex_ID': '428523', 'score': 392.8731}, {'Vertex_ID': '384889', 'score': 251.8021}, {'Vertex_ID': '377502', 'score': 149.1018}, {'Vertex_ID': '61855', 'score': 129.7406}, {'Vertex_ID': '416200', 'score': 129.2286}]}]}}
+```
+
+## Using LangChain
+To use LangChain with InquiryAI, first install the LangChain fork here in your Python environment:
+```
+pip install git+https://github.com/parkererickson-tg/langchain.git@gml-1483-tg-langchain-support
+```
+Then, you can get answers from the graph with the below:
+
+```py
+import pyTigerGraph as tg
+conn = tg.TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
+
+### ==== CONFIGURE INQUIRYAI HOST ====
+conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
+
+from langchain_community.graphs import TigerGraph
+graph = TigerGraph(conn)
+result = graph.query("How many servers are there?")
+print(result)
+# {'natural_language_response': 'There are 46148 servers.', 
+#  'answered_question': True,
+#  'query_sources': {'function_call': 'getVertexCount(vertexType="BareMetalNode")', 
+#                    'result': 46148}
 ```
 
 # Testing
