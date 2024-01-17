@@ -1,0 +1,47 @@
+name: nlqs build and test ci
+
+on:
+  push:
+    branches: [ "build-test-ci" ]
+  pull_request:
+    branches: [ "master" ]
+    types: [ closed ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: [ self-hosted, dind ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.tests
+        push: false
+        load: true
+        tags: nlqs/tests:0.1
+
+  - name: Create db config
+      run: |
+        mkdir configs
+        echo "$DB_CONFIG" > configs/db_config.json
+        echo "$LLM_CONFIG_OPENAI_GPT4" > configs/openai_gpt4_config.json
+      env:
+        DB_CONFIG: ${{ secrets.DB_CONFIG }}
+        LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
+
+    - name: Run Docker container
+      run: docker run -v $(pwd)/configs/:/code/configs -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} --name nlqs-tests -d nlqs/tests:0.1
+
+    - name: Execute tests
+      run: docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh openai_gpt4 all"
+
+    - name: Cleanup
+      run: docker rm -f nlqs-tests
