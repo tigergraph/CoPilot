@@ -38,7 +38,9 @@ jobs:
         LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
 
     - name: Run Docker container
-      run: docker run -it -v $(pwd)/configs/:/code/configs -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} --name nlqs-tests -d nlqs/tests:0.1
+      run: |
+        docker rm -f nlqs-tests || true
+        docker run -it -v $(pwd)/configs/:/code/configs -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Execute tests
       run: docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh openai_gpt4 all"
