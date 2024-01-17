@@ -202,18 +202,19 @@ class CommonTests():
                         "branch": Repository('.').head.shorthand,
                         "commit_hash": Repository('.').head.peel(Commit).id.hex
                     }
-                    cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]
-                    acc = (final_df["Answer Correct"].sum())/final_df["Answer Correct"].shape[0]
-                    not_wrong_perc = (final_df["Answer Correct"].sum() + (final_df["Answered Question"] == False).sum())/final_df["Answer Correct"].shape[0]
-                    avg_resp_time = final_df["Response Time (seconds)"].mean()
-                    cls.wandbLogger.log({"LLM Service": cls.llm_service,
-                                        "Question Type": q_type,
-                                        "Dataset": dataset,
-                                        "Accuracy": acc,
-                                        "Not Wrong Percent": not_wrong_perc,
-                                        "Average Response Time (seconds)": avg_resp_time,
-                                        "Number of Questions": final_df["Answer Correct"].shape[0]}, commit=True)
-                    tmp_table = wandb.Table(dataframe=final_df)
-                    cls.wandbLogger.log({"qa_results": tmp_table})
-                    wandb.finish()
+                    if final_df.shape[0] > 0:
+                        cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
+                        acc = (final_df["Answer Correct"].sum())/final_df["Answer Correct"].shape[0]
+                        not_wrong_perc = (final_df["Answer Correct"].sum() + (final_df["Answered Question"] == False).sum())/final_df["Answer Correct"].shape[0]
+                        avg_resp_time = final_df["Response Time (seconds)"].mean()
+                        cls.wandbLogger.log({"LLM Service": cls.llm_service,
+                                            "Question Type": q_type,
+                                            "Dataset": dataset,
+                                            "Accuracy": acc,
+                                            "Not Wrong Percent": not_wrong_perc,
+                                            "Average Response Time (seconds)": avg_resp_time,
+                                            "Number of Questions": final_df["Answer Correct"].shape[0]}, commit=True)
+                        tmp_table = wandb.Table(dataframe=final_df)
+                        cls.wandbLogger.log({"qa_results": tmp_table})
+                        wandb.finish()

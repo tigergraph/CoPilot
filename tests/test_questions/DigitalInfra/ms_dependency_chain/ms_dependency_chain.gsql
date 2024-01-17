@@ -1,0 +1,13 @@
+CREATE DISTRIBUTED QUERY ms_dependency_chain(VERTEX<Microservice> microservice, INT depth = 3) FOR GRAPH DigitalInfra { 
+  SetAccum<EDGE> @@dependency_edges;
+  SetAccum<VERTEX> @@dependencies;
+  start = {microservice};
+  
+  FOREACH i IN RANGE[0, depth-1] DO
+    start = SELECT t FROM start:s -(reverse_CALLS:e)-> Microservice:t
+            ACCUM @@dependency_edges += e
+            POST-ACCUM @@dependencies += t;
+  END;
+  PRINT start;
+  PRINT @@dependencies, @@dependency_edges;
+}
