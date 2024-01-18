@@ -62,17 +62,11 @@ jobs:
         url=$(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
         echo "REPORT_URL=${url}" >> $GITHUB_ENV
 
-    - name: Comment on PR
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ github.token }}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '${{ env.REPORT_URL }}'
-          })`
+    - name: Add PR Comment
+      uses: mshick/add-pr-comment@v2.8.1
+        with:
+          message: |
+            Test Report: ${{ env.REPORT_URL }}
 
 
     - name: Cleanup
