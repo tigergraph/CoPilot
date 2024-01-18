@@ -9,7 +9,7 @@ branch_name = os.getenv("PR_NUMBER", Repository('.').head.shorthand)
 
 report = wr.Report(
     project="llm-eval-sweep",
-    title="Test Summary For Branch "+ branch_name + " at "+datetime.now().strftime("%m/%d/%Y, %H:%M"),
+    title="Test Summary For PR #"+ branch_name + " at "+datetime.now().strftime("%m/%d/%Y, %H:%M"),
     description="Evaluate the peformance of the changes made to the service.",
 )
 
