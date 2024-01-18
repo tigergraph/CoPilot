@@ -59,7 +59,7 @@ jobs:
           echo "test failed with status $status"
           exit $status
         fi
-        url = $(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
+        url=$(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
         echo "REPORT_URL=${url}" >> $GITHUB_ENV
 
     - name: Comment on PR
