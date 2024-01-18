@@ -2,14 +2,18 @@ import wandb
 import wandb.apis.reports as wr
 from pygit2 import Repository, Commit
 from datetime import datetime, timedelta
+import os
+
+
+branch_name = os.getenv("PR_NUMBER", Repository('.').head.shorthand)
 
 report = wr.Report(
     project="llm-eval-sweep",
-    title="Test Summary For Branch "+ Repository('.').head.shorthand + " at "+datetime.now().strftime("%m/%d/%Y, %H:%M"),
+    title="Test Summary For Branch "+ branch_name + " at "+datetime.now().strftime("%m/%d/%Y, %H:%M"),
     description="Evaluate the peformance of the changes made to the service.",
 )
 
-python_filter = "branch == '"+Repository('.').head.shorthand+"' and commit_hash == '"+Repository('.').head.peel(Commit).id.hex+"'"
+python_filter = "branch == '"+ branch_name +"' and commit_hash == '"+Repository('.').head.peel(Commit).id.hex+"'"
 
 acc_llm_service_bar_plot = wr.PanelGrid(
     runsets=[wr.Runset(project="llm-eval-sweep", name="LLM Service Grouping", groupby=["llm_service"]).set_filters_with_python_expr(python_filter)],
@@ -112,3 +116,6 @@ report.blocks = [acc_llm_service_bar_plot, acc_question_type_bar_plot, acc_paral
 report.save()
 
 print(report.url)
+
+with open("report_url.txt", "w") as f:
+    f.write(report.url)

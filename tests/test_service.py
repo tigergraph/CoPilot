@@ -8,6 +8,8 @@ from langchain.chat_models import ChatOpenAI
 import time
 from pygit2 import Repository, Commit
 
+branch_name = os.getenv("PR_NUMBER", Repository('.').head.shorthand)
+
 EPS = 0.001
 
 class CommonTests():
@@ -199,7 +201,7 @@ class CommonTests():
                         "llm_service": cls.llm_service,
                         "question_type": q_type,
                         "dataset": dataset,
-                        "branch": Repository('.').head.shorthand,
+                        "branch": branch_name,
                         "commit_hash": Repository('.').head.peel(Commit).id.hex
                     }
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]

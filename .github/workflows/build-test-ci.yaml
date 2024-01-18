@@ -39,12 +39,11 @@ jobs:
         echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
       env:
         DB_CONFIG: ${{ secrets.DB_CONFIG }}
-        LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
 
     - name: Run Docker container
       run: |
         docker rm -f nlqs-tests || true
-        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} --name nlqs-tests -d nlqs/tests:0.1
+        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }} --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Execute tests
       run: |
@@ -54,6 +53,20 @@ jobs:
           echo "test failed with status $status"
           exit $status
         fi
+        docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt" >> $TEST_OUTPUT
+
+    - name: Comment on PR
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: process.env.TEST_OUTPUT
+          })`
+
 
     - name: Cleanup
       run: docker rm -f nlqs-tests

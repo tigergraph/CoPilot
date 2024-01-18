@@ -2,3 +2,4 @@ __pycache__/
 *_config*.json
 tigergraph-ml-*.json
 wandb/
+report_url.txt
