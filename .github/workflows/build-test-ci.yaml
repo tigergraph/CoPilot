@@ -64,9 +64,9 @@ jobs:
 
     - name: Add PR Comment
       uses: mshick/add-pr-comment@v2.8.1
-        with:
-          message: |
-            Test Report: ${{ env.REPORT_URL }}
+      with:
+        message: |
+          Test Report: ${{ env.REPORT_URL }}
 
 
     - name: Cleanup
