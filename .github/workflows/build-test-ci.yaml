@@ -53,7 +53,7 @@ jobs:
 
     - name: Execute tests
       run: |
-        docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh ${{ github.event.label.name }} Synthea"
+        docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh ${{ github.event.label.name }} all"
         status=$?
         if [ $status -ne 0 ]; then
           echo "test failed with status $status"
