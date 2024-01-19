@@ -37,6 +37,7 @@ jobs:
         echo "$LLM_CONFIG_OPENAI_GPT35" > configs/openai_gpt3.5-turbo_config.json
         echo "$LLM_CONFIG_GCP_TEXT_BISON" > configs/gcp_text-bison_config.json
         echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
+        echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
       env:
         DB_CONFIG: ${{ secrets.DB_CONFIG }}
         LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
@@ -44,6 +45,7 @@ jobs:
         LLM_CONFIG_GCP_TEXT_BISON: ${{ secrets.LLM_CONFIG_GCP_TEXT_BISON }}
         LLM_CONFIG_OPENAI_GPT35: ${{ secrets.LLM_CONFIG_OPENAI_GPT35 }}
         GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
+        LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
 
 
     - name: Run Docker container
