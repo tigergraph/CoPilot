@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [ "main" ]
     types: [ labeled ]
+  schedule:
+    - cron: '15 21 * * *'
   workflow_dispatch:
 
 jobs:
@@ -51,7 +53,8 @@ jobs:
         docker rm -f nlqs-tests || true
         docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }} --name nlqs-tests -d nlqs/tests:0.1
 
-    - name: Execute tests
+    - name: Execute PR Tests
+      if: ${{ github.event_name }} == 'pull_request'
       run: |
         docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh ${{ github.event.label.name }} all"
         status=$?
@@ -61,8 +64,21 @@ jobs:
         fi
         url=$(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
         echo "REPORT_URL=${url}" >> $GITHUB_ENV
+      
+    - name: Execute Regress Tests
+      if: ${{ github.event_name }} == 'schedule'
+      run: |
+        docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
+        status=$?
+        if [ $status -ne 0 ]; then
+          echo "test failed with status $status"
+          exit $status
+        fi
+        url=$(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
+        echo "REPORT_URL=${url}"
 
     - name: Add PR Comment
+      if: ${{ github.event_name }} == 'pull_request'
       uses: mshick/add-pr-comment@v2.8.1
       with:
         message: |
