@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
     types: [ labeled ]
   schedule:
-    - cron: '20 16 * * *'
+    - cron: '23 20 * * *'
   workflow_dispatch:
 
 jobs:
