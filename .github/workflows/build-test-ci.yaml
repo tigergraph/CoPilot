@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
     types: [ labeled ]
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '45 22 * * *'
   workflow_dispatch:
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
         echo "REPORT_URL=${url}" >> $GITHUB_ENV
       
     - name: Execute Regress Tests
-      if: ${{ github.event_name }} == 'schedule'
+      if: ${{ (github.event_name == 'schedule') || (github.event_name == 'workflow_dispatch')}} 
       run: |
         docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
         status=$?
