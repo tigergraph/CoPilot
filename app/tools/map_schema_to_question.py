@@ -21,7 +21,7 @@ class MapQuestionToSchema(BaseTool):
         Tool to map questions to their datatypes in the database. Should be exectued before GenerateFunction.
     """
     name = "MapQuestionToSchema"
-    description = "Always run first to map the query to the graph's schema. NEVER EXECUTE GenerateFunction before using MapQuestionToSchema"
+    description = "Always run first to map the query to the graph's schema. GenerateFunction before using MapQuestionToSchema"
     conn: "TigerGraphConnection" = None
     llm: LLM = None
     prompt: str = None
