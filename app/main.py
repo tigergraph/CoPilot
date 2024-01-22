@@ -1,5 +1,7 @@
 from typing import Union, Annotated, List, Dict
-from fastapi import FastAPI, Header, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Header, Depends, HTTPException, status, Request, WebSocket
+from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import os
 from pyTigerGraph import TigerGraphConnection
 import json
@@ -25,6 +27,15 @@ with open(LLM_SERVICE, "r") as f:
     llm_config = json.load(f)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 security = HTTPBasic()
 
@@ -58,35 +69,7 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-
-@app.get("/")
-def read_root():
-    return {"config": llm_config["model_name"]}
-
-
-@app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
-                                                                          "description": query_info.description,
-                                                                          "param_types": query_info.param_types,
-                                                                          "custom_query": True}])
-    return res
-
-# TODO: RUD of CRUD with custom queries
-
-@app.post("/{graphname}/retrievedocs")
-def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    # TODO: Better polishing of this response
-    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
-    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
-    return tmp
-
-
-@app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
+def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnection:
     with open(DB_CONFIG, "r") as config_file:
         config = json.load(config_file)
         
@@ -114,6 +97,39 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
             graphname = graphname,
             apiToken = apiToken
         )
+
+    return conn
+
+@app.get("/")
+def read_root():
+    return {"config": llm_config["model_name"]}
+
+
+@app.post("/{graphname}/registercustomquery")
+def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+    vec = embedding_service.embed_query(query_info.docstring)
+    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                          "description": query_info.description,
+                                                                          "param_types": query_info.param_types,
+                                                                          "custom_query": True}])
+    return res
+
+# TODO: RUD of CRUD with custom queries
+
+@app.post("/{graphname}/retrievedocs")
+def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
+    # TODO: Better polishing of this response
+    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
+    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
+    return tmp
+
+
+@app.post("/{graphname}/query")
+def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> NaturalLanguageQueryResponse:
+    logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
+    with open(DB_CONFIG, "r") as config_file:
+        config = json.load(config_file)
 
     conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=50000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
@@ -162,3 +178,129 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         resp.answered_question = False
         logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     return resp
+
+@app.get("/{graphname}/chat")
+async def chat(graphname):
+    return HTMLResponse("""
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>WebSocket Chat</title>
+                            <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    height: 100vh;
+                                    margin: 0;
+                                }
+                                .container {
+                                    text-align: center;
+                                    margin-bottom: 20px;
+                                }
+                                #chatBox {
+                                    width: 400px;
+                                    height: 300px;
+                                    border: 1px solid #ccc;
+                                    overflow: auto;
+                                    padding: 10px;
+                                    margin-bottom: 10px;
+                                }
+                                input {
+                                    padding: 10px;
+                                    margin: 5px;
+                                }
+                                button {
+                                    padding: 10px;
+                                    background-color: #4CAF50;
+                                    color: white;
+                                    border: none;
+                                    cursor: pointer;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <h2>WebSocket Chat</h2>
+                                <div id="chatBox"></div>
+                                <form id="authForm">
+                                    <label for="username">Username:</label>
+                                    <input type="text" id="username" name="username" required>
+                                    <br>
+                                    <label for="password">Password:</label>
+                                    <input type="password" id="password" name="password" required>
+                                    <br>
+                                    <button type="button" onclick="authenticate()">Authenticate</button>
+                                </form>
+                                <form id="chatForm" style="display: none;">
+                                    <label for="message">Message:</label>
+                                    <input type="text" id="message" name="message" required>
+                                    <br>
+                                    <button type="button" onclick="sendMessage()">Send Message</button>
+                                </form>
+                            </div>
+
+                            <script>
+                                var websocket;
+
+                                function authenticate() {
+                                    var username = document.getElementById("username").value;
+                                    var password = document.getElementById("password").value;
+
+                                    // After authentication, establish a WebSocket connection
+                                    establishWebSocket(username, password);
+                                }
+
+                                function establishWebSocket(username, password) {
+                                    // Replace 'your_server_endpoint' with the actual WebSocket endpoint
+                                    websocket = new WebSocket("ws://localhost:8000/chat_ws");
+
+                                    websocket.onopen = function (event) {
+                                        console.log("WebSocket connection opened");
+                                        document.getElementById("authForm").style.display = "none";
+                                        document.getElementById("chatForm").style.display = "block";
+                                    };
+
+                                    websocket.onmessage = function (event) {
+                                        var chatBox = document.getElementById("chatBox");
+                                        chatBox.innerHTML += event.data + "<br>";
+                                        chatBox.scrollTop = chatBox.scrollHeight;
+                                    };
+
+                                    websocket.onclose = function (event) {
+                                        console.log("WebSocket connection closed");
+                                        alert("WebSocket connection closed. Please refresh the page to reconnect.");
+                                    };
+                                }
+
+                                function sendMessage() {
+                                    var messageInput = document.getElementById("message");
+                                    var message = messageInput.value;
+
+                                    // Send the message through the WebSocket connection
+                                    websocket.send(message);
+
+                                    // Display the sent message in the chat box
+                                    var chatBox = document.getElementById("chatBox");
+                                    chatBox.innerHTML += "You: " + message + "<br>";
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+
+                                    // Clear the input field
+                                    messageInput.value = "";
+                                }
+                            </script>
+                        </body>
+                        </html>
+
+                        """)
+
+@app.websocket("/{graphname}/chat_ws")
+async def websocket_chat(websocket: WebSocket, graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        query = retrieve_answer(graphname, data, conn)
+        await websocket.send_text(f"Message text was: {query}")
