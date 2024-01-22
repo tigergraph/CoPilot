@@ -1,6 +1,8 @@
+You are mapping a question from a user to entities represented in a graph database.
+The question is: {question}
 Replace the entites mentioned in the question to one of these choices: {vertices}.
 Replace the relationships mentioned in the question to one of these choices: {edges}.
 If there are words that are synonyms with the entities or relationships above, make sure to output the cannonical form found in the choices above.
-Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same.
+Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same. Format your response following the directions below.
+
 {format_instructions}
-QUESTION: {question}
