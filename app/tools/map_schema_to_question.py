@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.schemas import MapQuestionToSchemaResponse
+from app.schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
 from typing import List, Dict
 from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re
@@ -21,7 +21,7 @@ class MapQuestionToSchema(BaseTool):
         Tool to map questions to their datatypes in the database. Should be exectued before GenerateFunction.
     """
     name = "MapQuestionToSchema"
-    description = "Always run first to map the query to the graph's schema. NEVER EXECUTE GenerateFunction before using MapQuestionToSchema"
+    description = "Always run first to map the query to the graph's schema. GenerateFunction before using MapQuestionToSchema"
     conn: "TigerGraphConnection" = None
     llm: LLM = None
     prompt: str = None
@@ -68,6 +68,33 @@ class MapQuestionToSchema(BaseTool):
         parsed_q = parser.invoke(restate_q)
 
         logger.debug_pii(f"request_id={req_id_cv.get()} MapQuestionToSchema parsed for question={query} into normalized_form={parsed_q}")
+
+        attr_prompt = """For the following source attributes: {parsed_attrs}, map them to the corresponding output attribute in this list: {real_attrs}.
+                         Format the response way explained below:
+                        {format_instructions}"""
+
+        attr_parser = PydanticOutputParser(pydantic_object=MapAttributeToAttributeResponse)
+
+        ATTR_MAP_PROMPT = PromptTemplate(
+            template = attr_prompt,
+            input_variables=["parsed_attrs", "real_attrs"],
+            partial_variables = {"format_instructions": attr_parser.get_format_instructions()}
+        )
+
+        attr_map_chain = LLMChain(llm=self.llm, prompt=ATTR_MAP_PROMPT)
+        for vertex in parsed_q.target_vertex_attributes.keys():
+            map_attr = attr_map_chain.apply([{"parsed_attrs": parsed_q.target_vertex_attributes[vertex], "real_attrs": self.conn.getVertexAttrs(vertex)}])[0]["text"]
+            parsed_map = attr_parser.invoke(map_attr).attr_map
+            parsed_q.target_vertex_attributes[vertex] = [parsed_map[x] for x in list(parsed_q.target_vertex_attributes[vertex])]
+
+        logger.debug(f"request_id={req_id_cv.get()} MapVertexAttributes applied")
+
+        for edge in parsed_q.target_edge_attributes.keys():
+            map_attr = attr_map_chain.apply([{"parsed_attrs": parsed_q.target_edge_attributes[edge], "real_attrs": self.conn.getEdgeAttrs(edge)}])[0]["text"]
+            parsed_map = attr_parser.invoke(map_attr).attr_map
+            parsed_q.target_edge_attributes[edge] = [parsed_map[x] for x in list(parsed_q.target_edge_attributes[edge])]
+
+        logger.debug(f"request_id={req_id_cv.get()} MapEdgeAttributes applied")
 
         try:
             validate_schema(self.conn,

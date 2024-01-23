@@ -12,3 +12,6 @@ class MapQuestionToSchemaResponse(BaseModel):
 class AgentOutput(BaseModel):
     answer: str = Field(description="Natural language answer generated")
     function_call: str = Field(description="Function call used to generate answer")
+
+class MapAttributeToAttributeResponse(BaseModel):
+    attr_map: Dict[str, str] = Field(description="The dictionary of the form {'source_attribute': 'output_attribute'}")

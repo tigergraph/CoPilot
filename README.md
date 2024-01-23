@@ -193,7 +193,7 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 ## Using LangChain
 To use LangChain with InquiryAI, first install the LangChain fork here in your Python environment:
 ```
-pip install git+https://github.com/parkererickson-tg/langchain.git@gml-1483-tg-langchain-support
+pip install git+https://github.com/langchain-ai/langchain.git
 ```
 Then, you can get answers from the graph with the below:
 
