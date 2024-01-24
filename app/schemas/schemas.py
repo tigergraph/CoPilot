@@ -3,6 +3,7 @@ from typing import Union, Annotated, List, Dict
 
 class NaturalLanguageQuery(BaseModel):
     query:str
+    chat_history:List[Tuple] = None
 
 class GSQLQueryInfo(BaseModel):
     function_header: str
