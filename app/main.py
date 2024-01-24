@@ -115,7 +115,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
             apiToken = apiToken
         )
 
-    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=50000000)
+    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
