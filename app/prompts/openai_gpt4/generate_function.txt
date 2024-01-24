@@ -1,4 +1,5 @@
 Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+You are interacting with a graph database that contains edges and vertices, and some functions may traverse between vertices or count edges based upon vertex filters.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
 Vertex Types: {vertex_types}
 Vertex Attributes: {vertex_attributes}
