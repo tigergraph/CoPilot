@@ -1,5 +1,8 @@
 Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+YOU ARE INTERACTING WITH A LABELED PROPERTY GRAPH DATABSE THROUGH PYTHON FUNCTION CALLS, WHERE VERTICES AND EDGES HAVE UNIQUE TYPES AND ATTRIBUTES.
+When the question asks for "How many", make sure to select a function that contains "Count" in the description/function call. Make sure never to generate a function that is not listed below.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
+ONLY WRITE THE FUNCTION CALL, without `conn` in front of it.
 Vertex Types: {vertex_types}
 Vertex Attributes: {vertex_attributes}
 Vertex IDs: {vertex_ids}
@@ -10,4 +13,5 @@ First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
 
-Given a pyTigerGraph TigerGraphConnection object named `conn`, what would be the Python function to answer the question? Only answer with the function call.
+Follow the output directions below on how to structure your response:
+{format_instructions}

@@ -140,11 +140,11 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         steps = agent.question_for_agent(query.query)
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-            function_call = steps["intermediate_steps"][-1][-1].split("Function ")[1].split(" produced")[0]
-            res = steps["intermediate_steps"][-1][-1].split("the result ")[-1]
+            generate_func_output = steps["intermediate_steps"][-1][-1]
             resp.natural_language_response = steps["output"]
-            resp.query_sources = {"function_call": function_call,
-                                "result": json.loads(res)}
+            resp.query_sources = {"function_call": generate_func_output["function_call"],
+                                "result": json.loads(generate_func_output["result"]),
+                                "reasoning": generate_func_output["reasoning"]}
             resp.answered_question = True
         except Exception as e:
             resp.natural_language_response = steps["output"]

@@ -12,4 +12,6 @@ Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
-Python Call: conn.
+
+Follow the output directions below on how to structure your response:
+{format_instructions}
