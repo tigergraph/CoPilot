@@ -1,0 +1,2 @@
+USE GRAPH Synthea
+CREATE DATA_SOURCE synthea_source = """{type: "s3", access.key: "AWS_IAM_ACCESS_KEY", secret.key: "AWS_IAM_SECRET_KEY"}"""

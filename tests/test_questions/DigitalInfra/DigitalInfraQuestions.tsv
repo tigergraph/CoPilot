@@ -1,0 +1,9 @@
+Question Type	Question Theme	Question	Schema Mapped Question	Function Call	Answer
+COUNT VERTEX	COUNT(Microservice)	How many microservices are there?	How many Microservice Vertexes are there?	getVertexCount("Microservice")	39190
+COUNT VERTEX	COUNT(Microservice)	How many services are there?	How many Microservice Vertexes are there?	getVertexCount("Microservice")	39190
+COUNT VERTEX	COUNT(Microservice)	How many apps are there?	How many Microservice Vertexes are there?	getVertexCount("Microservice")	39190
+COUNT VERTEX	COUNT(Container)	How many containers are there?	How many Container Vertexes are there?	getVertexCount("Container")	839657
+COUNT VERTEX WHERE ATTRIBUTE	COUNT(MSCall > 5)	How many calls have a response time greater than 5?	How many MSCall Vertexes have response_time > 5?	getVertexCount("MSCall", where="response_time>5")	1463511
+COUNT VERTEX WHERE ATTRIBUTE	COUNT(MSCall > 5)	What is the count of calls that have a response time longer than 5 seconds?	How many MSCall Vertexes have response_time > 5?	getVertexCount("MSCall", where="response_time>5")	1463511
+COUNT VERTEX WHERE ATTRIBUTE	COUNT(MSCall > 5)	How many calls have a response time that is longer than 5 seconds?	How many MSCall Vertexes have response_time > 5?	getVertexCount("MSCall", where="response_time>5")	1463511
+COUNT VERTEX WHERE ATTRIBUTE	COUNT(MSCall > 5)	What is the count of calls that have a response time greater than 5?	How many MSCall Vertexes have response_time > 5?	getVertexCount("MSCall", where="response_time>5")	1463511

@@ -64,7 +64,14 @@ In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited 
 }
 ```
 ### GCP
-Follow the GCP authentication information found here: https://cloud.google.com/docs/authentication/application-default-credentials#GAC
+Follow the GCP authentication information found here: https://cloud.google.com/docs/authentication/application-default-credentials#GAC and create a Service Account with VertexAI credentials. Then add the following to the docker run command:
+
+```sh
+-v $(pwd)/configs/SERVICE_ACCOUNT_CREDS.json:/code/configs/SERVICE_ACCOUNT_CREDS.json -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/SERVICE_ACCOUNT_CREDS.json
+```
+
+And your JSON config should follow as:
+
 ```json
 {
     "model_name": "GCP-text-bison",
@@ -135,6 +142,9 @@ docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pw
 ## Open Swagger Doc Page
 Navigate to `http://localhost/docs` when the Docker container is running.
 
+## Authentication
+There are two options to authenticate with the service. First is an username/password pair generated from the TigerGraph database. The second is a GSQL secret, also obtained from the database. However, when using the GSQL secret, the username field must be specified as `__GSQL__secret`, with the password field containing the secret. If pyTigerGraph is being used and a connection is created with the `gsqlSecret` parameter, this will already be done for you.
+
 ## Using pyTigerGraph
 First, update pyTigerGraph to utilize the latest build:
 ```sh
@@ -150,7 +160,7 @@ from pyTigerGraph import TigerGraphConnection
 conn = TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
 
 ### ==== CONFIGURE INQUIRYAI HOST ====
-conn.ai.configureInquiryAIHost("http://localhost:8000")
+conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
 
 ### ==== RETRIEVE TOP-K DOCS FROM LIBRARY ====
 # `top_k` parameter optional
@@ -182,3 +192,72 @@ print(conn.ai.query("What are the 5 most influential papers by citations?"))
 
 # prints: {'natural_language_response': 'The top 5 most cited papers are:\n\n1. [Title of paper with Vertex_ID 428523]\n2. [Title of paper with Vertex_ID 384889]\n3. [Title of paper with Vertex_ID 377502]\n4. [Title of paper with Vertex_ID 61855]\n5. [Title of paper with Vertex_ID 416200]', 'answered_question': True, 'query_sources': {'function_call': "runInstalledQuery('tg_pagerank', params={'v_type': 'Paper', 'e_type': 'CITES', 'top_k': 5})", 'result': [{'@@top_scores_heap': [{'Vertex_ID': '428523', 'score': 392.8731}, {'Vertex_ID': '384889', 'score': 251.8021}, {'Vertex_ID': '377502', 'score': 149.1018}, {'Vertex_ID': '61855', 'score': 129.7406}, {'Vertex_ID': '416200', 'score': 129.2286}]}]}}
 ```
+
+## Using LangChain
+To use LangChain with InquiryAI, first install the LangChain fork here in your Python environment:
+```
+pip install git+https://github.com/langchain-ai/langchain.git
+```
+Then, you can get answers from the graph with the below:
+
+```py
+import pyTigerGraph as tg
+conn = tg.TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
+
+### ==== CONFIGURE INQUIRYAI HOST ====
+conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
+
+from langchain_community.graphs import TigerGraph
+graph = TigerGraph(conn)
+result = graph.query("How many servers are there?")
+print(result)
+# {'natural_language_response': 'There are 46148 servers.', 
+#  'answered_question': True,
+#  'query_sources': {'function_call': 'getVertexCount(vertexType="BareMetalNode")', 
+#                    'result': 46148}
+```
+
+# Testing
+
+## Test in Docker Container (Easiest)
+
+If you want to use Weights And Biases, your API key needs to be set in an environment variable on the host machine. 
+
+```sh
+export WANDB_API_KEY=KEY HERE
+```
+
+Make sure that all your LLM service provider configuration files are working properly. The configs will be mounted for the container to access.
+
+```sh
+docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
+
+docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -it --name nlqs-tests nlqs-tests:0.1
+
+
+docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
+```
+
+## Test Script Options
+
+To edit what tests are executed, one can pass arguments to the `./run_tests.sh` script. Currently, one can configure what LLM service to use (defaults to all), what schemas to test against (defaults to all), and whether or not to use Weights and Biases for logging (defaults to true). Instructions of the options are found below:
+
+### Configure LLM Service
+The first parameter to `run_tests.sh` is what LLMs to test against. Defaults to `all`. The options are:
+
+* `all` - run tests against all LLMs
+* `azure_gpt35` - run tests against GPT-3.5 hosted on Azure
+* `openai_gpt35` - run tests against GPT-3.5 hosted on OpenAI
+* `openai_gpt4` - run tests on GPT-4 hosted on OpenAI
+* `gcp_textbison` - run tests on text-bison hosted on GCP
+
+### Configure Testing Graphs
+The second parameter to `run_tests.sh` is what graphs to test against. Defaults to `all`. The options are:
+
+* `all` - run tests against all available graphs
+* `OGB_MAG` - The academic paper dataset provided by: https://ogb.stanford.edu/docs/nodeprop/#ogbn-mag.
+* `DigtialInfra` - Digital infrastructure digital twin dataset
+* `Synthea` - Synthetic health dataset
+
+### Configure Weights and Biases
+If you wish to log the test results to Weights and Biases (and have the correct credentials setup above), the final parameter to `run_tests.sh` automatically defaults to true. If you wish to disable Weights and Biases logging, use `false`.

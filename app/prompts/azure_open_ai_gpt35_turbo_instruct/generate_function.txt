@@ -1,5 +1,4 @@
 Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
-YOU ARE INTERACTING WITH A LABELED PROPERTY GRAPH DATABSE THROUGH PYTHON FUNCTION CALLS, WHERE VERTICES AND EDGES HAVE UNIQUE TYPES AND ATTRIBUTES.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
 Vertex Types: {vertex_types}
 Vertex Attributes: {vertex_attributes}
@@ -10,4 +9,5 @@ Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
-Python Call: conn.
+
+Given a pyTigerGraph TigerGraphConnection object named `conn`, what would be the Python function to answer the question? Only answer with the function call.

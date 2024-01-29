@@ -1,0 +1,29 @@
+FROM continuumio/miniconda3
+
+RUN apt-get update
+RUN apt install -y build-essential
+
+RUN conda create -n py39 python=3.9 pip
+RUN echo "conda activate py39" > ~/.bashrc
+ENV PATH /opt/conda/envs/env/bin:$PATH
+RUN conda run -n py39 \ 
+        conda install faiss-cpu -c pytorch
+# 
+WORKDIR /code
+
+# 
+COPY ./requirements.txt /code/requirements.txt
+
+# 
+RUN /opt/conda/envs/py39/bin/pip install --no-cache-dir --upgrade -r /code/requirements.txt
+
+# 
+COPY ./app /code/app
+COPY ./tests /code/tests
+
+COPY ./.git /code/.git
+
+# INFO, DEBUG, DEBUG_PII
+ENV LOGLEVEL="INFO"
+
+WORKDIR /code/tests

@@ -44,13 +44,16 @@ class TigerGraphAgent():
                                       return_intermediate_steps=True,
                                       #max_iterations=7,
                                       early_stopping_method="generate",
-                                      handle_parsing_errors=True,
-                                      agent_kwargs={
+                                      handle_parsing_errors=True)
+
+        '''
+        agent_kwargs={
                                         "prefix": """DIRECTLY TRANSFER THE OBSERVATION INTO ACTION INPUTS AS NECESSARY.
                                                      BE VERBOSE IN ACTION INPUTS AND THOUGHTS.
                                                      NEVER HALLUCINATE FUNCTION CALLS, MY JOB DEPENDS ON CORRECT ANSWERS.
                                                      ALWAYS USE THE MapQuestionToSchema TOOL BEFORE GenerateFunction.'"""
-                                      })
+                                      }
+        '''
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
 
     def question_for_agent(self, question: str):

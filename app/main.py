@@ -115,7 +115,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
             apiToken = apiToken
         )
 
-    conn.customizeHeader(timeout=config["default_timeout"]*1000)
+    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
@@ -150,15 +150,15 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
             resp.natural_language_response = steps["output"]
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
-            logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+            logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = ""
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
+        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
     except Exception as e:
         resp.natural_language_response = ""
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     return resp
