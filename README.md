@@ -142,6 +142,9 @@ docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pw
 ## Open Swagger Doc Page
 Navigate to `http://localhost/docs` when the Docker container is running.
 
+## Authentication
+There are two options to authenticate with the service. First is an username/password pair generated from the TigerGraph database. The second is a GSQL secret, also obtained from the database. However, when using the GSQL secret, the username field must be specified as `__GSQL__secret`, with the password field containing the secret. If pyTigerGraph is being used and a connection is created with the `gsqlSecret` parameter, this will already be done for you.
+
 ## Using pyTigerGraph
 First, update pyTigerGraph to utilize the latest build:
 ```sh
