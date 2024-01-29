@@ -90,7 +90,7 @@ class GenerateFunction(BaseTool):
                             target_vertex_attributes, 
                             target_edge_attributes)
         except MapQuestionToSchemaException as e:
-            logger.warn(f"request_id={req_id_cv.get()} WARN input schema not valid")
+            logger.warning(f"request_id={req_id_cv.get()} WARN input schema not valid")
             return e
 
         lookup_question = question + " "
@@ -122,7 +122,7 @@ class GenerateFunction(BaseTool):
         try:
             generated = validate_function_call(self.conn, generated, docs)
         except InvalidFunctionCallException as e:
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             return e
 
         try:
@@ -131,7 +131,7 @@ class GenerateFunction(BaseTool):
             logger.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
             return "Function {} produced the result {}".format(generated, json.dumps(loc["res"]))
         except Exception as e:
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 
