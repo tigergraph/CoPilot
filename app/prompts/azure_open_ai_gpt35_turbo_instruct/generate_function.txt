@@ -1,5 +1,4 @@
 Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
-When the question asks for "How many", make sure to select a function that contains "Count" in the description/function call. Make sure never to generate a function that is not listed below.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
 Vertex Types: {vertex_types}
 Vertex Attributes: {vertex_attributes}
