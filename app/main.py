@@ -1,11 +1,14 @@
 from typing import Union, Annotated, List, Dict
-from fastapi import FastAPI, Header, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Header, Depends, HTTPException, status, Request, WebSocket
+from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import os
 from pyTigerGraph import TigerGraphConnection
 import json
 import time
 import uuid
 import logging
+from app.session import SessionHandler
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -26,7 +29,17 @@ with open(LLM_SERVICE, "r") as f:
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 security = HTTPBasic()
+session_handler = SessionHandler()
 
 logger = logging.getLogger(__name__)
 
@@ -58,35 +71,7 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-
-@app.get("/")
-def read_root():
-    return {"config": llm_config["model_name"]}
-
-
-@app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
-                                                                          "description": query_info.description,
-                                                                          "param_types": query_info.param_types,
-                                                                          "custom_query": True}])
-    return res
-
-# TODO: RUD of CRUD with custom queries
-
-@app.post("/{graphname}/retrievedocs")
-def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    # TODO: Better polishing of this response
-    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
-    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
-    return tmp
-
-
-@app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
+def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnection:
     with open(DB_CONFIG, "r") as config_file:
         config = json.load(config_file)
         
@@ -114,6 +99,39 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
             graphname = graphname,
             apiToken = apiToken
         )
+
+    return conn
+
+@app.get("/")
+def read_root():
+    return {"config": llm_config["model_name"]}
+
+
+@app.post("/{graphname}/registercustomquery")
+def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+    vec = embedding_service.embed_query(query_info.docstring)
+    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                          "description": query_info.description,
+                                                                          "param_types": query_info.param_types,
+                                                                          "custom_query": True}])
+    return res
+
+# TODO: RUD of CRUD with custom queries
+
+@app.post("/{graphname}/retrievedocs")
+def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
+    # TODO: Better polishing of this response
+    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
+    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
+    return tmp
+
+
+@app.post("/{graphname}/query")
+def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> NaturalLanguageQueryResponse:
+    logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
+    with open(DB_CONFIG, "r") as config_file:
+        config = json.load(config_file)
 
     conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
@@ -160,5 +178,28 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
         resp.natural_language_response = ""
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     return resp
+
+@app.post("/{graphname}/login")
+def login(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    session_id = session_handler.create_session(conn.username, conn)
+    return {"session_id": session_id}
+
+@app.post("/{graphname}/logout")
+def logout(graphname, session_id: str):
+    session_handler.delete_session(session_id)
+    return {"status": "success"}
+
+@app.get("/{graphname}/chat")
+def chat(request: Request):
+    return HTMLResponse(open("app/static/chat.html").read())
+
+@app.websocket("/{graphname}/ws")
+async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
+    session = session_handler.get_session(session_id)
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
+        await websocket.send_text(f"{res.natural_language_response}")
