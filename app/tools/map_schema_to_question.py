@@ -103,7 +103,7 @@ class MapQuestionToSchema(BaseTool):
                             parsed_q.target_vertex_attributes, 
                             parsed_q.target_edge_attributes)
         except MapQuestionToSchemaException as e:
-            logger.warn(f"request_id={req_id_cv.get()} WARN MapQuestionToSchema to validate schema")
+            logger.warning(f"request_id={req_id_cv.get()} WARN MapQuestionToSchema to validate schema")
             raise e
         logger.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
         return parsed_q
