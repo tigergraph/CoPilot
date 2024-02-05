@@ -133,7 +133,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
     with open(DB_CONFIG, "r") as config_file:
         config = json.load(config_file)
 
-    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=50000000)
+    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
@@ -158,22 +158,22 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         steps = agent.question_for_agent(query.query)
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-            function_call = steps["intermediate_steps"][-1][-1].split("Function ")[1].split(" produced")[0]
-            res = steps["intermediate_steps"][-1][-1].split("the result ")[-1]
+            generate_func_output = steps["intermediate_steps"][-1][-1]
             resp.natural_language_response = steps["output"]
-            resp.query_sources = {"function_call": function_call,
-                                "result": json.loads(res)}
+            resp.query_sources = {"function_call": generate_func_output["function_call"],
+                                "result": json.loads(generate_func_output["result"]),
+                                "reasoning": generate_func_output["reasoning"]}
             resp.answered_question = True
         except Exception as e:
             resp.natural_language_response = steps["output"]
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
-            logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+            logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = ""
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
+        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
     except Exception as e:
         resp.natural_language_response = ""
         resp.query_sources = {}

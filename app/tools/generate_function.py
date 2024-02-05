@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.schemas import MapQuestionToSchemaResponse
+from app.schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
 from app.embedding_utils.embedding_services import EmbeddingModel
 from app.embedding_utils.embedding_stores import EmbeddingStore
@@ -75,10 +75,6 @@ class GenerateFunction(BaseTool):
                     The dictionary of edge attributes the question mentions, in the form {"edge_type": ["attr1", "attr2"]}
         """
         logger.info(f"request_id={req_id_cv.get()} ENTRY GenerateFunction._run()")
-        PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
-                                                   "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
-        )
 
         if target_vertex_types == [] and target_edge_types == []:
             return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
@@ -90,7 +86,7 @@ class GenerateFunction(BaseTool):
                             target_vertex_attributes, 
                             target_edge_attributes)
         except MapQuestionToSchemaException as e:
-            logger.warn(f"request_id={req_id_cv.get()} WARN input schema not valid")
+            logger.warning(f"request_id={req_id_cv.get()} WARN input schema not valid")
             return e
 
         lookup_question = question + " "
@@ -100,6 +96,15 @@ class GenerateFunction(BaseTool):
             lookup_question += "using edges: "+str(target_edge_types)
 
         logger.debug_pii(f"request_id={req_id_cv.get()} retrieving documents for question={lookup_question}")
+
+        func_parser = PydanticOutputParser(pydantic_object=GenerateFunctionResponse)
+        
+        PROMPT = PromptTemplate(
+            template=self.prompt,
+            input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
+                             "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"],
+            partial_variables={"format_instructions": func_parser.get_format_instructions()}
+        )
 
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         inputs = [{"question": question, 
@@ -118,20 +123,23 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
-
+        generated = func_parser.invoke(generated)
         try:
-            generated = validate_function_call(self.conn, generated, docs)
+            parsed_func = validate_function_call(self.conn, generated.connection_func_call, docs)
         except InvalidFunctionCallException as e:
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             return e
 
         try:
             loc = {}
-            exec("res = conn."+generated, {"conn": self.conn}, loc)
+            exec("res = conn."+parsed_func, {"conn": self.conn}, loc)
             logger.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
-            return "Function {} produced the result {}".format(generated, json.dumps(loc["res"]))
+            return {"function_call": parsed_func,
+                    "result": json.dumps(loc["res"]),
+                    "reasoning": generated.func_call_reasoning}
+            #return "Function {} produced the result {}, due to reason {}".format(generated, json.dumps(loc["res"]), generated.func_call_reasoning)
         except Exception as e:
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 

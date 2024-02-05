@@ -15,3 +15,7 @@ class AgentOutput(BaseModel):
 
 class MapAttributeToAttributeResponse(BaseModel):
     attr_map: Dict[str, str] = Field(description="The dictionary of the form {'source_attribute': 'output_attribute'}")
+
+class GenerateFunctionResponse(BaseModel):
+    connection_func_call: str = Field(description="The function call to make to answer the question. Must start with conn.")
+    func_call_reasoning: str = Field(description="The reason why the function call was generated to answer the question.")
