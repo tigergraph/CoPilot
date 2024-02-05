@@ -21,7 +21,7 @@ from app.tools import MapQuestionToSchemaException
 from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
 from app.log import req_id_cv
 
-LLM_SERVICE = os.getenv("LLM_SERVICE")
+LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 
 with open(LLM_SERVICE, "r") as f:
