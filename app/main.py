@@ -8,6 +8,7 @@ import json
 import time
 import uuid
 import logging
+from app.session import SessionHandler
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -20,7 +21,7 @@ from app.tools import MapQuestionToSchemaException
 from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
 from app.log import req_id_cv
 
-LLM_SERVICE = os.getenv("LLM_CONFIG")
+LLM_SERVICE = os.getenv("LLM_SERVICE")
 DB_CONFIG = os.getenv("DB_CONFIG")
 
 with open(LLM_SERVICE, "r") as f:
@@ -38,6 +39,7 @@ app.add_middleware(
 
 
 security = HTTPBasic()
+session_handler = SessionHandler()
 
 logger = logging.getLogger(__name__)
 
@@ -179,128 +181,25 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     return resp
 
+@app.post("/{graphname}/login")
+def login(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    session_id = session_handler.create_session(conn.username, conn)
+    return {"session_id": session_id}
+
+@app.post("/{graphname}/logout")
+def logout(graphname, session_id: str):
+    session_handler.delete_session(session_id)
+    return {"status": "success"}
+
 @app.get("/{graphname}/chat")
-async def chat(graphname):
-    return HTMLResponse("""
-                        <!DOCTYPE html>
-                        <html lang="en">
-                        <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>WebSocket Chat</title>
-                            <style>
-                                body {
-                                    font-family: Arial, sans-serif;
-                                    display: flex;
-                                    flex-direction: column;
-                                    align-items: center;
-                                    height: 100vh;
-                                    margin: 0;
-                                }
-                                .container {
-                                    text-align: center;
-                                    margin-bottom: 20px;
-                                }
-                                #chatBox {
-                                    width: 400px;
-                                    height: 300px;
-                                    border: 1px solid #ccc;
-                                    overflow: auto;
-                                    padding: 10px;
-                                    margin-bottom: 10px;
-                                }
-                                input {
-                                    padding: 10px;
-                                    margin: 5px;
-                                }
-                                button {
-                                    padding: 10px;
-                                    background-color: #4CAF50;
-                                    color: white;
-                                    border: none;
-                                    cursor: pointer;
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <h2>WebSocket Chat</h2>
-                                <div id="chatBox"></div>
-                                <form id="authForm">
-                                    <label for="username">Username:</label>
-                                    <input type="text" id="username" name="username" required>
-                                    <br>
-                                    <label for="password">Password:</label>
-                                    <input type="password" id="password" name="password" required>
-                                    <br>
-                                    <button type="button" onclick="authenticate()">Authenticate</button>
-                                </form>
-                                <form id="chatForm" style="display: none;">
-                                    <label for="message">Message:</label>
-                                    <input type="text" id="message" name="message" required>
-                                    <br>
-                                    <button type="button" onclick="sendMessage()">Send Message</button>
-                                </form>
-                            </div>
+def chat(request: Request):
+    return HTMLResponse(open("app/static/chat.html").read())
 
-                            <script>
-                                var websocket;
-
-                                function authenticate() {
-                                    var username = document.getElementById("username").value;
-                                    var password = document.getElementById("password").value;
-
-                                    // After authentication, establish a WebSocket connection
-                                    establishWebSocket(username, password);
-                                }
-
-                                function establishWebSocket(username, password) {
-                                    // Replace 'your_server_endpoint' with the actual WebSocket endpoint
-                                    websocket = new WebSocket("ws://localhost:8000/chat_ws");
-
-                                    websocket.onopen = function (event) {
-                                        console.log("WebSocket connection opened");
-                                        document.getElementById("authForm").style.display = "none";
-                                        document.getElementById("chatForm").style.display = "block";
-                                    };
-
-                                    websocket.onmessage = function (event) {
-                                        var chatBox = document.getElementById("chatBox");
-                                        chatBox.innerHTML += event.data + "<br>";
-                                        chatBox.scrollTop = chatBox.scrollHeight;
-                                    };
-
-                                    websocket.onclose = function (event) {
-                                        console.log("WebSocket connection closed");
-                                        alert("WebSocket connection closed. Please refresh the page to reconnect.");
-                                    };
-                                }
-
-                                function sendMessage() {
-                                    var messageInput = document.getElementById("message");
-                                    var message = messageInput.value;
-
-                                    // Send the message through the WebSocket connection
-                                    websocket.send(message);
-
-                                    // Display the sent message in the chat box
-                                    var chatBox = document.getElementById("chatBox");
-                                    chatBox.innerHTML += "You: " + message + "<br>";
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-
-                                    // Clear the input field
-                                    messageInput.value = "";
-                                }
-                            </script>
-                        </body>
-                        </html>
-
-                        """)
-
-@app.websocket("/{graphname}/chat_ws")
-async def websocket_chat(websocket: WebSocket, graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+@app.websocket("/{graphname}/ws")
+async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
+    session = session_handler.get_session(session_id)
     await websocket.accept()
     while True:
         data = await websocket.receive_text()
-        query = retrieve_answer(graphname, data, conn)
-        await websocket.send_text(f"Message text was: {query}")
+        res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
+        await websocket.send_text(f"{res.natural_language_response}")
