@@ -1,4 +1,33 @@
-# TigerGraph Natural Language Query Service
+# TigerGraph CoPilot
+TigerGraph CoPilot is a natural language query service that allows users to ask questions about their graph data in plain English. The service uses a Large Language Model (LLM) to convert the user's question into a function call, which is then executed on the graph database. The service is designed to be easily extensible, allowing for the addition of new LLM providers and graph schemas. TigerGraph CoPilot consists of 3 components, InquiryAI (available now), SupportAI (available Q2 2024), and QueryAI (available Q4 2024). 
+
+![./docs/img/TG-CoPilot-Architecture.png](./docs/img/TG-CoPilot-Architecture.png)
+
+## InquiryAI
+InquiryAI is the first component of TigerGraph CoPilot. It is a natural language query service that allows users to ask questions about their graph data in plain English. The service uses a Large Language Model (LLM) to convert the user's question into a function call, which is then executed on the graph database. The service is designed to be easily extensible, allowing for the addition of new LLM providers and LangChain tools. InquiryAI is available now in alpha.
+
+### InquiryAI Architecture
+![./docs/img/InquiryAI-Architecture.png](./docs/img/InquiryAI-Architecture.png)
+
+InquiryAI leverages a Large Language Model (LLM) to convert a user's question into a function call, which is then executed on the graph database. In order to do this, InquiryAI uses an AI agent that has two tools available to it: `MapQuestionToSchema` and `GenerateFunction`. The `MapQuestionToSchema` tool maps the user's question to the graph schema, and the `GenerateFunction` tool generates a function call based on the user's question and the graph schema. The function is then executed on the graph database, then the result is processed by the LLM service and returned to the user. `GenerateFunction` utilizes a vector RAG process to suggest the most relevant functions to the user's question. **Currently, the vector store used by `GenerateFunction` is ephemeral, meaning that the available queries will not be persisted when the container is shut off. If the container dies, the desired queries available to the CoPilot service will have to be re-registered.** 
+
+
+### InquiryAI Roadmap
+InquiryAI is currently in alpha and is being actively developed. The roadmap for InquiryAI is as follows:
+
+* **February 2024**: InquiryAI alpha is released, with support for OpenAI, GCP, and Azure hosted models. The service is packaged as a Docker container and is available via GitHub. To store the available queries and function calls, an ephemeral vector store (FAISS) is used. This means the available queries will not be persisted when the container is shut off. Support for LangChain and pyTigerGraph interaction with the CoPilot service is also available.
+
+* **March 2024**: InquiryAI will support the ability to connect with AWS hosted LLMs. LlamaIndex integration will begin. 
+
+* **April 2024**: InquiryAI will move into beta stage. A persistent vector store will be implemented, allowing for the storage of available queries and function calls.
+
+* **May 2024 +**: The InquiryAI will support continous conversations, and the agent will be aware of previous questions and answers. Integration with common open-source models such as Llama and Mistral will be performed. InquiryAI will be available on TigerGraph Cloud by July 2024.
+
+## SupportAI
+SupportAI is the second component of TigerGraph CoPilot. It is designed to ingest a set of documents, extract a knowledge graph from the information, and enable hybrid search of the documents and graph data through natural language queries. This functionality will enrich RAG (Retrieval-Augmented Generation) pipelines with graph data, enabling more accurate and informative responses to user queries. SupportAI is available in alpha Q2 2024.
+
+## QueryAI
+QueryAI is the third component of TigerGraph CoPilot. It is designed to be used as a developer tool to help generate graph queries in GSQL from an English language description. This will enable developers to write GSQL queries more quickly and accurately, and will be especially useful for those who are new to GSQL. QueryAI is available in alpha Q4 2024.
 
 # Getting Started
 
