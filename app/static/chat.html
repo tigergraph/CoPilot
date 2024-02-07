@@ -4,26 +4,165 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <title>TigerGraph CoPilot InquiryAI</title>
-</head>
-<body>
-    <h1>Login</h1>
-    <form id="loginForm">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br>
-        <button type="button" onclick="login()">Login</button>
-        <button type="button" onclick="logout()">Logout</button>
-    </form>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            /* More styles here */
+        }
 
-    <h1>Chatbox</h1>
-    <div id="chatbox" style="height: 200px; border: 1px solid #ccc; padding: 10px; overflow-y: auto;"></div>
-    <input type="text" id="messageInput" placeholder="Type your message" onkeyup="handleKeyup(event)">
-    <button type="button" onclick="sendMessage()">Send</button>
+        .modal-content {
+            background-color: #d69f14;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            width: 20%; /* Could be more or less, depending on screen size */
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            background-color: white;
+        }
+
+        #chatbox {
+            width: 50%; /* Adjust this value to make the chatbox skinnier */
+            height: 80%; /* Adjust this value to make the chatbox taller */
+            /* Other styles go here */
+        }
+
+        .logo {
+           float: left;
+        }
+
+        .logout-button {
+            float: right;
+        }
+
+        #h2 {
+            text-align: center;
+            color:#ccc;
+        }
+
+        .loader-inner {
+            bottom: 0;
+            height: 60px;
+            left: 0;
+            margin: auto;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 100px;
+        }
+
+        .loader-line-wrap {
+            animation: 
+                spin 2000ms cubic-bezier(.175, .885, .32, 1.275) infinite
+            ;
+            box-sizing: border-box;
+            height: 50px;
+            left: 0;
+            overflow: hidden;
+            position: absolute;
+            top: 0;
+            transform-origin: 50% 100%;
+            width: 50px;
+        }
+        .loader-line {
+            border: 4px solid transparent;
+            border-radius: 100%;
+            box-sizing: border-box;
+            height: 100px;
+            left: 0;
+            margin: 0 auto;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 100px;
+        }
+        .loader-line-wrap:nth-child(1) { animation-delay: -50ms; }
+        .loader-line-wrap:nth-child(2) { animation-delay: -100ms; }
+        .loader-line-wrap:nth-child(3) { animation-delay: -150ms; }
+
+        .loader-line-wrap:nth-child(1) .loader-line {
+            border-color: #ec6408;
+            height: 90px;
+            width: 90px;
+            top: 7px;
+        }
+        .loader-line-wrap:nth-child(2) .loader-line {
+            border-color: #ec6308c9;
+            height: 76px;
+            width: 76px;
+            top: 14px;
+        }
+        .loader-line-wrap:nth-child(3) .loader-line {
+            border-color: #ec63087a;
+            height: 62px;
+            width: 62px;
+            top: 21px;
+        }
+
+        @keyframes spin {
+            0%, 15% {
+                transform: rotate(0);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+
+    </style>
+</head>
+<header style="width: 100%; height: 5%; background-color: white;">
+    <img id="logo" src="https://www.tigergraph.com/wp-content/uploads/2020/05/TG_LOGO.svg" alt="TigerGraph Logo" style="height: 50px; padding: 10px;">
+    <button id ="logout-button" type="button" style="padding: 10px;" onclick="logout()">Logout</button>
+</header>
+<body style="background-color: #2d5e77;">
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login to TigerGraph CoPilot</h2>
+            <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required><br>
+                <button type="button" onclick="login()">Login</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="chatwindow" style="width: 40%; padding-bottom: 5%; bottom: 0; left: 30%; position: absolute;">
+        <div id="chatbox" style="padding-top: 97%; overflow-y: auto; width: 100%">
+            <div id="loader" hidden="true">
+                <div class="loader-inner">
+                    <div class="loader-line-wrap">
+                        <div class="loader-line"></div>
+                    </div>
+                    <div class="loader-line-wrap">
+                        <div class="loader-line"></div>
+                    </div>
+                    <div class="loader-line-wrap">
+                        <div class="loader-line"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <input type="text" id="messageInput" placeholder="Ask TigerGraph CoPilot" onkeyup="handleKeyup(event)" style="width:82%;">
+        <button type="button" onclick="sendMessage()" style="width: 15%; right: 0; position: absolute;">Ask CoPilot</button>
+    </div>
 
     <script>
         let socket;
+        var modal;
+        window.onload = function() {
+            modal = document.getElementById("loginModal");
+            modal.style.display = "block";
+        }
 
         async function login() {
             const username = document.getElementById('username').value;
@@ -51,11 +190,19 @@
 
                 // Connect to WebSocket
                 socket = new WebSocket(`ws://${hostname}:${port}/${graphname}/ws?session_id=${sessionId}`);
+                
+                console.log(modal);
+
+                socket.onopen = function(event) {
+                    console.log("WebSocket is open now.");
+                    modal.style.display = "none";
+                };
 
                 // Handle WebSocket messages
                 socket.onmessage = (event) => {
                     const chatbox = document.getElementById('chatbox');
-                    chatbox.innerHTML += `<p>TigerGraph CoPilot: ${event.data}</p>`;
+                    document.getElementById('loader').hidden = true
+                    chatbox.innerHTML += `<p style="color: white; width: 100%; float: left; text-align: left;">TigerGraph CoPilot: ${event.data}</p>`;
                     chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the bottom
                 };
 
@@ -75,6 +222,8 @@
         }
 
         function logout() {
+            const url2 = window.location.pathname.split('/');
+            const graphname = url2[1];
             // Close WebSocket connection
             if (socket) {
                 socket.close();
@@ -95,6 +244,9 @@
 
             // Clear session ID from storage
             sessionStorage.removeItem('sessionId');
+
+            modal = document.getElementById("loginModal");
+            modal.style.display = "block";
         }
 
         function handleKeyup(event) {
@@ -111,7 +263,8 @@
             if (message.trim() !== '') {
                 // Display your message in the chatbox
                 const chatbox = document.getElementById('chatbox');
-                chatbox.innerHTML += `<p>You: ${message}</p>`;
+                chatbox.innerHTML += `<p style="color: white; width: 100%; float: right; text-align: right;">You: ${message}</p>`;
+                document.getElementById('loader').hidden = false;
                 chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the bottom
 
                 // Send message through WebSocket
