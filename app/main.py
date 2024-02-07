@@ -138,6 +138,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotat
 
     try:
         steps = agent.question_for_agent(query.query)
+        print(steps)
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]

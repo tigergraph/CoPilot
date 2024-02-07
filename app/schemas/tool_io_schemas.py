@@ -1,6 +1,9 @@
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Type
 
+class MapQuestionToSchemaInput(BaseModel):
+    query: str = Field(description="The user's question")
+
 class MapQuestionToSchemaResponse(BaseModel):
     question: str = Field(description="The question restated in terms of the graph schema")
     target_vertex_types: List[str] = Field(description="The list of vertices mentioned in the question. If there are no vertices mentioned, then use an empty list.")

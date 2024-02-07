@@ -6,8 +6,8 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
-from typing import List, Dict
+from app.schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse, MapQuestionToSchemaInput
+from typing import List, Dict, Type
 from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re
 import logging
@@ -26,6 +26,7 @@ class MapQuestionToSchema(BaseTool):
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool = True
+    args_schema: Type[MapQuestionToSchemaInput] = MapQuestionToSchemaInput
     
     def __init__(self, conn, llm, prompt):
         """ Initialize MapQuestionToSchema.
