@@ -9,7 +9,8 @@ Welcome to the developer guide for TigerGraph CoPilot. This guide provides infor
 - [Adding a New LangChain Tool](#adding-a-new-langchain-tool)
 - [Adding a New Embedding Service](#embedding-a-service)
 - [Adding a New LLM Generation Service](#adding-a-new-llm-generation-service)
-
+- [Adding New Tests](#adding-a-new-test-suite)
+  
 ## Adding a New LangChain Tool
 If you want your agent to connect to other data sources or be able to perform custom logic, you can add a new LangChain tool to TigerGraph CoPilot. To add a new LangChain tool, follow these steps:
 1. In the `app/tools` directory, create a new file for your tool. The file should be named `toolname.py` where `toolname` is the name of your tool.
