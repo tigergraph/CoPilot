@@ -74,3 +74,24 @@ elif llm_config["completion_service"]["llm_service"].lower() == "my_service":
 5. Test your service. Run the service and test your service to ensure that it works as expected.
 6. (Optional): Think that your service could be useful for others? Consider contributing it! To contribute your service, submit a pull request to the TigerGraph CoPilot repository and checkout our [contributing guidelines](./Contributing.md).
 
+## Adding a New Test Suite
+To add a new InquiryAI test suite to TigerGraph CoPilot, follow these steps:
+
+1. Download the InquiryAI test template from [here](https://docs.google.com/spreadsheets/d/1wyEgRhWjmgv0xkLQPOIWd00s0FQPgQy_prI5fnSrC5I/edit?usp=sharing) in `.tsv` format.
+
+2. Create a new directory in the `tests/test_questions` directory. The directory should be named `suite_name` where `suite_name` is the name of your test suite.
+
+3. Add the `.tsv` file to the new directory, populated with your example questions and expected answers.
+
+4. (Optional): Add the necessary GSQL and setup script to the `tests/test_questions/suite_name` directory to support your test suite. The setup scripts are not run with the test suite, but help to set up the graph for the test suite. The tests assume that the graph is already set up.
+
+5. Add necessary query descriptors to the `tests/test_questions/suite_name` directory. Within a directory named after the query, add a `.json` file with the query descriptor. Optionally add a `.gsql` file with the query itself.
+
+6. Add the test suite to the `tests/test_questions/parse_test_config.py` file by adding an available schema to the `schema` argument list.
+
+7. Test your test suite. Run the test suite and ensure that it works as expected. Run the tests with the following command (and add desired options described [here](../README.md#test-script-options)):
+```bash
+./run_tests.sh
+```
+
+8. (Optional): Think that your test suite could be useful for others? Consider contributing it! To contribute your test suite, submit a pull request to the TigerGraph CoPilot repository and checkout our [contributing guidelines](./Contributing.md).

@@ -168,11 +168,19 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name nlqs -p 80:80 nlqs:0.1
 ```
 
-## Open Swagger Doc Page
-Navigate to `http://localhost/docs` when the Docker container is running.
+# Using TigerGraph CoPilot
+There are five ways to interact with the TigerGraph CoPilot service: through the Swagger documentation page, through the pyTigerGraph client, through the LangChain client, or through the REST API.
 
 ## Authentication
 There are two options to authenticate with the service. First is an username/password pair generated from the TigerGraph database. The second is a GSQL secret, also obtained from the database. However, when using the GSQL secret, the username field must be specified as `__GSQL__secret`, with the password field containing the secret. If pyTigerGraph is being used and a connection is created with the `gsqlSecret` parameter, this will already be done for you.
+
+## Swagger Doc Page
+Navigate to `http://localhost/docs` when the Docker container is running.
+![./docs/img/SwaggerDocUX.png](./docs/img/SwaggerDocUX.png)
+
+## Chat with the CoPilot
+Navigate to `http://localhost/graphname/chat` when the Docker container is running, where graphname is the name of the graph you want to query.
+![./docs/img/CoPilot-UX-Demo.png](./docs/img/CoPilot-UX-Demo.png)
 
 ## Using pyTigerGraph
 First, update pyTigerGraph to utilize the latest build:
@@ -246,6 +254,12 @@ print(result)
 #                    'result': 46148}
 ```
 
+## Using the REST API
+The REST API can be used to interact with the service. The endpoints can be found on the Swagger documentation page.
+
+# Customization and Extensibility
+TigerGraph CoPilot is designed to be easily extensible. The service can be configured to use different LLM providers, different graph schemas, and different LangChain tools. The service can also be extended to use different embedding services, different LLM generation services, and different LangChain tools. For more information on how to extend the service, see the [Developer Guide](./docs/DeveloperGuide.md).
+
 # Testing
 
 ## Test in Docker Container (Easiest)
@@ -290,3 +304,10 @@ The second parameter to `run_tests.sh` is what graphs to test against. Defaults 
 
 ### Configure Weights and Biases
 If you wish to log the test results to Weights and Biases (and have the correct credentials setup above), the final parameter to `run_tests.sh` automatically defaults to true. If you wish to disable Weights and Biases logging, use `false`.
+
+
+### Add Your Own Test Suite
+To add a new InquiryAI test suite to TigerGraph CoPilot, read the documentation [here](./docs/DeveloperGuide.md#adding-a-new-test-suite).
+
+# Contributing
+If you would like to contribute to TigerGraph CoPilot, please read the documentation [here](./docs/Contributing.md).
