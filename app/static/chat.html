@@ -16,10 +16,10 @@
         }
 
         .modal-content {
-            background-color: #d69f14;
+            background-color: #43a4dc;
             margin: 15% auto; /* 15% from the top and centered */
             padding: 20px;
-            width: 20%; /* Could be more or less, depending on screen size */
+            width: 25%; /* Could be more or less, depending on screen size */
         }
 
         .header {
@@ -42,20 +42,18 @@
             float: right;
         }
 
-        #h2 {
+        h2 {
             text-align: center;
-            color:#ccc;
+            color: white;
         }
 
         .loader-inner {
             bottom: 0;
-            height: 60px;
+            height: 30px;
             left: 0;
-            margin: auto;
-            position: absolute;
             right: 0;
             top: 0;
-            width: 100px;
+            width: 50px;
         }
 
         .loader-line-wrap {
@@ -63,25 +61,25 @@
                 spin 2000ms cubic-bezier(.175, .885, .32, 1.275) infinite
             ;
             box-sizing: border-box;
-            height: 50px;
+            height: 25px;
             left: 0;
             overflow: hidden;
             position: absolute;
             top: 0;
             transform-origin: 50% 100%;
-            width: 50px;
+            width: 25px;
         }
         .loader-line {
             border: 4px solid transparent;
             border-radius: 100%;
             box-sizing: border-box;
-            height: 100px;
+            height: 50px;
             left: 0;
             margin: 0 auto;
             position: absolute;
             right: 0;
             top: 0;
-            width: 100px;
+            width: 50px;
         }
         .loader-line-wrap:nth-child(1) { animation-delay: -50ms; }
         .loader-line-wrap:nth-child(2) { animation-delay: -100ms; }
@@ -89,21 +87,21 @@
 
         .loader-line-wrap:nth-child(1) .loader-line {
             border-color: #ec6408;
-            height: 90px;
-            width: 90px;
-            top: 7px;
+            height: 45px;
+            width: 45px;
+            top: 4px;
         }
         .loader-line-wrap:nth-child(2) .loader-line {
             border-color: #ec6308c9;
-            height: 76px;
-            width: 76px;
-            top: 14px;
+            height: 38px;
+            width: 38px;
+            top: 7px;
         }
         .loader-line-wrap:nth-child(3) .loader-line {
             border-color: #ec63087a;
-            height: 62px;
-            width: 62px;
-            top: 21px;
+            height: 31px;
+            width: 31px;
+            top: 11px;
         }
 
         @keyframes spin {
@@ -115,30 +113,92 @@
             }
         }
 
+        #message-bubble {
+            background-color: #43a4dc;
+            max-width: 65%;
+            border-radius: 10px;
+            padding: 10px;
+            right: 0;
+            position: relative;
+        }
+
+        .copilot-bubble {
+            background-color: #ec6408;
+            max-width: 65%;
+            border-radius: 10px;
+            padding: 10px;
+            left: 0;
+            position: relative;
+        }
+
+        .copilot-loading-bubble {
+            margin-left: 10px;
+            max-width: 65%;
+            border-radius: 10px;
+            padding: 0px;
+            left: 10;
+            position: relative;
+        }
+
+        .message-container {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end; /* Change to 'flex-end' for right alignment */
+        }
+
+        .copilot-container {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start; /* Change to 'flex-end' for right alignment */
+        }
+
+        #loginForm {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #loginForm input {
+            margin-bottom: 10px;
+        }
+        .message-bubble-button {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .message-bubble-button:hover {
+            background-color: #e0e0e0;
+        }
 
     </style>
 </head>
 <header style="width: 100%; height: 5%; background-color: white;">
     <img id="logo" src="https://www.tigergraph.com/wp-content/uploads/2020/05/TG_LOGO.svg" alt="TigerGraph Logo" style="height: 50px; padding: 10px;">
-    <button id ="logout-button" type="button" style="padding: 10px;" onclick="logout()">Logout</button>
+    <button class="message-bubble-button" id ="logout-button" type="button" onclick="logout()">Logout</button>
 </header>
 <body style="background-color: #2d5e77;">
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <h2>Login to TigerGraph CoPilot</h2>
+            <h2>TigerGraph CoPilot</h2>
             <form id="loginForm">
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" required><br>
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required><br>
-                <button type="button" onclick="login()">Login</button>
+                <button class="message-bubble-button" type="button" onclick="login()">Login</button>
             </form>
         </div>
     </div>
     
     <div id="chatwindow" style="width: 40%; padding-bottom: 5%; bottom: 0; left: 30%; position: absolute;">
-        <div id="chatbox" style="padding-top: 97%; overflow-y: auto; width: 100%">
-            <div id="loader" hidden="true">
+        <div id="chatbox" style="overflow-y: scroll; width: 100%; height:95%">
+        </div>
+        <div class="copilot-container">
+            <div class="copilot-loading-bubble" id="loader" hidden="true" style="padding-bottom: 30px;">
                 <div class="loader-inner">
                     <div class="loader-line-wrap">
                         <div class="loader-line"></div>
@@ -152,13 +212,14 @@
                 </div>
             </div>
         </div>
-        <input type="text" id="messageInput" placeholder="Ask TigerGraph CoPilot" onkeyup="handleKeyup(event)" style="width:82%;">
-        <button type="button" onclick="sendMessage()" style="width: 15%; right: 0; position: absolute;">Ask CoPilot</button>
+        <input type="text" id="messageInput" placeholder="Ask TigerGraph CoPilot" onkeyup="handleKeyup(event)" style="width:82%; height: 40px;">
+        <button class="message-bubble-button" type="button" onclick="sendMessage()" style="width: 15%; right: 0; position: absolute; margin: 0px; height: 40px;">Ask CoPilot</button>
     </div>
 
     <script>
         let socket;
         var modal;
+        var can_send = true;
         window.onload = function() {
             modal = document.getElementById("loginModal");
             modal.style.display = "block";
@@ -202,8 +263,9 @@
                 socket.onmessage = (event) => {
                     const chatbox = document.getElementById('chatbox');
                     document.getElementById('loader').hidden = true
-                    chatbox.innerHTML += `<p style="color: white; width: 100%; float: left; text-align: left;">TigerGraph CoPilot: ${event.data}</p>`;
+                    chatbox.innerHTML += `<div class="copilot-container"><p class="copilot-bubble" style="color: white; float: left; text-align: left;">${event.data}</p></div>`;
                     chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the bottom
+                    can_send = true;
                 };
 
                 // Handle WebSocket errors
@@ -260,16 +322,16 @@
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value;
 
-            if (message.trim() !== '') {
+            if (message.trim() !== '' && can_send == true) {
                 // Display your message in the chatbox
                 const chatbox = document.getElementById('chatbox');
-                chatbox.innerHTML += `<p style="color: white; width: 100%; float: right; text-align: right;">You: ${message}</p>`;
+                chatbox.innerHTML += `<div class="message-container"><p id="message-bubble" style="color: white; float: right; text-align: right;">${message}</p></div>`;
                 document.getElementById('loader').hidden = false;
                 chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the bottom
 
                 // Send message through WebSocket
                 socket.send(message);
-
+                can_send = false;
                 // Clear input field
                 messageInput.value = '';
             }
