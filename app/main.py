@@ -1,7 +1,7 @@
 from typing import Union, Annotated, List, Dict
 from fastapi import FastAPI, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 import os
 from pyTigerGraph import TigerGraphConnection
 import json
@@ -203,3 +203,9 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
         data = await websocket.receive_text()
         res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
         await websocket.send_text(f"{res.natural_language_response}")
+
+
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return FileResponse('app/static/favicon.ico')
