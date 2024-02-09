@@ -210,9 +210,12 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
 async def favicon():
     return FileResponse('app/static/favicon.ico')
 
-@app.get("/{graphname}/supportai/initialize")
+@app.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
-    with open("./gsql/supportai/SupportAI_Schema.gsql", "r") as f:
+    # need to open the file using the absolute path
+    abs_path = os.path.abspath(__file__)
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql")
+    with open(file_path, "r") as f:
         schema = f.read()
     res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
     return {"status": res}
