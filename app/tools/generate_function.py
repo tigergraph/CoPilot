@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
+from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
 from app.embedding_utils.embedding_services import EmbeddingModel
 from app.embedding_utils.embedding_stores import EmbeddingStore

@@ -18,7 +18,7 @@ from app.embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Em
 from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from app.tools import MapQuestionToSchemaException
-from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
+from app.py_schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo, BatchDocumentIngest, S3BatchDocumentIngest
 from app.log import req_id_cv
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
@@ -209,3 +209,38 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return FileResponse('app/static/favicon.ico')
+
+@app.get("/{graphname}/supportai/initialize")
+def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    with open("./gsql/supportai/SupportAI_Schema.gsql", "r") as f:
+        schema = f.read()
+    res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
+    return {"status": res}
+
+'''
+@app.post("/{graphname}/supportai/batch_ingest")
+def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], conn: TigerGraphConnection = Depends(get_db_connection)):
+    if doc_source.service.lower() == "s3":
+        import boto3
+        s3 = boto3.client('s3')
+        # get the list of documents
+        documents = []
+        if doc_source.service_params["type"].lower() == "file":
+            response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=doc_source.service_params["key"])
+            documents = response['Body'].read().decode('utf-8').split("\n")
+        elif doc_source.service_params["type"].lower() == "directory":
+            response = s3.list_objects_v2(Bucket=doc_source.service_params["bucket"], Prefix=doc_source.service_params["key"])
+            for obj in response.get('Contents', []):
+                response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=obj['Key'])
+                documents.append(response['Body'].read().decode('utf-8'))
+    else:
+        raise Exception("Document storage service not implemented")
+    if doc_source.chunker.lower() == "regex":
+        from app.chunkers.regex_chunker import RegexChunker
+        chunker = RegexChunker(doc_source.chunker_params["pattern"])
+    elif doc_source.chunker.lower() == "characters":
+        from app.chunkers.character_chunker import CharacterChunker
+        chunker = CharacterChunker(doc_source.chunker_params["chunk_size"], doc_source.chunker_params.get("overlap", 0))
+
+    chunks = chunker(documents)
+'''
