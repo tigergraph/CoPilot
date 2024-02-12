@@ -9,8 +9,11 @@ InquiryAI is the first component of TigerGraph CoPilot. It is a natural language
 ### InquiryAI Architecture
 ![./docs/img/InquiryAI-Architecture.png](./docs/img/InquiryAI-Architecture.png)
 
-InquiryAI leverages a Large Language Model (LLM) to convert a user's question into a function call, which is then executed on the graph database. In order to do this, InquiryAI uses an AI agent that has two tools available to it: `MapQuestionToSchema` and `GenerateFunction`. The `MapQuestionToSchema` tool maps the user's question to the graph schema, and the `GenerateFunction` tool generates a function call based on the user's question and the graph schema. The function is then executed on the graph database, then the result is processed by the LLM service and returned to the user. `GenerateFunction` utilizes a vector RAG process to suggest the most relevant functions to the user's question. **Currently, the vector store used by `GenerateFunction` is ephemeral, meaning that the available queries will not be persisted when the container is shut off. If the container dies, the desired queries available to the CoPilot service will have to be re-registered.** 
+InquiryAI leverages a Large Language Model (LLM) to convert a user's question into a function call, which is then executed on the graph database. In order to do this, InquiryAI uses an AI agent that has two tools available to it: `MapQuestionToSchema` and `GenerateFunction`. 
 
+The `MapQuestionToSchema` tool maps the user's question to the graph schema. 
+
+The `GenerateFunction` tool generates a function call based on the user's question and the graph schema. The function is then executed on the graph database, then the result is processed by the LLM service and returned to the user. `GenerateFunction` utilizes a vector RAG (Retrieval-Augmented Generation) process to suggest the most relevant functions to the user's question. **Currently, the vector store used by `GenerateFunction` is ephemeral, meaning that the available queries will not be persisted when the container is shut off. If the container dies, the desired queries available to the CoPilot service will have to be re-registered.** 
 
 ### InquiryAI Roadmap
 InquiryAI is currently in alpha and is being actively developed. The roadmap for InquiryAI is as follows:
