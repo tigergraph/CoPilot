@@ -1,5 +1,5 @@
 from typing import Union, Annotated, List, Dict
-from fastapi import FastAPI, Header, Depends, HTTPException, status, Request, WebSocket
+from fastapi import FastAPI, BackgroundTasks, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 import os
@@ -9,6 +9,7 @@ import time
 import uuid
 import logging
 from app.session import SessionHandler
+from app.supportai.supportai_ingest import BatchIngestion
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -17,6 +18,7 @@ from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, Google
 from app.embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
 from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
+from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo, BatchDocumentIngest, S3BatchDocumentIngest
 from app.log import req_id_cv
@@ -40,6 +42,7 @@ app.add_middleware(
 
 security = HTTPBasic()
 session_handler = SessionHandler()
+status_manager = StatusManager()
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,18 @@ elif llm_config["embedding_service"]["embedding_model_service"].lower() == "vert
     embedding_service = VertexAI_PaLM_Embedding(llm_config["embedding_service"])
 else:
     raise Exception("Embedding service not implemented")
+
+def get_llm_service(llm_config):
+    if llm_config["completion_service"]["llm_service"].lower() == "openai":
+        return OpenAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "azure":
+        return AzureOpenAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
+        return AWS_SageMaker_Endpoint(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
+        return GoogleVertexAI(llm_config["completion_service"])
+    else:
+        raise Exception("LLM Completion Service Not Supported")
 
 
 embedding_store = FAISS_EmbeddingStore(embedding_service)
@@ -218,32 +233,24 @@ def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection
     with open(file_path, "r") as f:
         schema = f.read()
     res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
-    return {"status": res}
+    return {"status": json.dumps(res)}
 
-'''
 @app.post("/{graphname}/supportai/batch_ingest")
-def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], conn: TigerGraphConnection = Depends(get_db_connection)):
+async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection)):
+    req_id = req_id_cv.get()
+    status_manager.create_status(conn.username, req_id, graphname)
+    ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
     if doc_source.service.lower() == "s3":
-        import boto3
-        s3 = boto3.client('s3')
-        # get the list of documents
-        documents = []
-        if doc_source.service_params["type"].lower() == "file":
-            response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=doc_source.service_params["key"])
-            documents = response['Body'].read().decode('utf-8').split("\n")
-        elif doc_source.service_params["type"].lower() == "directory":
-            response = s3.list_objects_v2(Bucket=doc_source.service_params["bucket"], Prefix=doc_source.service_params["key"])
-            for obj in response.get('Contents', []):
-                response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=obj['Key'])
-                documents.append(response['Body'].read().decode('utf-8'))
+        background_tasks.add_task(ingestion.ingest_s3, doc_source)
     else:
         raise Exception("Document storage service not implemented")
-    if doc_source.chunker.lower() == "regex":
-        from app.chunkers.regex_chunker import RegexChunker
-        chunker = RegexChunker(doc_source.chunker_params["pattern"])
-    elif doc_source.chunker.lower() == "characters":
-        from app.chunkers.character_chunker import CharacterChunker
-        chunker = CharacterChunker(doc_source.chunker_params["chunk_size"], doc_source.chunker_params.get("overlap", 0))
+    return {"status": "request accepted", "request_id": req_id}
 
-    chunks = chunker(documents)
-'''
+@app.get("/{graphname}/supportai/ingestion_status")
+def ingestion_status(graphname, status_id: str):
+    status = status_manager.get_status(status_id)
+    if status:
+        return {"status": status.to_dict()}
+    else:
+        return {"status": "not found"}
+    
