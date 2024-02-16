@@ -23,5 +23,24 @@ class BatchDocumentIngest(BaseModel):
 
 class S3BatchDocumentIngest(BatchDocumentIngest):
     service: str = "s3"
-    service_params: dict = {"bucket": str, "key": str}
+    service_params: dict = {"bucket": str, 
+                            "key": str,
+                            "type": str,
+                            "aws_access_key_id": str,
+                            "aws_secret_access_key": str}
 
+class DocumentChunk(BaseModel):
+    document_chunk_id: str
+    text: str
+    chunk_embedding: List[float] = None
+    entities: List[Dict] = None
+    relationships: List[Dict] = None
+
+class Document(BaseModel):
+    document_id: str
+    text: str
+    document_embedding: List[float] = None
+    document_chunks: List[DocumentChunk] = None
+    entities: List[Dict] = None
+    relationships: List[Dict] = None
+    document_collection: str = None

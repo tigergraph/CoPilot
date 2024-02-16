@@ -1,4 +1,9 @@
 from langchain.pydantic_v1 import BaseModel, Field
+from langchain_core.pydantic_v1 import Field
+from langchain_community.graphs.graph_document import (
+    Node as BaseNode,
+    Relationship as BaseRelationship
+)
 from typing import List, Dict, Type
 
 class MapQuestionToSchemaResponse(BaseModel):
@@ -19,3 +24,22 @@ class MapAttributeToAttributeResponse(BaseModel):
 class GenerateFunctionResponse(BaseModel):
     connection_func_call: str = Field(description="The function call to make to answer the question. Must start with conn.")
     func_call_reasoning: str = Field(description="The reason why the function call was generated to answer the question.")
+
+class Node(BaseNode):
+    #properties: Optional[List[Property]] = Field(
+    #    None, description="List of node properties")
+    definition: str = Field(description="Definition of the node. Describe what the entity is.")
+
+class Relationship(BaseRelationship):
+    #properties: Optional[List[Property]] = Field(
+    #    None, description="List of relationship properties"
+    #)
+    definition: str = Field(description="Definition of the relationship. Describe what the entity is.")
+
+class KnowledgeGraph(BaseModel):
+    """Generate a knowledge graph with entities and relationships."""
+    nodes: List[Node] = Field(
+        ..., description="List of nodes in the knowledge graph")
+    rels: List[Relationship] = Field(
+        ..., description="List of relationships in the knowledge graph"
+    )

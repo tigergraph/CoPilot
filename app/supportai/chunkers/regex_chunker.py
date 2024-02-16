@@ -1,4 +1,4 @@
-from app.chunkers.base_chunker import BaseChunker
+from app.supportai.chunkers.base_chunker import BaseChunker
 import re
 from typing import List
 
@@ -11,7 +11,8 @@ class RegexChunker(BaseChunker):
         '''Split a document using a regex pattern.
            Returns a list of strings that are split by the pattern.
         '''
-        return self.pattern.split(doc)
+        res = self.pattern.split(doc)
+        return list(filter(None, res))
     
     def __call__(self, doc):
         return self.chunk(doc)
