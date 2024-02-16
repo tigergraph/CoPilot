@@ -23,7 +23,7 @@ class BaseIngestion():
     def chunk_document(self, document, chunker, chunker_params):
         if chunker.lower() == "regex":
             from app.supportai.chunkers.regex_chunker import RegexChunker
-            chunker = RegexChunker(str(chunker_params["pattern"]))
+            chunker = RegexChunker(chunker_params["pattern"])
         elif chunker.lower() == "characters":
             from app.supportai.chunkers.character_chunker import CharacterChunker
             chunker = CharacterChunker(chunker_params["chunk_size"], chunker_params.get("overlap", 0))
@@ -42,9 +42,16 @@ class BaseIngestion():
     
 
     def _extract_kg_from_doc(self, doc, chain, parser):
-        out = chain.invoke({"input": doc, "format_instructions": parser.get_format_instructions()})
         try:
-            json_out = json.loads(out.content.split("```")[1].strip("```").strip("json").strip())
+            out = chain.invoke({"input": doc, "format_instructions": parser.get_format_instructions()})
+        except Exception as e:
+            print("Error: ", e)
+            return {"nodes": [], "rels": []}
+        try:
+            if "```json" not in out.content:
+                json_out = json.loads(out.content.strip("content="))
+            else:
+                json_out = json.loads(out.content.split("```")[1].strip("```").strip("json").strip())
 
             formatted_rels = []
             for rels in json_out["rels"]:
@@ -71,7 +78,7 @@ class BaseIngestion():
                             f"""# Knowledge Graph Instructions for GPT-4
                         ## 1. Overview
                         You are a top-tier algorithm designed for extracting information in structured formats to build a knowledge graph.
-                        - **Nodes** represent entities and concepts. They're akin to Wikipedia nodes.
+                        - **Nodes** represent entities, concepts, and properties of entities.
                         - The aim is to achieve simplicity and clarity in the knowledge graph, making it accessible for a vast audience.
                         ## 2. Labeling Nodes
                         - **Consistency**: Ensure you use basic or elementary types for node labels.
@@ -93,7 +100,7 @@ class BaseIngestion():
                                 ("human", "Use the given format to extract information from the following input: {input}"),
                                 ("human", "Mandatory: Make sure to answer in the correct format, specified here: {format_instructions}"),
                             ])
-        chain = prompt | self.llm_service.model
+        chain = prompt | self.llm_service.model #| parser
         er =  self._extract_kg_from_doc(document.text, chain, parser)
         return (er["nodes"], er["rels"])
         
@@ -194,13 +201,13 @@ class BatchIngestion(BaseIngestion):
         documents = []
         if doc_source.service_params["type"].lower() == "file":
             response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=doc_source.service_params["key"])
-            doc = Document(document_id=doc_source.service_params["key"], document_text=response['Body'].read().decode('utf-8'))
+            doc = Document(document_id=doc_source.service_params["key"], document_text=response['Body'].read().decode('utf-8', errors="replace"))
             documents = [doc]
         elif doc_source.service_params["type"].lower() == "directory":
             response = s3.list_objects_v2(Bucket=doc_source.service_params["bucket"], Prefix=doc_source.service_params["key"])
             for obj in response.get('Contents', []):
                 response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=obj['Key'])
-                doc = Document(document_id=obj['Key'], text=response['Body'].read().decode('utf-8'), document_collection=doc_source.service_params["bucket"]+"_"+doc_source.service_params["key"])
+                doc = Document(document_id=obj['Key'], text=response['Body'].read().decode('utf-8', errors="replace"), document_collection=doc_source.service_params["bucket"]+"_"+doc_source.service_params["key"])
                 documents.append(doc)
         else:
             raise ValueError(f"Type {doc_source.service_params['type']} not supported")

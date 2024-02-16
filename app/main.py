@@ -121,6 +121,10 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
 def read_root():
     return {"config": llm_config["model_name"]}
 
+@app.post("/{graphname}/getqueryembedding")
+def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
+    return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/registercustomquery")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
