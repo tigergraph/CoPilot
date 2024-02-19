@@ -120,8 +120,12 @@ class BaseIngestion():
         doc_id = chunk.document_chunk_id.split("_")[0]
         self.status.progress.chunk_failures[chunk_id] = []
         try:
-            self.conn.upsertVertex("DocumentChunk", chunk_id, attributes={"embedding": chunk.chunk_embedding, "date_added": date_added, "content": chunk.text})
+            self.conn.upsertVertex("DocumentChunk", chunk_id, attributes={"embedding": chunk.chunk_embedding, "date_added": date_added, "idx": int(chunk_id.split("_")[-1])})
+            self.conn.upsertVertex("Content", chunk_id, attributes={"text": chunk.text, "date_added": date_added})
+            self.conn.upsertEdge("DocumentChunk", chunk_id, "HAS_CONTENT", "Content", chunk_id)
             self.conn.upsertEdge("Document", doc_id, "HAS_CHILD", "DocumentChunk", chunk_id)
+            if int(chunk_id.split("_")[-1]) > 0:
+                self.conn.upsertEdge("DocumentChunk", chunk_id, "IS_AFTER", "DocumentChunk", doc_id+"_chunk_"+str(int(chunk_id.split("_")[-1])-1))
         except Exception as e:
             self.status.progress.chunk_failures[chunk_id].append(e)
         
@@ -151,7 +155,9 @@ class BaseIngestion():
         try:
             self.conn.upsertVertex("Document", doc_id, attributes={"embedding": doc_emb, "date_added": date_added})
             if doc_collection:
-                self.conn.upsertEdge("DocumentCollection", doc_collection, "DOCUMENT_IN_COLLECTION", "Document", doc_id)
+                self.conn.upsertEdge("DocumentCollection", doc_collection, "CONTAINS_DOCUMENT", "Document", doc_id)
+            self.conn.upsertVertex("Content", doc_id, attributes={"text": document.text, "date_added": date_added})
+            self.conn.upsertEdge("Document", doc_id, "HAS_CONTENT", "Content", doc_id)
         except Exception as e:
             self.status.progress.doc_failures[doc_id].append(e)
         

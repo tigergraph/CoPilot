@@ -1,0 +1,10 @@
+CREATE DISTRIBUTED QUERY HNSW_DeleteIndex(/* Parameters here */) { 
+  
+  tmp = SELECT s
+    FROM Document:s -((LINK_TO|ENTRYPOINT_OF):e)- :t
+    ACCUM
+      DELETE(e);
+    
+  
+  PRINT "delete_edges_from_hnswlib_testing works!"; 
+}
