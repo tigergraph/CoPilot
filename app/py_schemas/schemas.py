@@ -4,6 +4,11 @@ from typing import Union, Annotated, List, Dict
 class NaturalLanguageQuery(BaseModel):
     query:str
 
+class SupportAIQuestion(BaseModel):
+    question:str
+    method: str = "hybrid"
+    method_params: dict = {}
+
 class GSQLQueryInfo(BaseModel):
     function_header: str
     description: str
