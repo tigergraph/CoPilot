@@ -262,7 +262,12 @@ def ingestion_status(graphname, status_id: str):
 def create_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_db_connection)):
     if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(index_name)) == 0:
         res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": index_name})
-    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": index_name, "v_types": ["DocumentChunk"]})
+    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": index_name, "v_types": ["Entity"]})
+    return res
+
+@app.get("/{graphname}/supportai/deletevdb/{index_name}")
+def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_db_connection)):
+    res = conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
     return res
     
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
@@ -270,7 +275,6 @@ def query_vdb(graphname, index_name, query: NaturalLanguageQuery, conn: TigerGra
     q_emb = embedding_service.embed_query(query.query)
     # TODO: Add support for Native HNSW Implementation to EmbeddingStore
 
-    res = conn.runInstalledQuery("HNSW_Search", {"input": str(q_emb).strip("[").strip("]").replace(" ", ""), "index_name": index_name})
+    res = conn.runInstalledQuery("HNSW_Search", {"input": str(q_emb).strip("[").strip("]").replace(" ", ""), "index_name": index_name, "k":50, "max_level": 10})
 
     return res
-    

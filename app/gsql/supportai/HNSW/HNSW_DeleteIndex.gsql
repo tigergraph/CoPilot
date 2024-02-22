@@ -1,10 +1,21 @@
-CREATE DISTRIBUTED QUERY HNSW_DeleteIndex(/* Parameters here */) { 
+CREATE DISTRIBUTED QUERY HNSW_DeleteIndex(STRING index_name) { 
+  SetAccum<STRING> @@t_type;
+  entry = {HNSWEntrypoint.*};
   
-  tmp = SELECT s
-    FROM Document:s -((LINK_TO|ENTRYPOINT_OF):e)- :t
+  tmp = SELECT t
+    FROM entry:s -(ENTRYPOINT_OF:e)- :t
     ACCUM
-      DELETE(e);
-    
+      DELETE(e)
+    POST-ACCUM
+      @@t_type += t.type
+    POST-ACCUM
+      DELETE(s);
   
+  seeds = {@@t_type};
+  
+  tmp = SELECT t
+        FROM seeds:s -(LINK_TO:e)- :t
+        ACCUM
+          DELETE(e);
   PRINT "delete_edges_from_hnswlib_testing works!"; 
 }
