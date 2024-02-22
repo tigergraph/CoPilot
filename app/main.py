@@ -20,7 +20,7 @@ from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
-from app.py_schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo, BatchDocumentIngest, S3BatchDocumentIngest
+from app.py_schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo, BatchDocumentIngest, S3BatchDocumentIngest, SupportAIQuestion
 from app.log import req_id_cv
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
@@ -258,3 +258,64 @@ def ingestion_status(graphname, status_id: str):
     else:
         return {"status": "not found"}
     
+@app.get("/{graphname}/supportai/createvdb/{index_name}")
+def create_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_db_connection)):
+    if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(index_name)) == 0:
+        res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": index_name})
+    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": index_name, "v_types": ["DocumentChunk"], "M": 20, "ef_construction": 128})
+    return res
+
+@app.get("/{graphname}/supportai/deletevdb/{index_name}")
+def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_db_connection)):
+    res = conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
+    return res
+    
+@app.post("/{graphname}/supportai/queryvdb/{index_name}")
+def query_vdb(graphname, index_name, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)):
+    q_emb = embedding_service.embed_query(query.query)
+    # TODO: Add support for Native HNSW Implementation to EmbeddingStore
+
+    res = conn.runInstalledQuery("HNSW_Search", {"input": str(q_emb).strip("[").strip("]").replace(" ", ""), "index_name": index_name, "k": 20})
+
+    return res
+
+@app.post("/{graphname}/supportai/hybridsearch")
+def hybrid_search(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)):
+    q_emb = embedding_service.embed_query(query.query)
+    res = conn.runInstalledQuery("HNSW_Overlap_Search", {"embedding": str(q_emb).strip("[").strip("]").replace(" ", ""),
+                                                         "embedding_indices": ["EntityIndex", "DocChunkIndex"],
+                                                         "k":1,
+                                                         "num_hops": 2,
+                                                         "num_seen_min": 2})
+    return res
+
+@app.post("/{graphname}/supportai/{index_name}/search")
+def search(graphname, index_name, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)):
+    q_emb = embedding_service.embed_query(query.query)
+    res = conn.runInstalledQuery("HNSW_Search_Content", {"embedding": str(q_emb).strip("[").strip("]").replace(" ", ""), "index_name": index_name, "k": 1})
+    return res
+
+@app.post("/{graphname}/supportai/answerquestion")
+def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    retrieve = NaturalLanguageQuery(query=query.question)
+    if query.method.lower() == "hybrid":
+        res = hybrid_search(graphname, retrieve, conn)
+    elif query.method.lower() == "vdb":
+        if "index_name" not in query.method_params:
+            raise Exception("Index name not provided")
+        res = search(graphname, query.method_params["index_name"], retrieve, conn)
+    else:
+        raise Exception("Method not implemented")
+    
+    from langchain_core.output_parsers import StrOutputParser
+    from langchain_core.prompts import ChatPromptTemplate
+
+    prompt = ChatPromptTemplate.from_template("Answer this question: {question}\nUse this information: {info}")
+    model = get_llm_service(llm_config).llm
+    output_parser = StrOutputParser()
+
+    chain = prompt | model | output_parser
+
+    generated = chain.invoke({"question": query.question, "info": res})
+
+    return {"response": generated, "source": res}

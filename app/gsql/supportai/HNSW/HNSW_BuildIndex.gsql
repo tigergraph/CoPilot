@@ -1,0 +1,66 @@
+CREATE QUERY HNSW_BuildIndex(
+  STRING index_name,
+  SET<STRING> v_types,
+  UINT M = 16,
+  UINT ef_construction = 64
+) { 
+  TYPEDEF tuple<VERTEX src_v, INT level> EntryPointTuple;
+  MapAccum<STRING, MapAccum<STRING, SetAccum<UINT>>> @@HNSW_STRUCTURE; //primary key: src vid, secondary key: dst vid, value: the levels where the edge exists.
+  
+  // HeapAccum<> // size 1 store source of @@HNSW_STRUCTURE and rank on max value of set of levels in @@HNSW_STRUCTURE
+  HeapAccum<EntryPointTuple>(1, level DESC) @@find_entrypoint;
+  MapAccum<STRING, ListAccum<DOUBLE>> @@verts_vects_map;
+  MapAccum<STRING, VERTEX> @@id_v_map;
+  MaxAccum<INT> @@dim;
+  ListAccum<VERTEX<HNSWEntrypoint>> @@entrypoint;
+  
+  seeds = {v_types};
+  
+  vects = SELECT s
+    FROM seeds:s
+    WHERE s.embedding.size() != 0
+    POST-ACCUM
+      @@verts_vects_map += (s.id -> s.embedding),
+      @@dim += s.embedding.size(),
+      @@id_v_map += (s.id -> s);
+  
+    
+
+  PRINT vects.size() as num_vects;
+  
+  PRINT @@dim as dimension;
+  
+  PRINT now() as START_TIME;
+  
+  @@HNSW_STRUCTURE = init_hnsw_index(@@dim, vects.size(), M, ef_construction, @@verts_vects_map);
+  
+  PRINT now() as END_TIME;
+  
+  //PRINT @@verts_vects_map;
+  
+  //PRINT @@HNSW_STRUCTURE;
+  
+  tmp = SELECT s
+    FROM vects:s
+    POST-ACCUM
+      FOREACH (tgt, lvls) IN @@HNSW_STRUCTURE.get(s.id) DO
+        @@find_entrypoint += EntryPointTuple(s, max(lvls)),
+        INSERT INTO LINK_TO VALUES (@@id_v_map.get(s.id), @@id_v_map.get(tgt), lvls)
+      END;
+  
+  // Insert Entrypoint
+  
+  tmp = SELECT s FROM HNSWEntrypoint:s
+        WHERE s.id == index_name
+        POST-ACCUM
+          INSERT INTO ENTRYPOINT_OF VALUES (s, @@find_entrypoint.top().src_v),
+          s.emb_dimension = @@dim,
+          s.ef_construction = ef_construction,
+          s.date_added = now(); 
+  
+  errors = SELECT s
+    FROM seeds:s
+    WHERE s.embedding.size() == 0;
+  
+  PRINT errors;
+}
