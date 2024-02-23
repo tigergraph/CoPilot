@@ -22,6 +22,11 @@ class LLM_Model():
         raise("generate_function_prompt not supported in base class")
 
     @property
+    def supportai_response_prompt(self):
+        """ Property to get the prompt for the SupportAI response. """
+        return "Answer this question: {question}\nUse this information: {sources}"
+
+    @property
     def model(self):
         """ Property to get the external LLM model."""
         raise ("model not supported in base class")
