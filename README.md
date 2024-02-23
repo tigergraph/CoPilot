@@ -34,6 +34,11 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 
 # Getting Started
 
+First, make sure you have read access to the proper repos.  You must be in the TigerGraph
+GitHub organization and have read access to the following repo:
+
+https://github.com/tigergraph/CoPilot
+
 ## Clone The Repository and Setup Environment
 ```sh
 git clone https://github.com/tigergraph/natural_language_service.git
