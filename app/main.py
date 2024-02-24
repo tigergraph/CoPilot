@@ -204,6 +204,11 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
         res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
         await websocket.send_text(f"{res.natural_language_response}")
 
+@app.get("/health")
+def health():
+    return {"status": "healthy",
+            "llm_completion_model": llm_config["completion_service"]["llm_model"],
+            "embedding_service": llm_config["embedding_service"]["embedding_model_service"]}
 
 
 @app.get('/favicon.ico', include_in_schema=False)
