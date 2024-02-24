@@ -24,8 +24,31 @@ from app.log import req_id_cv
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 
-with open(LLM_SERVICE, "r") as f:
-    llm_config = json.load(f)
+if LLM_SERVICE is None:
+    raise Exception("LLM_CONFIG environment variable not set")
+if DB_CONFIG is None:
+    raise Exception("DB_CONFIG environment variable not set")
+
+if LLM_SERVICE[-5:] != ".json":
+    try:
+        llm_config = json.loads(LLM_SERVICE)
+    except Exception as e:
+        raise Exception("LLM_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
+else:
+    with open(LLM_SERVICE, "r") as f:
+        llm_config = json.load(f)
+    
+if DB_CONFIG[-5:] != ".json":
+    print(DB_CONFIG)
+    try:
+        db_config = json.loads(str(DB_CONFIG))
+    except Exception as e:
+        raise Exception("DB_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
+else:
+    with open(DB_CONFIG, "r") as f:
+        db_config = json.load(f)
+
+
 
 app = FastAPI()
 
@@ -72,17 +95,14 @@ async def log_requests(request: Request, call_next):
     return response
 
 def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnection:
-    with open(DB_CONFIG, "r") as config_file:
-        config = json.load(config_file)
-        
     conn = TigerGraphConnection(
-        host=config["hostname"],
+        host=db_config["hostname"],
         username = credentials.username,
         password = credentials.password,
         graphname = graphname,
     )
 
-    if config["getToken"]:
+    if db_config["getToken"]:
         try:
             apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
         except:
@@ -93,13 +113,13 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
             )
 
         conn = TigerGraphConnection(
-            host=config["hostname"],
+            host=db_config["hostname"],
             username = credentials.username,
             password = credentials.password,
             graphname = graphname,
             apiToken = apiToken
         )
-
+    conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
     return conn
 
 @app.get("/")
@@ -130,10 +150,6 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> NaturalLanguageQueryResponse:
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
-    with open(DB_CONFIG, "r") as config_file:
-        config = json.load(config_file)
-
-    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
