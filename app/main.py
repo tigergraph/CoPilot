@@ -24,6 +24,23 @@ from app.log import req_id_cv
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 
+if LLM_SERVICE is None:
+    raise Exception("LLM_CONFIG environment variable not set")
+if DB_CONFIG is None:
+    raise Exception("DB_CONFIG environment variable not set")
+
+if LLM_SERVICE[:-5] != ".json":
+    try:
+        llm_config = json.loads(LLM_SERVICE)
+    except:
+        raise Exception("LLM_CONFIG environment variable must be a .json file or a JSON string")
+    
+if DB_CONFIG[:-5] != ".json":
+    try:
+        db_config = json.loads(DB_CONFIG)
+    except:
+        raise Exception("DB_CONFIG environment variable must be a .json file or a JSON string")
+
 with open(LLM_SERVICE, "r") as f:
     llm_config = json.load(f)
 
