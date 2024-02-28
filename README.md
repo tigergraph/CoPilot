@@ -90,7 +90,7 @@ In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited 
         "model_kwargs": {
             "temperature": 0
         },
-        "prompt_path": "./app/prompts/open_ai_davinci-003/"
+        "prompt_path": "./app/prompts/openai_gpt4/"
     }
 }
 ```
