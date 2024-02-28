@@ -36,11 +36,13 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 
 ## Clone The Repository and Setup Environment
 ```sh
-git clone https://github.com/tigergraph/natural_language_service.git
+git clone https://github.com/tigergraph/CoPilot.git
 
-cd natural_language_service
+cd CoPilot/app
 
 mkdir configs
+
+cd configs
 
 touch db_config.json
 touch llm_config.json
@@ -48,7 +50,7 @@ touch llm_config.json
 
 ## Build the Dockerfile
 ```sh
-docker build -t nlqs:0.1 .
+docker build -t copilot:0.1 .
 ```
 
 ### Optional: Configure Logging Level in Dockerfile
@@ -91,7 +93,7 @@ In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited 
         "model_kwargs": {
             "temperature": 0
         },
-        "prompt_path": "./app/prompts/open_ai_davinci-003/"
+        "prompt_path": "./app/prompts/openai_gpt4/"
     }
 }
 ```
@@ -168,7 +170,7 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 ## Run the Docker Image
 ```sh
-docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name nlqs -p 80:80 nlqs:0.1
+docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 copilot:0.1
 ```
 
 # Using TigerGraph CoPilot
@@ -276,12 +278,12 @@ export WANDB_API_KEY=KEY HERE
 Make sure that all your LLM service provider configuration files are working properly. The configs will be mounted for the container to access.
 
 ```sh
-docker build -f Dockerfile.tests -t nlqs-tests:0.1 .
+docker build -f Dockerfile.tests -t copilot-tests:0.1 .
 
-docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -it --name nlqs-tests nlqs-tests:0.1
+docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -it --name copilot-tests copilot-tests:0.1
 
 
-docker exec nlqs-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
+docker exec copilot-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
 ```
 
 ## Test Script Options
