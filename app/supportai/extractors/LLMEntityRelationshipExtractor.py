@@ -1,17 +1,12 @@
-'''
-
-from app.llm_services import LLMService
+from app.llm_services import LLM_Model
+from app.supportai.extractors.BaseExtractor import BaseExtractor
+from app.py_schemas import KnowledgeGraph
 import json
 
-class BaseExtractor():
-    def __init__():
-        pass
 
-    def extract(self, text):
-        pass
 
 class LLMEntityRelationshipExtractor(BaseExtractor):
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLM_Model):
         self.llm_service = llm_service
 
     def _extract_kg_from_doc(self, doc, chain, parser):
@@ -76,9 +71,8 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
                                 ("human", "Mandatory: Make sure to answer in the correct format, specified here: {format_instructions}"),
                             ])
         chain = prompt | self.llm_service.model #| parser
-        er =  self._extract_kg_from_doc(document.text, chain, parser)
-        return (er["nodes"], er["rels"])
+        er =  self._extract_kg_from_doc(document, chain, parser)
+        return er
 
     def extract(self, text):
-        return self.llm_service.get_entities_relationships(text)
-'''
+        return self.document_er_extraction(text)
