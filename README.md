@@ -38,7 +38,7 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 ```sh
 git clone https://github.com/tigergraph/CoPilot.git
 
-cd CoPilot/app
+cd CoPilot
 
 mkdir configs
 

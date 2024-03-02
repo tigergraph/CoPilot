@@ -1,20 +1,16 @@
 FROM continuumio/miniconda3
 
-RUN apt-get update
-RUN apt install -y build-essential
+RUN apt-get update && apt-get install -y build-essential
 
-RUN conda create -n py39 python=3.9 pip
-RUN echo "conda activate py39" > ~/.bashrc
-ENV PATH /opt/conda/envs/env/bin:$PATH
-RUN conda run -n py39 \ 
-        conda install faiss-cpu -c pytorch
+# Create conda environment and install packages
+RUN conda create -n py39 python=3.9 pip && \
+    /bin/bash -c "source activate py39 && \
+    conda install faiss-cpu -c pytorch"
 # 
 WORKDIR /code
 
 # 
 COPY ./requirements.txt /code/requirements.txt
-COPY ./configs/llm_config.json /configs/llm_config.json
-COPY ./configs/db_config.json /configs/db_config.json
 
 # 
 RUN /opt/conda/envs/py39/bin/pip install --no-cache-dir --upgrade -r /code/requirements.txt
@@ -22,8 +18,8 @@ RUN /opt/conda/envs/py39/bin/pip install --no-cache-dir --upgrade -r /code/requi
 # 
 COPY ./app /code/app
 
-ENV LLM_CONFIG="/configs/llm_config.json"
-ENV DB_CONFIG="/configs/db_config.json"
+ENV LLM_CONFIG="/llm_config.json"
+ENV DB_CONFIG="/db_config.json"
 
 # INFO, DEBUG, DEBUG_PII
 ENV LOGLEVEL="INFO"
