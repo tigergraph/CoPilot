@@ -8,7 +8,6 @@ RUN echo "conda activate py39" > ~/.bashrc
 ENV PATH /opt/conda/envs/env/bin:$PATH
 RUN conda run -n py39 \ 
         conda install faiss-cpu -c pytorch
-
 # 
 WORKDIR /code
 

@@ -3,9 +3,14 @@ FROM continuumio/miniconda3
 RUN apt-get update && apt-get install -y build-essential
 
 # Create conda environment and install packages
-RUN conda create -n py39 python=3.9 pip && \
-    /bin/bash -c "source activate py39 && \
-    conda install faiss-cpu -c pytorch"
+RUN apt-get update
+RUN apt install -y build-essential
+
+RUN conda create -n py39 python=3.9 pip
+RUN echo "conda activate py39" > ~/.bashrc
+ENV PATH /opt/conda/envs/env/bin:$PATH
+RUN conda run -n py39 \ 
+        conda install faiss-cpu -c pytorch
 # 
 WORKDIR /code
 
