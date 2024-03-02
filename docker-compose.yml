@@ -11,11 +11,13 @@ services:
       - milvus-standalone
       - kafka
     environment:
-      LLM_CONFIG: "/configs/llm_config.json"
-      DB_CONFIG: "/configs/db_config.json"
+      LLM_CONFIG: "/code/configs/llm_config.json"
+      DB_CONFIG: "/code/configs/db_config.json"
       LOGLEVEL: "INFO"
       KAFKA_BROKER: "kafka:9092"
       MILVUS_HOST: "milvus-standalone"
+    volumes:
+      - ./configs/:/code/configs
 
   kafka:
     image: wurstmeister/kafka
