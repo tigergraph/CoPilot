@@ -1,8 +1,5 @@
 FROM continuumio/miniconda3
 
-RUN apt-get update && apt-get install -y build-essential
-
-# Create conda environment and install packages
 RUN apt-get update
 RUN apt install -y build-essential
 
