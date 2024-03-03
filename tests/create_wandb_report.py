@@ -8,7 +8,7 @@ import os
 branch_name = os.getenv("PR_NUMBER", Repository('.').head.shorthand)
 
 report = wr.Report(
-    project="llm-eval-sweep",
+    project="CoPilot",
     title="Test Summary For PR #"+ branch_name + " at "+datetime.now().strftime("%m/%d/%Y, %H:%M"),
     description="Evaluate the peformance of the changes made to the service.",
 )
@@ -16,7 +16,7 @@ report = wr.Report(
 python_filter = "branch == '"+ branch_name +"' and commit_hash == '"+Repository('.').head.peel(Commit).id.hex+"'"
 
 acc_llm_service_bar_plot = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep", name="LLM Service Grouping", groupby=["llm_service"]).set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot", name="LLM Service Grouping", groupby=["llm_service"]).set_filters_with_python_expr(python_filter)],
     panels = [
         wr.BarPlot(
             title="Average Accuracy by LLM Service",
@@ -30,7 +30,7 @@ acc_llm_service_bar_plot = wr.PanelGrid(
 )
 
 acc_question_type_bar_plot = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep", name="Question Type Grouping", groupby=["question_type"]).set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot", name="Question Type Grouping", groupby=["question_type"]).set_filters_with_python_expr(python_filter)],
     panels = [
         wr.BarPlot(
             title="Average Accuracy by Question Type",
@@ -45,7 +45,7 @@ acc_question_type_bar_plot = wr.PanelGrid(
 
 
 acc_parallel_cords = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep").set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot").set_filters_with_python_expr(python_filter)],
     panels = [
         wr.ParallelCoordinatesPlot(
             columns=[
@@ -60,7 +60,7 @@ acc_parallel_cords = wr.PanelGrid(
 )
 
 nrp_llm_service_bar_plot = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep", name="LLM Service Grouping", groupby=["llm_service"]).set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot", name="LLM Service Grouping", groupby=["llm_service"]).set_filters_with_python_expr(python_filter)],
     panels = [
         wr.BarPlot(
             title="Average Not Wrong Percent by LLM Service",
@@ -74,7 +74,7 @@ nrp_llm_service_bar_plot = wr.PanelGrid(
 )
 
 nrp_question_type_bar_plot = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep", name="Question Type Grouping", groupby=["question_type"]).set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot", name="Question Type Grouping", groupby=["question_type"]).set_filters_with_python_expr(python_filter)],
     panels = [
         wr.BarPlot(
             title="Average Not Wrong Percent by Question Type",
@@ -89,7 +89,7 @@ nrp_question_type_bar_plot = wr.PanelGrid(
 
 
 nrp_parallel_cords = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep").set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot").set_filters_with_python_expr(python_filter)],
     panels = [
         wr.ParallelCoordinatesPlot(
             columns=[
@@ -104,7 +104,7 @@ nrp_parallel_cords = wr.PanelGrid(
 )
 
 table = wr.PanelGrid(
-    runsets=[wr.Runset(project="llm-eval-sweep").set_filters_with_python_expr(python_filter)],
+    runsets=[wr.Runset(project="CoPilot").set_filters_with_python_expr(python_filter)],
     panels = [
         wr.WeavePanelSummaryTable(table_name="qa_results",
             layout={'w': 24, 'h': 16}  # change the layout!
