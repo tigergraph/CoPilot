@@ -298,7 +298,7 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_d
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
 def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
-    res = retriever.search(query.query, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
+    res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
 
 
