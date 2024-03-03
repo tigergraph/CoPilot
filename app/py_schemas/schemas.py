@@ -49,3 +49,9 @@ class Document(BaseModel):
     entities: List[Dict] = None
     relationships: List[Dict] = None
     document_collection: str = None
+
+class CreateVectorIndexConfig(BaseModel):
+    index_name: str
+    vertex_types: List[str]
+    M: int = 20
+    ef_construction: int = 128
