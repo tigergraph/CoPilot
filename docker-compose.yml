@@ -59,12 +59,12 @@ services:
       MINIO_SECRET_KEY: minioadmin
     ports:
       - "9001:9001"
-      - "9000:9000"
+      - "9002:9000"
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9002/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -93,6 +93,22 @@ services:
       - "etcd"
       - "minio"
 
+  tigergraph:
+    image: tigergraph/tigergraph:latest
+    ports:
+      - "14022:22"
+      - "9000:9000"
+      - "14240:14240"
+    environment:
+      - ~/data:/home/tigergraph/mydata
+      - tg-data:/home/tigergraph
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+
 networks:
   default:
     name: milvus
+volumes:
+  tg-data: {}
