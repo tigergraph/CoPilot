@@ -1,0 +1,45 @@
+CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING embedding, SET<STRING> embedding_indices, UINT k=1, UINT num_hops=5, UINT num_seen_min=1) FOR GRAPH SupportAI2 { 
+  SetAccum<VERTEX> @@start_set;
+  SumAccum<INT> @num_times_seen;
+  MapAccum<STRING, STRING> @@relationship_info;
+  MapAccum<STRING, STRING> @@entity_info;
+  MapAccum<STRING, STRING> @@doc_chunk_info;
+  SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
+  MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
+  
+  FOREACH index IN embedding_indices DO
+    @@start_set += HNSW_Search_Sub(embedding, index, k);
+  END;
+  
+  start = {@@start_set};
+  
+  start = SELECT s FROM start:s POST-ACCUM s.@num_times_seen += 1;
+  
+  FOREACH i IN RANGE[0, num_hops-1] DO
+    start = SELECT t FROM start:s -(:e)- :t
+            WHERE e.type != "LINK_TO" AND e.type != "reverse_LINK_TO" AND e.type != "ENTRYPOINT_OF"
+            POST-ACCUM t.@num_times_seen += 1;
+  END;
+  
+  res = SELECT s FROM start:s WHERE s.@num_times_seen >= num_seen_min AND s.type != "Document"
+        POST-ACCUM
+          IF s.type == "Relationship" THEN
+            @@relationship_info += (s.id -> s.definition)
+          ELSE IF s.type == "Entity" THEN
+            @@entity_info += (s.id -> s.definition)
+          ELSE IF s.type == "DocumentChunk" THEN
+            @@to_retrieve_content += s 
+          END;
+  
+  doc_chunks = {@@to_retrieve_content};
+  
+  res = SELECT t FROM doc_chunks:s -(HAS_CONTENT)- Content:t 
+        ACCUM
+          @@doc_chunk_info += (s.id -> t.text);
+  
+  @@final_retrieval += ("DocumentChunkInfo" -> @@doc_chunk_info);
+  @@final_retrieval += ("RelationshipInfo" -> @@relationship_info);
+  @@final_retrieval += ("EntityInfo" -> @@entity_info);
+  
+  PRINT @@final_retrieval;
+}

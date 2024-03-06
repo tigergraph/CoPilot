@@ -1,0 +1,43 @@
+CREATE DISTRIBUTED QUERY Chunk_Sibling_Retrieval(STRING embedding, STRING index_name, INT k=3, UINT lookback=3, INT lookahead=3) FOR GRAPH SupportAI2 { 
+  MapAccum<VERTEX, INT> @distances;
+  SumAccum<STRING> @content;
+  MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@sibling_set;
+  OrAccum @touched;
+  SetAccum<VERTEX> @@start_set;
+  
+  all_chunks = {DocumentChunk.*};
+  @@start_set += HNSW_Search_Sub(embedding, index_name, k);
+  seeds = {@@start_set};
+  start = SELECT s FROM seeds:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  FOREACH i IN RANGE[1, lookback] DO
+    start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
+          ACCUM 
+            tgt.@touched += TRUE,
+            FOREACH (key, val) IN s.@distances DO
+              tgt.@distances += (key -> -1*i)
+            END;
+  END;
+  
+  start = seeds;
+  FOREACH i IN RANGE[1, lookahead] DO
+    start = SELECT tgt FROM start:s -(reverse_IS_AFTER)-> :tgt
+            ACCUM
+              tgt.@touched += TRUE,
+              FOREACH (key, val) IN s.@distances DO
+                tgt.@distances += (key -> i)
+              END;
+  END;
+  
+  res = SELECT s FROM all_chunks:s -(HAS_CONTENT)- Content:t WHERE s.@touched == TRUE
+        ACCUM s.@content += t.text;
+  
+  res = SELECT s FROM all_chunks:s WHERE s.@touched == TRUE
+        POST-ACCUM
+          FOREACH (key, val) IN s.@distances DO
+            @@sibling_set += (key -> (s -> ("distance" -> to_string(val)))),
+            @@sibling_set += (key -> (s -> ("content" -> s.@content)))
+          END;
+  
+  PRINT @@sibling_set;
+  
+}

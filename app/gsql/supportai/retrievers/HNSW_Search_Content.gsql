@@ -1,0 +1,20 @@
+CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING embedding, STRING index_name, UINT k=1) FOR GRAPH SupportAI2 { 
+  SetAccum<VERTEX> @@start_set;
+  MapAccum<STRING, STRING> @@final_retrieval;
+  
+  @@start_set += HNSW_Search_Sub(embedding, index_name, k);
+  
+  src = {@@start_set};
+
+  res = SELECT s FROM src:s -(:e)- :tgt
+        ACCUM
+          IF (s.type == "DocumentChunk" OR s.type == "Document") AND tgt.type == "Content" THEN
+            @@final_retrieval += (s.id -> tgt.text)
+          END
+        POST-ACCUM
+          IF s.type == "Relationship" OR s.type == "Entity" OR s.type == "Concept" THEN
+            @@final_retrieval += (s.id -> s.definition)
+          END;
+    
+  PRINT @@final_retrieval;     
+}
