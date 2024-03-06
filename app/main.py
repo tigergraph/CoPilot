@@ -22,7 +22,7 @@ from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import *
 from app.log import req_id_cv
-from app.supportai.retrievers import HNSWOverlapRetriever, HNSWRetriever
+from app.supportai.retrievers import HNSWOverlapRetriever, HNSWRetriever, HNSWSiblingRetriever
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
@@ -312,13 +312,24 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
                                query.method_params["num_hops"],
                                query.method_params["num_seen_min"])
     elif query.method.lower() == "vdb":
-        if "index_name" not in query.method_params:
+        if "index" not in query.method_params:
             raise Exception("Index name not provided")
         retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
-                               query.method_params["index_name"],
+                               query.method_params["index"],
                                query.method_params["top_k"],
                                query.method_params["withHyDE"])
+    elif query.method.lower() == "sibling":
+        if "index" not in query.method_params:
+            raise Exception("Index name not provided")
+        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        res = retriever.search(query.question,
+                               query.method_params["index"],
+                               query.method_params["top_k"],
+                               query.method_params["lookback"],
+                               query.method_params["lookahead"],
+                               query.method_params["withHyDE"])
+
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
@@ -326,7 +337,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
-                                        query.method_params["indicies"],
+                                        query.method_params["indices"],
                                         query.method_params["top_k"],
                                         query.method_params["num_hops"],
                                         query.method_params["num_seen_min"])
@@ -338,6 +349,16 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
                                         query.method_params["index"],
                                         query.method_params["top_k"],
                                         query.method_params["withHyDE"])
+    elif query.method.lower() == "sibling":
+        if "index" not in query.method_params:
+            raise Exception("Index name not provided")
+        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        res = retriever.retrieve_answer(query.question,
+                               query.method_params["index"],
+                               query.method_params["top_k"],
+                               query.method_params["lookback"],
+                               query.method_params["lookahead"],
+                               query.method_params["withHyDE"])
     else:
         raise Exception("Method not implemented")
     
