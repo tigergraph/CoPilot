@@ -214,7 +214,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         resp.natural_language_response = ""
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warn(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     return resp
 
 @app.post("/{graphname}/login")
