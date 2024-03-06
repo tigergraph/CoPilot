@@ -34,22 +34,23 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 
 # Getting Started
 
-## Clone The Repository and Setup Environment
+## Docker Pull the CoPilot Image and Setup Environment
+```sh
+docker pull tigergraphml/copilot
+
+cd ~ && mkdir -p CoPilot/configs
+
+touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json
+```
+
+## Alternative: Clone the Repository, Setup Environment, and Build the Dockerfile
 ```sh
 git clone https://github.com/tigergraph/CoPilot.git
 
-cd CoPilot
+cd CoPilot && mkdir -p app/configs
 
-mkdir configs
+touch app/configs/db_config.json app/configs/llm_config.json
 
-cd configs
-
-touch db_config.json
-touch llm_config.json
-```
-
-## Build the Dockerfile
-```sh
 docker build -t copilot:0.1 .
 ```
 
@@ -170,7 +171,7 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 ## Run the Docker Image
 ```sh
-docker run -d -v $(pwd)/configs/openai_gpt4_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 copilot:0.1
+docker run -d -v $(pwd)/configs/llm_config.json:/code/configs/llm_config.json -v $(pwd)/configs/db_config.json:/code/configs/db_config.json --name copilot -p 80:80 copilot:0.1
 ```
 
 # Using TigerGraph CoPilot
