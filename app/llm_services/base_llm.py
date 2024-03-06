@@ -20,6 +20,12 @@ class LLM_Model():
     def generate_function_prompt(self):
         """ Property to get the prompt for the GenerateFunction tool."""
         raise("generate_function_prompt not supported in base class")
+    
+    @property
+    def hyde_prompt(self):
+        """ Property to get the prompt for the HyDE tool."""
+        return """You are a helpful agent that is writing an example of a document that might answer this question: {question}
+                  Answer:"""
 
     @property
     def supportai_response_prompt(self):

@@ -20,7 +20,7 @@ from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
 
 from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
-from app.py_schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo, BatchDocumentIngest, S3BatchDocumentIngest, SupportAIQuestion
+from app.py_schemas.schemas import *
 from app.log import req_id_cv
 from app.supportai.retrievers import HNSWOverlapRetriever, HNSWRetriever
 
@@ -280,11 +280,14 @@ def ingestion_status(graphname, status_id: str):
     else:
         return {"status": "not found"}
     
-@app.get("/{graphname}/supportai/createvdb/{index_name}")
-def create_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_db_connection)):
-    if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(index_name)) == 0:
-        res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": index_name})
-    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": index_name, "v_types": ["DocumentChunk"], "M": 20, "ef_construction": 128})
+@app.post("/{graphname}/supportai/createvdb")
+def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConnection = Depends(get_db_connection)):
+    if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(config.index_name)) == 0:
+        res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
+    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": config.index_name,
+                                                     "v_types": config.vertex_types,
+                                                     "M": config.M,
+                                                     "ef_construction": config.ef_construction})
     return res
 
 @app.get("/{graphname}/supportai/deletevdb/{index_name}")
@@ -295,7 +298,7 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_d
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
 def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
-    res = retriever.search(query.query, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
+    res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
 
 

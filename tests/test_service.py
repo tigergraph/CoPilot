@@ -206,7 +206,7 @@ class CommonTests():
                     }
                     final_df = filtered_df[filtered_df["Dataset"] == dataset]
                     if final_df.shape[0] > 0:
-                        cls.wandbLogger = wandb.init(project="llm-eval-sweep", config=cls.config)
+                        cls.wandbLogger = wandb.init(project="CoPilot", config=cls.config)
                         acc = (final_df["Answer Correct"].sum())/final_df["Answer Correct"].shape[0]
                         not_wrong_perc = (final_df["Answer Correct"].sum() + (final_df["Answered Question"] == False).sum())/final_df["Answer Correct"].shape[0]
                         avg_resp_time = final_df["Response Time (seconds)"].mean()
