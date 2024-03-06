@@ -38,7 +38,7 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 ```sh
 git clone https://github.com/tigergraph/CoPilot.git
 
-cd CoPilot/app
+cd CoPilot
 
 mkdir configs
 
@@ -70,7 +70,7 @@ This line can be changed to support different logging levels. The levels are des
 * **NOTSET**: All messages are processed
 
 ## Create LLM provider configuration file
-In the `config/llm_config.json` file, copy your provider's JSON config template below, and fill out the appropriate fields.
+In the `configs/llm_config.json` file, copy your provider's JSON config template below, and fill out the appropriate fields.
 
 ### OpenAI
 In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited to match your specific configuration details.
@@ -284,6 +284,11 @@ docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS
 
 
 docker exec copilot-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
+```
+
+## Running Locally
+```sh
+docker-compose -f ./docker-compose.yml up -d
 ```
 
 ## Test Script Options
