@@ -47,13 +47,17 @@ def validate_function_call(conn, generated_call: str, retrieved_docs: list) -> s
     logger.info(f"request_id={req_id_cv.get()} ENTRY validate_function_call()")
     generated_call = generated_call.strip().strip("\n").strip("\t")
     valid_headers = [doc.metadata.get("function_header") for doc in retrieved_docs]
+    endpoints = conn.getEndpoints(dynamic=True) # installed queries in database
+    installed_queries = [q.split("/")[-1] for q in endpoints]
     if "runInstalledQuery(" == generated_call[:18]:
         query_name = generated_call.split(",")[0].split("runInstalledQuery(")[1].strip("'")
         logger.debug(f"request_id={req_id_cv.get()} validate_function_call() validating query_name={query_name}")
         logger.debug_pii(f"request_id={req_id_cv.get()} validate_function_call() validating query_call={generated_call}")
-        if query_name in valid_headers:
+        if query_name in valid_headers and query_name in installed_queries:
             logger.info(f"request_id={req_id_cv.get()} EXIT validate_function_call()")
             return generated_call
+        elif query_name not in installed_queries:
+            raise InvalidFunctionCallException(generated_call + " is not an installed function. Please select from the installed queries or install the query in the database.") 
         else:
             raise InvalidFunctionCallException(generated_call + " is not an acceptable function. Please select from the retrieved functions.")
     elif "conn." == generated_call[:5]:
