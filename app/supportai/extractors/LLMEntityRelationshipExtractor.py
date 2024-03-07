@@ -66,7 +66,9 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
                         always use the most complete identifier for that entity throughout the knowledge graph. In this example, use "John Doe" as the entity ID.  
                         Remember, the knowledge graph should be coherent and easily understandable, so maintaining consistency in entity references is crucial. 
                         ## 5. Strict Compliance
-                        Adhere to the rules strictly. Non-compliance will result in termination, including poor formatting. """),
+                        Adhere to the rules strictly. Non-compliance will result in termination, including poor formatting. 
+                        ## 6. Handling Instances with No Relationships
+                        If a node has no relationships, it should still be included in the knowledge graph. Simply add the node and leave the relationships section empty."""),
                                 ("human", "Use the given format to extract information from the following input: {input}"),
                                 ("human", "Mandatory: Make sure to answer in the correct format, specified here: {format_instructions}"),
                             ])
