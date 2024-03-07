@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Chunk_Sibling_Retrieval(STRING embedding, STRING index_name, INT k=3, UINT lookback=3, INT lookahead=3) FOR GRAPH SupportAI2 { 
+CREATE DISTRIBUTED QUERY Chunk_Sibling_Retrieval(STRING embedding, STRING index_name, INT k=3, UINT lookback=3, INT lookahead=3) { 
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
   MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@sibling_set;

@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING embedding, STRING index_name, UINT k=1) FOR GRAPH SupportAI2 { 
+CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING embedding, STRING index_name, UINT k=1) { 
   SetAccum<VERTEX> @@start_set;
   MapAccum<STRING, STRING> @@final_retrieval;
   

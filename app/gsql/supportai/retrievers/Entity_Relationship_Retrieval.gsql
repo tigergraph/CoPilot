@@ -1,0 +1,37 @@
+CREATE DISTRIBUTED QUERY Entity_Relationship_Retrieval(SET<STRING> entities, SET<STRING> relationships, INT top_k=5) { 
+  SumAccum<INT> @num_touched;
+  MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
+  SetAccum<VERTEX> @@starting_ents;
+  SetAccum<VERTEX> @@starting_rels;
+  
+  ents = {Entity.*};
+  rels = {Relationship.*};
+  
+  FOREACH ent IN entities DO
+    STRING search_param = lower(ent);
+    tmp = SELECT e FROM ents:e WHERE lower(e.id) LIKE search_param ACCUM @@starting_ents += e;
+  END;
+  
+  FOREACH rel IN relationships DO
+    STRING search_param = lower(rel);
+    tmp = SELECT r FROM rels:r WHERE lower(r.short_name) LIKE search_param ACCUM @@starting_rels += r;
+  END;
+  
+  v_set = @@starting_ents UNION @@starting_rels;
+  
+  doc_chunks = SELECT dc FROM v_set:s -(:e)- DocumentChunk:dc POST-ACCUM dc.@num_touched += 2;
+  
+  docs = SELECT d FROM v_set:s -(:e)- Document:d;
+  
+  doc_chunks_in_docs = SELECT dc FROM docs:s -(:e)- DocumentChunk:dc POST-ACCUM dc.@num_touched += 1;
+  
+  dcs = doc_chunks UNION doc_chunks_in_docs;
+  
+  dcs = SELECT d FROM dcs:d ORDER BY d.@num_touched DESC LIMIT top_k;
+  
+  content = SELECT c FROM dcs:d -(HAS_CONTENT)-> Content:c ACCUM 
+      @@final_retrieval += (d.id -> ("content" -> c.text)),
+      @@final_retrieval += (d.id -> ("score" -> to_string(d.@num_touched)));
+  
+  PRINT @@final_retrieval;
+}

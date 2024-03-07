@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING embedding, SET<STRING> embedding_indices, UINT k=1, UINT num_hops=5, UINT num_seen_min=1) FOR GRAPH SupportAI2 { 
+CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING embedding, SET<STRING> embedding_indices, UINT k=1, UINT num_hops=5, UINT num_seen_min=1) { 
   SetAccum<VERTEX> @@start_set;
   SumAccum<INT> @num_times_seen;
   MapAccum<STRING, STRING> @@relationship_info;

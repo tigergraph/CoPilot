@@ -22,7 +22,7 @@ from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import *
 from app.log import req_id_cv
-from app.supportai.retrievers import HNSWOverlapRetriever, HNSWRetriever, HNSWSiblingRetriever
+from app.supportai.retrievers import *
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
@@ -329,6 +329,9 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
                                query.method_params["lookback"],
                                query.method_params["lookahead"],
                                query.method_params["withHyDE"])
+    elif query.method.lower() == "entityrelationship":
+        retriever = EntityRelationshipRetriever(embedding_service, get_llm_service(llm_config), conn)
+        res = retriever.search(query.question, query.method_params["top_k"])
 
     return res
 
@@ -359,6 +362,9 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
                                query.method_params["lookback"],
                                query.method_params["lookahead"],
                                query.method_params["withHyDE"])
+    elif query.method.lower() == "entityrelationship":
+        retriever = EntityRelationshipRetriever(embedding_service, get_llm_service(llm_config), conn)
+        res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
     else:
         raise Exception("Method not implemented")
     
