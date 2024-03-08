@@ -267,7 +267,7 @@ async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchD
     status_manager.create_status(conn.username, req_id, graphname)
     ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
     if doc_source.service.lower() == "s3":
-        background_tasks.add_task(ingestion.ingest_s3, doc_source)
+        background_tasks.add_task(ingestion.ingest_blobs, doc_source)
     else:
         raise Exception("Document storage service not implemented")
     return {"status": "request accepted", "request_id": req_id}

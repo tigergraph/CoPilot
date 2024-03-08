@@ -34,6 +34,20 @@ class S3BatchDocumentIngest(BatchDocumentIngest):
                             "aws_access_key_id": str,
                             "aws_secret_access_key": str}
 
+class GoogleBatchDocumentIngest(BatchDocumentIngest):
+    service: str = "s3"
+    service_params: dict = {"bucket": str, 
+                            "key": str,
+                            "type": str,
+                            "google_credentials": str}
+
+class AzureBatchDocumentIngest(BatchDocumentIngest):
+    service: str = "s3"
+    service_params: dict = {"bucket": str, 
+                            "key": str,
+                            "type": str,
+                            "azure_connection_string": str}
+
 class DocumentChunk(BaseModel):
     document_chunk_id: str
     text: str
