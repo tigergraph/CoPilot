@@ -1,4 +1,7 @@
-from app.py_schemas import S3BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
+from app.blob_stores.azure_blob_store import AzureBlobStore
+from app.blob_stores.google_blob_store import GoogleBlobStore
+from app.blob_stores.s3_blob_store import S3BlobStore
+from app.py_schemas import BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
 from typing import List, Union
 import json
 from datetime import datetime
@@ -11,11 +14,11 @@ from pyTigerGraph import TigerGraphConnection
 
 
 class BaseIngestion():
-    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnection, stauts: Status):
+    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnection, status: Status):
         self.embedding_service = embedding_service
         self.llm_service = llm_service
         self.conn = conn
-        self.status = stauts
+        self.status = status
 
     def chunk_documents(self, documents, chunker, chunker_params):
         for doc in documents:
@@ -122,7 +125,7 @@ class BaseIngestion():
 
 class BatchIngestion(BaseIngestion):
     def __init__(self, embedding_service, llm_service, conn: TigerGraphConnection, status: Status):
-        super().__init__(embedding_service=embedding_service, llm_service=llm_service, conn=conn, stauts=status)
+        super().__init__(embedding_service=embedding_service, llm_service=llm_service, conn=conn, status=status)
 
     def _ingest(self, documents: List[Document], chunker, chunker_params):
         self.chunk_documents(documents, chunker, chunker_params)
@@ -144,23 +147,31 @@ class BatchIngestion(BaseIngestion):
         self.status.status = "complete"
         return self.status.to_dict()
 
-    def ingest_s3(self, doc_source: S3BatchDocumentIngest):
-        import boto3
-        s3 = boto3.client('s3', aws_access_key_id = doc_source.service_params["aws_access_key_id"],
-                                aws_secret_access_key = doc_source.service_params["aws_secret_access_key"])
+    def ingest_blobs(self, doc_source: BatchDocumentIngest):
+        if doc_source.service == "s3":
+            blob_store = S3BlobStore(doc_source.service_params["aws_access_key_id"],
+                                     doc_source.service_params["aws_secret_access_key"])
+        elif doc_source.service == "google":
+            blob_store = GoogleBlobStore(doc_source.service_params["google_credentials"])
+        elif doc_source.service == "azure":
+            blob_store = AzureBlobStore(doc_source.service_params["azure_connection_string"])
+        else:
+            raise ValueError(f"Service {doc_source.service} not supported")
+            
         # get the list of documents
         documents = []
         if doc_source.service_params["type"].lower() == "file":
-            response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=doc_source.service_params["key"])
-            doc = Document(document_id=doc_source.service_params["key"], document_text=response['Body'].read().decode('utf-8', errors="replace"))
+            content = blob_store.read_document(doc_source.service_params["bucket"], doc_source.service_params["key"])
+            doc = Document(document_id=doc_source.service_params["key"], text=content)
             documents = [doc]
         elif doc_source.service_params["type"].lower() == "directory":
-            response = s3.list_objects_v2(Bucket=doc_source.service_params["bucket"], Prefix=doc_source.service_params["key"])
-            for obj in response.get('Contents', []):
-                response = s3.get_object(Bucket=doc_source.service_params["bucket"], Key=obj['Key'])
-                doc = Document(document_id=obj['Key'], text=response['Body'].read().decode('utf-8', errors="replace"), document_collection=doc_source.service_params["bucket"]+"_"+doc_source.service_params["key"])
+            keys = blob_store.list_documents(doc_source.service_params["bucket"], doc_source.service_params["key"])
+            for key in keys:
+                content = blob_store.read_document(doc_source.service_params["bucket"], key)
+                doc = Document(document_id=key, text=content, document_collection=doc_source.service_params["bucket"] + "_" + doc_source.service_params["key"])
                 documents.append(doc)
         else:
             raise ValueError(f"Type {doc_source.service_params['type']} not supported")
+
         self.status.progress = IngestionProgress(num_docs=len(documents))
         return self._ingest(documents, doc_source.chunker, doc_source.chunker_params)
