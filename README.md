@@ -47,7 +47,7 @@ touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json
 ```sh
 git clone https://github.com/tigergraph/CoPilot.git
 
-cd CoPilot && mkdir -p configs
+cd CoPilot && mkdir configs
 
 touch configs/db_config.json configs/llm_config.json
 
