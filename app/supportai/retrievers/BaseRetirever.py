@@ -5,9 +5,26 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 class BaseRetriever():
-    def __init__(self, embedding_service: EmbeddingModel, llm_service: LLM_Model):
+    def __init__(self, embedding_service: EmbeddingModel, llm_service: LLM_Model, connection=None):
         self.emb_service = embedding_service
         self.llm_service = llm_service
+        self.conn = connection
+
+    def _install_query(self, query_name):
+        with open(f"app/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
+            query = f.read()
+        res = self.conn.gsql("USE GRAPH "+self.conn.graphname+"\n"+query+"\n INSTALL QUERY "+query_name)
+        return res
+
+
+    def _check_query_install(self, query_name):
+        endpoints = self.conn.getEndpoints(dynamic=True) # installed queries in database
+        installed_queries = [q.split("/")[-1] for q in endpoints]
+
+        if query_name not in installed_queries:
+            return self._install_query(query_name)
+        else:
+            return True
 
     def _generate_response(self, question, retrieved):
         model = self.llm_service.llm

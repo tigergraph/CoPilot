@@ -3,8 +3,9 @@ from pyTigerGraph import TigerGraphConnection
 
 class HNSWRetriever(BaseRetriever):
     def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
-        super().__init__(embedding_service, llm_service)
-        self.conn = connection
+        super().__init__(embedding_service, llm_service, connection)
+        self._check_query_install("HNSW_Search_Sub")
+        self._check_query_install("HNSW_Search_Content")
 
     def search(self, question, index, top_k=1, withHyDE=False):
         if withHyDE:

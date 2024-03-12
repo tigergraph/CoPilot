@@ -4,8 +4,8 @@ from pyTigerGraph import TigerGraphConnection
 
 class EntityRelationshipRetriever(BaseRetriever):
     def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
-        super().__init__(embedding_service, llm_service)
-        self.conn = connection
+        super().__init__(embedding_service, llm_service, connection)
+        self._check_query_install("Entity_Relationship_Retrieval")
         self.extractor = LLMEntityRelationshipExtractor(llm_service)
 
     def search(self, question, top_k=1):
