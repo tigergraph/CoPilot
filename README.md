@@ -1,4 +1,9 @@
 # TigerGraph CoPilot
+
+## News
+CoPilot is available now in Alpha. We would love to hear your feedback to keep improving it. If you are trying it out, it would be helpful if you could fill out this sign up form so we can keep track of it (no spam, promised). And if you would just like to provide the feedback, please feel free to fill out this short survey anytime. Thank you for trying out CoPilot! 
+
+## Overview
 TigerGraph CoPilot is a natural language query service that allows users to ask questions about their graph data in plain English. The service uses a Large Language Model (LLM) to convert the user's question into a function call, which is then executed on the graph database. The service is designed to be easily extensible, allowing for the addition of new LLM providers and graph schemas. TigerGraph CoPilot consists of 3 components, InquiryAI (available now), SupportAI (available Q2 2024), and QueryAI (available Q4 2024). 
 
 ![./docs/img/TG-CoPilot-Architecture.png](./docs/img/TG-CoPilot-Architecture.png)
