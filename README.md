@@ -47,9 +47,9 @@ touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json
 ```sh
 git clone https://github.com/tigergraph/CoPilot.git
 
-cd CoPilot && mkdir -p app/configs
+cd CoPilot && mkdir configs
 
-touch app/configs/db_config.json app/configs/llm_config.json
+touch configs/db_config.json configs/llm_config.json
 
 docker build -t copilot:0.1 .
 ```
@@ -102,7 +102,7 @@ In addition to the `OPENAI_API_KEY`, `llm_model` and `model_name` can be edited 
 Follow the GCP authentication information found here: https://cloud.google.com/docs/authentication/application-default-credentials#GAC and create a Service Account with VertexAI credentials. Then add the following to the docker run command:
 
 ```sh
--v $(pwd)/configs/SERVICE_ACCOUNT_CREDS.json:/code/configs/SERVICE_ACCOUNT_CREDS.json -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/SERVICE_ACCOUNT_CREDS.json
+-v $(pwd)/configs/SERVICE_ACCOUNT_CREDS.json:/SERVICE_ACCOUNT_CREDS.json -e GOOGLE_APPLICATION_CREDENTIALS=/SERVICE_ACCOUNT_CREDS.json
 ```
 
 And your JSON config should follow as:
@@ -171,7 +171,7 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 ## Run the Docker Image
 ```sh
-docker run -d -v $(pwd)/configs/llm_config.json:/code/configs/llm_config.json -v $(pwd)/configs/db_config.json:/code/configs/db_config.json --name copilot -p 80:80 copilot:0.1
+docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 copilot:0.1
 ```
 
 # Using TigerGraph CoPilot
@@ -281,7 +281,7 @@ Make sure that all your LLM service provider configuration files are working pro
 ```sh
 docker build -f Dockerfile.tests -t copilot-tests:0.1 .
 
-docker run -d -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -it --name copilot-tests copilot-tests:0.1
+docker run -d -v $(pwd)/configs/:/ -e GOOGLE_APPLICATION_CREDENTIALS=/GOOGLE_SERVICE_ACCOUNT_CREDS.json -e WANDB_API_KEY=$WANDB_API_KEY -it --name copilot-tests copilot-tests:0.1
 
 
 docker exec copilot-tests bash -c "conda run --no-capture-output -n py39 ./run_tests.sh all all"
