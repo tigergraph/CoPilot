@@ -15,7 +15,7 @@ WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
 
 # 
-RUN /opt/conda/envs/py39/bin/pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 # 
 COPY ./app /code/app
