@@ -176,7 +176,7 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 
 ## Create Milvus configuration file
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration.  `username` and `password` can also be configured below if required by your Milvus setup.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration.  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
 ```json
 {
     "host": "localhost",
