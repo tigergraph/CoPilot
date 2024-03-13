@@ -42,19 +42,18 @@ class FAISS_EmbeddingStore(EmbeddingStore):
 
         self.faiss = FAISS.from_documents(docs, embedding_service)
 
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None):
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]=None):
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
                 embeddings (Iterable[Tuple[str, List[float], int]]):
-                    Iterable of vertex id, embedding of the document, and the last_updated_time as int.
+                    Iterable of content and embedding of the document.
                 metadatas (List[dict]):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
         logger.info(f"request_id={req_id_cv.get()} ENTRY add_embeddings()")
-        transformed_embeddings = (embedding[:2] for embedding in embeddings)
-        added = self.faiss.add_embeddings(transformed_embeddings, metadatas)
+        added = self.faiss.add_embeddings(embeddings, metadatas)
         logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
         return added
 
@@ -85,14 +84,3 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         logger.debug(f"request_id={req_id_cv.get()} retrieve_similar() retrieved={sim_ids}")
         logger.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
         return similar
-
-    def retrieve_similar_ids(self, query_embedding, top_k=10):
-        """ Retireve Similar.
-            Retrieve similar embeddings from the vector store given a query embedding.
-            Args:
-                query_embedding (List[float]):
-                    The embedding to search with.
-                top_k (int, optional):
-                    The number of documents to return. Defaults to 10.
-        """
-        raise Exception("Not implemented") 

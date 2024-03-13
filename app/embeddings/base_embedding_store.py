@@ -9,12 +9,12 @@ class EmbeddingStore(ABC):
         Used for connecting to various embedding stores.
     """
     @abstractmethod
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None) -> None:
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]=None) -> None:
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
-                embeddings (Iterable[Tuple[str, List[float], int]]):
-                    Iterable of vertex id, embedding of the document, and the last_updated_time as int.
+                embeddings (Iterable[Tuple[str, List[float]]]):
+                    Iterable of content and embedding of the document.
                 metadatas (List[dict]):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
@@ -42,19 +42,5 @@ class EmbeddingStore(ABC):
                     The number of documents to return. Defaults to 10.
             Returns:
                 A list of Tuples containing vector id and vector embedding
-        """
-        pass
-
-    @abstractmethod
-    def retrieve_similar_ids(self, query_embedding: List[float], top_k: int = 10) -> List[Tuple[str, str]]:
-        """ Retrieve Similar ids.
-            Retrieve the vertex ids of the similar embeddings from vector store given a query embedding.
-            Args:
-                query_embedding (List[float]):
-                    The embedding to search with.
-                top_k (int, optional):
-                    The number of documents to return. Defaults to 10.
-            Returns:
-                A list of Tuples containing vector id and vertex id
         """
         pass

@@ -76,7 +76,7 @@ docker pull tigergraphml/copilot
 
 cd ~ && mkdir -p CoPilot/configs
 
-touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json
+touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json CoPilot/configs/milvus_config.json
 ```
 
 ## Alternative: Clone the Repository, Setup Environment, and Build the Dockerfile
@@ -85,7 +85,7 @@ git clone https://github.com/tigergraph/CoPilot.git
 
 cd CoPilot && mkdir -p app/configs
 
-touch app/configs/db_config.json app/configs/llm_config.json
+touch app/configs/db_config.json app/configs/llm_config.json app/configs/milvus_config.json
 
 docker build -t copilot:0.1 .
 ```
@@ -212,8 +212,13 @@ Copy the below into `configs/milvus_config.json` and edit the `hostname` and `ge
 {
     "host": "localhost",
     "port": 19530,
-    "user": "user",
-    "password": "password"
+    "collection_name": "tg_documents",
+    "username": "",
+    "password": "",
+    "enabled": "true",
+    "vector_field": "document_vector",
+    "text_field": "document_content",
+    "vertex_field": "vertex_id"
 }
 ```
 ## Run the Docker Image

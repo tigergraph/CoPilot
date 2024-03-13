@@ -4,86 +4,47 @@ from typing import Iterable, Tuple, List
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 from app.log import req_id_cv
-from pymilvus import CollectionSchema, FieldSchema, DataType, connections, Collection, utility
+from langchain_community.vectorstores import Milvus
 
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
-    def __init__(self, host: str, port: str, collection_name: str, vector_field: str, vertex_field: str, shard_num: int = 2, consistency_level: str = "Eventually"):
-        connections.connect(host=host, port=port)
+    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, collection_name: str = "LangChainCollection", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "vertex_id", username: str = "", password: str = ""):
+        logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
+        self.milvus = Milvus(
+            embedding_function=embedding_service, 
+            collection_name=collection_name, 
+                connection_args=dict(
+                host=host,
+                port=port,
+                username=username,
+                password=password
+            ),
+            auto_id = True,
+            drop_old = True,
+            text_field=text_field,
+            vector_field=vector_field
+        )
+        self.embedding_service = embedding_service
         self.vector_field = vector_field
         self.vertex_field = vertex_field
-        self.collection_name = collection_name
+        self.text_field = text_field
+        logger.info(f"Milvus initialized successfully")
 
-        if not utility.has_collection(collection_name):
-            logger.debug(f"creating Milvus collection = {collection_name}")
-            vector_id = FieldSchema(
-                name="vector_id", 
-                dtype=DataType.INT64, 
-                is_primary=True,
-                auto_id=True
-            )
-            document_content = FieldSchema(
-                name=self.vector_field, 
-                dtype=DataType.FLOAT_VECTOR, 
-                dim=1536
-            )
-            vertex_id = FieldSchema(
-                name=self.vertex_field, 
-                dtype=DataType.VARCHAR,
-                max_length=48
-            )
-            last_updated_at = FieldSchema(
-                name="last_updated_at", 
-                dtype=DataType.INT64  
-            )
-            schema = CollectionSchema(
-                fields=[vector_id, document_content, vertex_id, last_updated_at], 
-                description="Document content search"
-            )
-            
-            self.collection = Collection(
-                name=collection_name, 
-                schema=schema, 
-                using='default', 
-                shards_num=shard_num,
-                consistency_level=consistency_level
-            )
-            # TODO: Ahmed update
-            index_params = {
-                "index_type": "IVF_FLAT",
-                "metric_type": "L2",
-                "params": {"nlist": 100},
-            }
-            self.collection.create_index(field_name=self.vector_field, index_params=index_params)
-        else:
-            logger.debug(f"Loading existing Milvus collection = {collection_name}")
-            self.collection = Collection(name=collection_name)
-        
-        self.collection.load()
-
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None):
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]=None):
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
-                embeddings (Iterable[Tuple[str, List[float], int]]):
-                    Iterable of vertex id, embedding of the document, and the last_updated_time as int.
+                embeddings (Iterable[Tuple[str, List[float]]]):
+                    Iterable of content and embedding of the document.
                 metadatas (List[Dict]):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
-        vertex_ids = [id_ for id_, _, _ in embeddings]
-        vectors = [vec for _, vec, _ in embeddings]
-        last_updated_times = [lut for _, _, lut in embeddings]
-        data = [vectors, vertex_ids, last_updated_times]
-        self.collection = Collection(name=self.collection_name)
-        insert_result = self.collection.insert(data)
-        if insert_result is not None:
-            logger.info(f"Successfully inserted data into the collection '{self.collection_name}'.")
-            logger.info(f"Insert result IDs:{insert_result.primary_keys}")
-            self.collection.load()
-        else:
-            logger.error(f"Failed to insert data into the collection '{self.collection_name}'.")
+        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
+        texts = [text for text, _ in embeddings]
+        self.milvus.add_texts(texts=texts, metadatas=metadatas)
+        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
 
     def remove_embeddings(self, ids):
         """ Remove Embeddings.
@@ -92,9 +53,9 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 ids (str):
                     ID of the document to remove from the embedding store  
         """
-        int_ids = [int(id_) for id_ in ids]
-        self.collection.delete(expr=f"id in {int_ids}")
-        self.collection.load()
+        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
+        self.milvus.delete(ids)
+        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
 
     def retrieve_similar(self, query_embedding, top_k=10):
         """ Retireve Similar.
@@ -104,34 +65,13 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     The embedding to search with.
                 top_k (int, optional):
                     The number of documents to return. Defaults to 10.
+            Returns:
+                https://api.python.langchain.com/en/latest/documents/langchain_core.documents.base.Document.html#langchain_core.documents.base.Document
+                Document results for search.
         """
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
-        results = self.collection.search(data=[query_embedding], anns_field="embedding", param=search_params, limit=top_k, output_fields=[self.vector_field, self.vertex_field])
-
-        results = []
-        for hit in results:
-            results.append((hit.entity.get(self.vector_field), hit.entity.get(self.vertex_field)))
-        return results
-
-    def retrieve_similar_ids(self, query_embedding, top_k=10):
-        """ Retireve the ids for the similar embeddings.
-            Retrieve similar embeddings from the vector store given a query embedding.
-            Args:
-                query_embedding (List[float]):
-                    The embedding to search with.
-                top_k (int, optional):
-                    The number of documents to return. Defaults to 10.
-        """
-        logger.info(f"Searching Milvus for query embedding with top_k = {top_k}")
-        logger.debug(f"Query Embedding = {query_embedding}")
-        logger.debug(f"Vector field = {self.vector_field}")
-        logger.debug(f"Vertex field = {self.vertex_field}")
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
-        self.collection.load()
-        search_results = self.collection.search(data=[query_embedding], anns_field=self.vector_field, param=search_params, limit=top_k, output_fields=[self.vertex_field])
-
-        results = []
-        for hits in search_results:
-            for hit in hits:
-                results.append((hit.id, hit.entity.get(self.vertex_field)))
-        return results
+        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
+        similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+        sim_ids = [doc.metadata.get("function_header") for doc in similar]
+        logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
+        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
+        return similar

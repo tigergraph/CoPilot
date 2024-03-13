@@ -10,7 +10,6 @@ import uuid
 import logging
 from app.session import SessionHandler
 from app.supportai.supportai_ingest import BatchIngestion
-from pymilvus import Milvus
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -45,7 +44,6 @@ else:
         llm_config = json.load(f)
     
 if DB_CONFIG[-5:] != ".json":
-    print(DB_CONFIG)
     try:
         db_config = json.loads(str(DB_CONFIG))
     except Exception as e:
@@ -55,7 +53,6 @@ else:
         db_config = json.load(f)
     
 if MILVUS_CONFIG[-5:] != ".json":
-    print(MILVUS_CONFIG)
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
     except Exception as e:
@@ -106,8 +103,20 @@ def get_llm_service(llm_config):
 
 
 embedding_store = FAISS_EmbeddingStore(embedding_service)
-milvus_embedding_store = MilvusEmbeddingStore(host=milvus_config.host, port=milvus_config.port, collection_name=milvus_config.collection_name, vertex_field=milvus_config.vertex_field)
 
+if milvus_config.get("enabled") == "true":
+    logger.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
+    embedding_store = MilvusEmbeddingStore(
+        embedding_service,
+        host=milvus_config["host"],
+        port=milvus_config["port"],
+        collection_name=milvus_config["collection_name"],
+        vector_field=milvus_config["vector_field"],
+        text_field=milvus_config["text_field"],
+        vertex_field=milvus_config["vertex_field"],
+        username=milvus_config["username"],
+        password=milvus_config["password"]
+    )
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -165,7 +174,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
     vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec, int(time.time()))], [{"function_header": query_info.function_header, 
+    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
                                                                           "description": query_info.description,
                                                                           "param_types": query_info.param_types,
                                                                           "custom_query": True}])
@@ -317,10 +326,11 @@ def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphC
     
 @app.post("/{graphname}/supportai/queryvdbmilvus/{index_name}")
 def query_vdb_milvus(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
-    retriever = MilvusRetriever(embedding_service, get_llm_service(llm_config), milvus_embedding_store, conn)
-    res = retriever.search(query.question, index_name, query.method_params["top_k"])
-    return res
-
+    vec = embedding_service.embed_query("this is a query")
+    res = embedding_store.add_embeddings([("this is a query", vec)], [{"function_header": "no", 
+                                                                          "description": "no",
+                                                                          "param_types": "query_info.param_types",
+                                                                          "custom_query": True}])
 
 @app.post("/{graphname}/supportai/search")
 def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
