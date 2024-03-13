@@ -1,6 +1,6 @@
 from app.supportai.chunkers.base_chunker import BaseChunker
-from app.embedding_utils.embedding_services import EmbeddingModel
-from langchain_experimental.text_splitter import SemanticChunker
+from app.embeddings.embedding_services import EmbeddingModel
+from langchain_experimental.text_splitter import SemanticChunker as LangChainSemanticChunker
 
 class SemanticChunker(BaseChunker):
     def __init__(self,
@@ -12,7 +12,7 @@ class SemanticChunker(BaseChunker):
         self.bta = breakpoint_threshold_amount
 
     def chunk(self, input_string):
-        text_splitter = SemanticChunker(self.emb_model.embeddings,
+        text_splitter = LangChainSemanticChunker(self.emb_model.embeddings,
                                         breakpoint_threshold_type=self.btt,
                                         breakpoint_threshold_amount=self.bta)
         
