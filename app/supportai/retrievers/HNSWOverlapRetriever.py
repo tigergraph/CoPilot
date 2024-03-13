@@ -3,8 +3,9 @@ from pyTigerGraph import TigerGraphConnection
 
 class HNSWOverlapRetriever(BaseRetriever):
     def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
-        super().__init__(embedding_service, llm_service)
-        self.conn = connection
+        super().__init__(embedding_service, llm_service, connection)
+        self._check_query_install("HNSW_Search_Sub")
+        self._check_query_install("HNSW_Overlap_Search")
 
     def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1):
         query_embedding = self._generate_embedding(question)
