@@ -25,20 +25,19 @@ class TestMilvusEmbeddingStore(unittest.TestCase):
         embedded_query = [0.1,0.2,0.3]
         docs = [
             Document(
-                page_content="A bunch of scientists bring back dinosaurs and mayhem breaks loose",
-                metadata={"year": 1993, "rating": 7.7, "genre": "action"},
-            ),
-            Document(
-                page_content="Leo DiCaprio gets lost in a dream within a dream within a dream within a ...",
-                metadata={"year": 2010, "genre": "thriller", "rating": 8.2},
+                page_content='What is the meaning of life?',
+                metadata={'last_updated_at': 1710352745, 'vertex_id': '123', 'pk': 448308749969916221}
             )
         ]
         mock_milvus_function.return_value = docs
 
         embedding_store = MilvusEmbeddingStore(embedding_service=MagicMock(), host="localhost", port=19530)
-        embedding_store.retrieve_similar(query_embedding=embedded_query, top_k=4)
+        result = embedding_store.retrieve_similar(query_embedding=embedded_query, top_k=4)
 
         mock_milvus_function.assert_called_once_with(embedding=embedded_query, k=4)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].page_content, "What is the meaning of life?")
+        self.assertEqual(result[0].metadata["vertex_id"], "123")
 
 if __name__ == "__main__":
     unittest.main()
