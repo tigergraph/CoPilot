@@ -52,7 +52,13 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
     
-if MILVUS_CONFIG[-5:] != ".json":
+if MILVUS_CONFIG is None or not os.path.exists(MILVUS_CONFIG):
+    milvus_config = {
+            "host": "localhost",
+            "port": "19530",
+            "enabled": "false"
+        }
+elif MILVUS_CONFIG[-5:] != ".json":
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
     except Exception as e:
@@ -61,12 +67,7 @@ else:
     if os.path.exists(MILVUS_CONFIG):
         with open(MILVUS_CONFIG, "r") as f:
             milvus_config = json.load(f)
-    else:
-        milvus_config = {
-            "host": "localhost",
-            "port": "19530",
-            "enabled": "false"
-        }
+        
 
 
 
