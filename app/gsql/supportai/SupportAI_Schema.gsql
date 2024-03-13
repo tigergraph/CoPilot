@@ -2,7 +2,7 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD VERTEX HNSWEntrypoint(PRIMARY_ID id STRING, emb_dimension INT, ef_construction UINT, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, embedding LIST<DOUBLE>, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Document(PRIMARY_ID id STRING, embedding LIST<DOUBLE>, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, embedding LIST<DOUBLE>, concept_type STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, embedding LIST<DOUBLE>, concept_type STRING, date_added DATETIME, human_curated BOOL) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Relationship(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, short_name STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
@@ -18,6 +18,7 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE MENTIONS_RELATIONSHIP(FROM DocumentChunk, TO Relationship|FROM Document, TO Relationship) WITH REVERSE_EDGE="reverse_MENTIONS_RELATIONSHIP";
     ADD DIRECTED EDGE IS_AFTER(FROM DocumentChunk, TO DocumentChunk) WITH REVERSE_EDGE="reverse_IS_AFTER";
     ADD DIRECTED EDGE HAS_CHILD(FROM Document, TO DocumentChunk) WITH REVERSE_EDGE="reverse_HAS_CHILD";
+    ADD DIRECTED EDGE HAS_RELATIONSHIP(FROM Concept, TO Concept, relation_type STRING) WITH REVERSE_EDGE="reverse_HAS_RELATIONSHIP";
     ADD UNDIRECTED EDGE ENTRYPOINT_OF(FROM HNSWEntrypoint, TO DocumentChunk|
                                       FROM HNSWEntrypoint, TO Document|
                                       FROM HNSWEntrypoint, TO Concept|
