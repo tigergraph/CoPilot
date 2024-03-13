@@ -1,6 +1,6 @@
-from app.blob_stores.azure_blob_store import AzureBlobStore
-from app.blob_stores.google_blob_store import GoogleBlobStore
-from app.blob_stores.s3_blob_store import S3BlobStore
+from app.storage.azure_blob_store import AzureBlobStore
+from app.storage.google_blob_store import GoogleBlobStore
+from app.storage.s3_blob_store import S3BlobStore
 from app.py_schemas import BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
 from typing import List, Union
 import json
@@ -31,6 +31,11 @@ class BaseIngestion():
         elif chunker.lower() == "characters":
             from app.supportai.chunkers.character_chunker import CharacterChunker
             chunker = CharacterChunker(chunker_params["chunk_size"], chunker_params.get("overlap", 0))
+        elif chunker.lower() == "semantic":
+            from app.supportai.chunkers.semantic_chunker import SemanticChunker
+            chunker = SemanticChunker(self.embedding_service,
+                                      chunker_params.get("breakpoint_threshold_type", "percentile"),
+                                      chunker_params.get("breakpoint_threshold_amount", 0.95))
         else:
             raise ValueError(f"Chunker {chunker} not supported")
 

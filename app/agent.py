@@ -3,8 +3,8 @@ from typing import List, Union
 import logging
 
 from app.tools import GenerateFunction, MapQuestionToSchema
-from app.embedding_utils.embedding_services import EmbeddingModel
-from app.embedding_utils.embedding_stores import EmbeddingStore
+from app.embeddings.embedding_services import EmbeddingModel
+from app.embeddings.base_embedding_store import EmbeddingStore
 
 from app.llm_services.base_llm import LLM_Model
 

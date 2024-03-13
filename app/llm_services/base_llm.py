@@ -28,6 +28,11 @@ class LLM_Model():
                   Answer:"""
 
     @property
+    def entity_relationship_extraction_prompt(self):
+        """ Property to get the prompt for the EntityRelationshipExtraction tool."""
+        raise("entity_relationship_extraction_prompt not supported in base class")
+
+    @property
     def supportai_response_prompt(self):
         """ Property to get the prompt for the SupportAI response. """
         return "Answer this question: {question}\nUse this information: {sources}"

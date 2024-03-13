@@ -1,7 +1,7 @@
-from app.blob_stores.blob_store_interface import BlobStoreInterface
+from app.storage.base_blob_store import BlobStorage
 import boto3
 
-class S3BlobStore(BlobStoreInterface):
+class S3BlobStore(BlobStorage):
     def __init__(self, aws_access_key_id, aws_secret_access_key):
         self.client = boto3.client('s3', aws_access_key_id=aws_access_key_id,
                                aws_secret_access_key=aws_secret_access_key)
