@@ -45,7 +45,7 @@ class MyEmbeddingService(BaseEmbeddingService):
 2. Implement the needed methods for your service. If you utilize a LangChain-supported embedding service, you can use the `BaseEmbeddingService` class as a reference. If you are using a custom endpoint, you will need to implement the `embed_documents` and `embed_query` methods accordingly.
 3. Import your service and dd your service to the `app/main.py` file where the `EmbeddingService` class is instantiated. For example:
 ```python
-from app.embeddings.my_embedding_service import MyembeddingService
+from app.embeddings.embedding_service import MyembeddingService
 
 if llm_config["embedding_service"]["embedding_model_service"].lower() == "MyEmbeddingService":
     embedding_service = MyEmbeddingService(llm_config["embedding_service"])

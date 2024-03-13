@@ -323,14 +323,6 @@ def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphC
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
-    
-@app.post("/{graphname}/supportai/queryvdbmilvus/{index_name}")
-def query_vdb_milvus(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
-    vec = embedding_service.embed_query("this is a query")
-    res = embedding_store.add_embeddings([("this is a query", vec)], [{"function_header": "no", 
-                                                                          "description": "no",
-                                                                          "param_types": "query_info.param_types",
-                                                                          "custom_query": True}])
 
 @app.post("/{graphname}/supportai/search")
 def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
