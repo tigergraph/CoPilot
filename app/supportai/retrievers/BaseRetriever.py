@@ -1,4 +1,4 @@
-from app.embedding_utils.embedding_services import EmbeddingModel
+from app.embeddings.embedding_services import EmbeddingModel
 from app.llm_services.base_llm import LLM_Model
 #from app.supportai.entity_relationship_extraction import BaseExtractor
 from langchain_core.output_parsers import StrOutputParser

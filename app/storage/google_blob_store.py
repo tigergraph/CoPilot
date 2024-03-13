@@ -1,7 +1,7 @@
-from app.blob_stores.blob_store_interface import BlobStoreInterface
+from app.storage.base_blob_store import BlobStorage
 from google.cloud import storage
 
-class GoogleBlobStore(BlobStoreInterface):
+class GoogleBlobStore(BlobStorage):
     def __init__(self, google_credentials_json):
         self.client = storage.Client.from_service_account_json(google_credentials_json)
 

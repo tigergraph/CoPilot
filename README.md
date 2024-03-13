@@ -45,7 +45,7 @@ docker pull tigergraphml/copilot
 
 cd ~ && mkdir -p CoPilot/configs
 
-touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json
+touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json CoPilot/configs/milvus_config.json
 ```
 
 ## Alternative: Clone the Repository, Setup Environment, and Build the Dockerfile
@@ -54,7 +54,7 @@ git clone https://github.com/tigergraph/CoPilot.git
 
 cd CoPilot && mkdir configs
 
-touch configs/db_config.json configs/llm_config.json
+touch configs/db_config.json configs/llm_config.json configs/milvus_config.json
 
 docker build -t copilot:0.1 .
 ```
@@ -172,6 +172,22 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
     "default_timeout": 300,
     "default_mem_threshold": 5000,
     "default_thread_limit": 8
+}
+```
+
+## Create Milvus configuration file
+Copy the below into `configs/milvus_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
+```json
+{
+    "host": "localhost",
+    "port": 19530,
+    "collection_name": "tg_documents",
+    "username": "",
+    "password": "",
+    "enabled": "true",
+    "vector_field": "document_vector",
+    "text_field": "document_content",
+    "vertex_field": "vertex_id"
 }
 ```
 ## Run the Docker Image

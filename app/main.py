@@ -15,8 +15,9 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.agent import TigerGraphAgent
 from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
-from app.embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
-from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
+from app.embeddings.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
+from app.embeddings.faiss_embedding_store import FAISS_EmbeddingStore
+from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 
 from app.status import StatusManager
 from app.tools import MapQuestionToSchemaException
@@ -26,6 +27,7 @@ from app.supportai.retrievers import *
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
+MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -42,7 +44,6 @@ else:
         llm_config = json.load(f)
     
 if DB_CONFIG[-5:] != ".json":
-    print(DB_CONFIG)
     try:
         db_config = json.loads(str(DB_CONFIG))
     except Exception as e:
@@ -50,6 +51,15 @@ if DB_CONFIG[-5:] != ".json":
 else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
+    
+if MILVUS_CONFIG[-5:] != ".json":
+    try:
+        milvus_config = json.loads(str(MILVUS_CONFIG))
+    except Exception as e:
+        raise Exception("MILVUS_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
+else:
+    with open(MILVUS_CONFIG, "r") as f:
+        milvus_config = json.load(f)
 
 
 
@@ -94,6 +104,19 @@ def get_llm_service(llm_config):
 
 embedding_store = FAISS_EmbeddingStore(embedding_service)
 
+if milvus_config.get("enabled") == "true":
+    logger.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
+    embedding_store = MilvusEmbeddingStore(
+        embedding_service,
+        host=milvus_config["host"],
+        port=milvus_config["port"],
+        collection_name=milvus_config["collection_name"],
+        vector_field=milvus_config["vector_field"],
+        text_field=milvus_config["text_field"],
+        vertex_field=milvus_config["vertex_field"],
+        username=milvus_config["username"],
+        password=milvus_config["password"]
+    )
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -300,7 +323,6 @@ def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphC
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
-
 
 @app.post("/{graphname}/supportai/search")
 def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):

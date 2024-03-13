@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from app.blob_stores.s3_blob_store import S3BlobStore
 from app.supportai.supportai_ingest import BatchIngestion
-from app.py_schemas import S3BatchDocumentIngest
 from app.status import IngestionProgress
 
 class TestBatchIngestion(unittest.TestCase):
