@@ -58,8 +58,15 @@ if MILVUS_CONFIG[-5:] != ".json":
     except Exception as e:
         raise Exception("MILVUS_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
 else:
-    with open(MILVUS_CONFIG, "r") as f:
-        milvus_config = json.load(f)
+    if os.path.exists(MILVUS_CONFIG):
+        with open(MILVUS_CONFIG, "r") as f:
+            milvus_config = json.load(f)
+    else:
+        milvus_config = {
+            "host": "localhost",
+            "port": "19530",
+            "enabled": "false"
+        }
 
 
 
