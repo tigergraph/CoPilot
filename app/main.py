@@ -110,10 +110,6 @@ if milvus_config.get("enabled") == "true":
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
-        collection_name=milvus_config["collection_name"],
-        vector_field=milvus_config["vector_field"],
-        text_field=milvus_config["text_field"],
-        vertex_field=milvus_config["vertex_field"],
         username=milvus_config["username"],
         password=milvus_config["password"]
     )

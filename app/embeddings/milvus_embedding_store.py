@@ -9,7 +9,7 @@ from langchain_community.vectorstores import Milvus
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
-    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, collection_name: str = "LangChainCollection", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "vertex_id", username: str = "", password: str = ""):
+    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "vertex_id", username: str = "", password: str = ""):
         logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
         self.milvus = Milvus(
             embedding_function=embedding_service, 

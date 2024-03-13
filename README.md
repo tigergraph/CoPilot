@@ -176,18 +176,14 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 
 ## Create Milvus configuration file
-Copy the below into `configs/milvus_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration.  `username` and `password` can also be configured below if required by your Milvus setup.
 ```json
 {
     "host": "localhost",
     "port": 19530,
-    "collection_name": "tg_documents",
     "username": "",
     "password": "",
-    "enabled": "true",
-    "vector_field": "document_vector",
-    "text_field": "document_content",
-    "vertex_field": "vertex_id"
+    "enabled": "true"
 }
 ```
 ## Run the Docker Image
