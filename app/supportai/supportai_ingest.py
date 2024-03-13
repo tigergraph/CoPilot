@@ -1,6 +1,6 @@
-from app.blob_stores.azure_blob_store import AzureBlobStore
-from app.blob_stores.google_blob_store import GoogleBlobStore
-from app.blob_stores.s3_blob_store import S3BlobStore
+from app.storage.azure_blob_store import AzureBlobStore
+from app.storage.google_blob_store import GoogleBlobStore
+from app.storage.s3_blob_store import S3BlobStore
 from app.py_schemas import BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
 from typing import List, Union
 import json

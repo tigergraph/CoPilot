@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  python-app:
+  copilot:
     build: 
       context: .
       dockerfile: Dockerfile
@@ -9,30 +9,13 @@ services:
       - "80:80"
     depends_on:
       - milvus-standalone
-      - kafka
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
       LOGLEVEL: "INFO"
-      KAFKA_BROKER: "kafka:9092"
       MILVUS_HOST: "milvus-standalone"
     volumes:
       - ./configs/:/code/configs
-
-  kafka:
-    image: wurstmeister/kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ADVERTISED_HOST_NAME: kafka
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-    depends_on:
-      - zookeeper
-
-  zookeeper:
-    image: wurstmeister/zookeeper
-    ports:
-      - "2181:2181"
 
   etcd:
       container_name: milvus-etcd

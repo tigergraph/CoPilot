@@ -1,7 +1,7 @@
-from app.blob_stores.blob_store_interface import BlobStoreInterface
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+from app.storage.base_blob_store import BlobStorage
+from azure.storage.blob import BlobServiceClient
 
-class AzureBlobStore(BlobStoreInterface):
+class AzureBlobStore(BlobStorage):
     def __init__(self, connection_string: str):
         self.client = BlobServiceClient.from_connection_string(connection_string)
 

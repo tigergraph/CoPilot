@@ -1,25 +1,10 @@
-from typing import Iterable, Tuple, List
-from app.embedding_utils.embedding_services import EmbeddingModel
-import logging
+from app.embeddings.base_embedding_store import EmbeddingStore
+from app.embeddings.embedding_services import EmbeddingModel
 from app.log import req_id_cv
+import logging
+from typing import Iterable, Tuple, List
 
 logger = logging.getLogger(__name__)
-
-class EmbeddingStore():
-    """ EmbeddingStore Base Class
-        Used for connecting to various embedding stores.
-    """
-    def __init__(self):
-        raise NotImplementedError("Cannot Instantiate Base Embedding Store Class")
-
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]):
-        raise NotImplementedError("Cannot Instantiate Base Embedding Store Class")
-
-    def remove_embeddings(self, ids: List[str]):
-        raise NotImplementedError("Cannot Instantiate Base Embedding Store Class")
-
-    def retrieve_similar(self, query_embedding, top_k=10):
-        raise NotImplementedError("Cannot Instantiate Base Embedding Store Class")
 
 class FAISS_EmbeddingStore(EmbeddingStore):
     """ FAISS_EmbeddingStore
@@ -57,13 +42,13 @@ class FAISS_EmbeddingStore(EmbeddingStore):
 
         self.faiss = FAISS.from_documents(docs, embedding_service)
 
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]):
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], List[str]]], metadatas: List[dict]):
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
                 embeddings (Iterable[Tuple[str, List[float]]]):
                     Iterable of content and embedding of the document.
-                metadatas (List[Dict]):
+                metadatas (List[dict]):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
@@ -100,6 +85,13 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         logger.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
         return similar
 
-class TG_EmbeddingStore(EmbeddingStore):
-    def __init__(self):
-        raise NotImplementedError("TG Embedding Store not implemented")
+    def retrieve_similar_ids(self, query_embedding, top_k=10):
+        """ Retireve Similar.
+            Retrieve similar embeddings from the vector store given a query embedding.
+            Args:
+                query_embedding (List[float]):
+                    The embedding to search with.
+                top_k (int, optional):
+                    The number of documents to return. Defaults to 10.
+        """
+        raise Exception("Not implemented") 

@@ -8,8 +8,8 @@ from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
-from app.embedding_utils.embedding_services import EmbeddingModel
-from app.embedding_utils.embedding_stores import EmbeddingStore
+from app.embeddings.embedding_services import EmbeddingModel
+from app.embeddings.base_embedding_store import EmbeddingStore
 from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException
 import json
 import logging
