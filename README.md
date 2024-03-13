@@ -1,4 +1,9 @@
 # TigerGraph CoPilot
+
+## Releases
+* **3/12/2024: CoPilot is available now in Alpha** (v0.0.1). It uses a Large Language Model (LLM) to convert your question into a function call, which is then executed on the graph in TigerGraph. We would love to hear your feedback to keep improving it so that it could bring more value to you. If you are trying it out, it would be helpful if you could fill out this sign up form so we can keep track of it (no spam, promised). And if you would just like to provide the feedback, please feel free to fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7) after you have played with CoPilot. Thank you for your interest and support!
+
+## Overview
 TigerGraph CoPilot is a natural language query service that allows users to ask questions about their graph data in plain English. The service uses a Large Language Model (LLM) to convert the user's question into a function call, which is then executed on the graph database. The service is designed to be easily extensible, allowing for the addition of new LLM providers and graph schemas. TigerGraph CoPilot consists of 3 components, InquiryAI (available now), SupportAI (available Q2 2024), and QueryAI (available Q4 2024). 
 
 ![./docs/img/TG-CoPilot-Architecture.png](./docs/img/TG-CoPilot-Architecture.png)
@@ -27,7 +32,7 @@ InquiryAI is currently in alpha and is being actively developed. The roadmap for
 * **May 2024 +**: The InquiryAI will support continous conversations, and the agent will be aware of previous questions and answers. Integration with common open-source models such as Llama and Mistral will be performed. InquiryAI will be available on TigerGraph Cloud by July 2024.
 
 ## SupportAI
-SupportAI is the second component of TigerGraph CoPilot. It is designed to ingest a set of documents, extract a knowledge graph from the information, and enable hybrid search of the documents and graph data through natural language queries. This functionality will enrich RAG (Retrieval-Augmented Generation) pipelines with graph data, enabling more accurate and informative responses to user queries. SupportAI is available in alpha Q2 2024.
+SupportAI is the second component of TigerGraph CoPilot. It is designed to ingest a set of documents, extract a knowledge graph from the information, and enable hybrid search of the documents and graph data through natural language queries. This functionality will enrich RAG (Retrieval-Augmented Generation) pipelines with graph data, enabling more accurate and informative responses to user queries. SupportAI is under active development and will be publicly released in alpha in Q2 2024. If you are interested in evaluating at its current phase, please contact us at ml@tigergraph.com.
 
 ## QueryAI
 QueryAI is the third component of TigerGraph CoPilot. It is designed to be used as a developer tool to help generate graph queries in GSQL from an English language description. This will enable developers to write GSQL queries more quickly and accurately, and will be especially useful for those who are new to GSQL. QueryAI is available in alpha Q4 2024.
