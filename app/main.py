@@ -52,14 +52,22 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
     
-if MILVUS_CONFIG[-5:] != ".json":
+if MILVUS_CONFIG is None or not os.path.exists(MILVUS_CONFIG):
+    milvus_config = {
+            "host": "localhost",
+            "port": "19530",
+            "enabled": "false"
+        }
+elif MILVUS_CONFIG[-5:] != ".json":
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
     except Exception as e:
         raise Exception("MILVUS_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
 else:
-    with open(MILVUS_CONFIG, "r") as f:
-        milvus_config = json.load(f)
+    if os.path.exists(MILVUS_CONFIG):
+        with open(MILVUS_CONFIG, "r") as f:
+            milvus_config = json.load(f)
+        
 
 
 
@@ -110,10 +118,6 @@ if milvus_config.get("enabled") == "true":
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
-        collection_name=milvus_config["collection_name"],
-        vector_field=milvus_config["vector_field"],
-        text_field=milvus_config["text_field"],
-        vertex_field=milvus_config["vertex_field"],
         username=milvus_config["username"],
         password=milvus_config["password"]
     )
