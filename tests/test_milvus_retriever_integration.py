@@ -48,27 +48,19 @@ class TestMilvusRetrieverIntegration(unittest.TestCase):
         retriever = MilvusRetriever(embedding_service=embedding_service, llm_service=llm_service, milvus_embedding_store=milvus_embedding_store)
 
         # Perform a search/retrieval
-        question = "Give all the character names"
-        results = retriever.retrieve_answer(question=question, top_k=5)
-
-        print("\n\n\nRetrieved the following embeddings")
-        print(results)
+        question = "Give me all the documents with characters"
+        generated_response = retriever.retrieve_answer(question=question, top_k=5)
+        print(generated_response)
+        results = generated_response["retrieved"]
         
-        ids = []
-        vector_ids = []
+        vector_ids = [vector_id for vector_id, _ in results]
+        vertex_ids = [vertex_id for _, vertex_id in results]
 
-        for hits in results:
-            for hit in hits:
-                ids.append(hit.id)
-                vector_ids.append(hit.entity.get(vertex_field))
-
-        print(ids)
-        print(vector_ids)
-        self.assertEqual(len(ids), 2)
         self.assertEqual(len(vector_ids), 2)
-        self.assertEqual(len(vector_ids), 2)
-        self.assertEqual(vertex_id1 in set(vector_ids), True)
-        self.assertEqual(vertex_id2 in set(vector_ids), True)
+        self.assertEqual(len(vertex_ids), 2)
+        self.assertEqual(len(vertex_ids), 2)
+        self.assertEqual(vertex_id1 in set(vertex_ids), True)
+        self.assertEqual(vertex_id2 in set(vertex_ids), True)
 
 if __name__ == "__main__":
     unittest.main()

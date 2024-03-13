@@ -9,7 +9,7 @@ class EmbeddingStore(ABC):
         Used for connecting to various embedding stores.
     """
     @abstractmethod
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict] = None) -> None:
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None) -> None:
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:

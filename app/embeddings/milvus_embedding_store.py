@@ -62,7 +62,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         
         self.collection.load()
 
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict] = None):
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None):
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
@@ -110,8 +110,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         results = []
         for hit in results:
-            tuple = Tuple(hit.entity.get(self.vector_field), hit.entity.get(self.vertex_field))
-            results.append(tuple)
+            results.append((hit.entity.get(self.vector_field), hit.entity.get(self.vertex_field)))
         return results
 
     def retrieve_similar_ids(self, query_embedding, top_k=10):
@@ -123,13 +122,16 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 top_k (int, optional):
                     The number of documents to return. Defaults to 10.
         """
+        logger.info(f"Searching Milvus for query embedding with top_k = {top_k}")
+        logger.debug(f"Query Embedding = {query_embedding}")
+        logger.debug(f"Vector field = {self.vector_field}")
+        logger.debug(f"Vertex field = {self.vertex_field}")
         search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
-        print(query_embedding)
         self.collection.load()
-        results = self.collection.search(data=[query_embedding], anns_field=self.vector_field, param=search_params, limit=top_k, output_fields=[self.vertex_field])
+        search_results = self.collection.search(data=[query_embedding], anns_field=self.vector_field, param=search_params, limit=top_k, output_fields=[self.vertex_field])
 
         results = []
-        for hit in results:
-            tuple = Tuple(hit.id, hit.entity.get(self.vertex_field))
-            results.append(tuple)
+        for hits in search_results:
+            for hit in hits:
+                results.append((hit.id, hit.entity.get(self.vertex_field)))
         return results

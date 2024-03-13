@@ -16,5 +16,4 @@ class MilvusRetriever(BaseRetriever):
 
     def retrieve_answer(self, question, top_k=1):
         retrieved = self.search(question, top_k)
-        return retrieved
-        # return self._generate_response(question, retrieved)
+        return self._generate_response(question, retrieved)

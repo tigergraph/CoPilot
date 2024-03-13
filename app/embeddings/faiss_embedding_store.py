@@ -42,18 +42,19 @@ class FAISS_EmbeddingStore(EmbeddingStore):
 
         self.faiss = FAISS.from_documents(docs, embedding_service)
 
-    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], List[str]]], metadatas: List[dict]):
+    def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float], int]], metadatas: List[dict]=None):
         """ Add Embeddings.
             Add embeddings to the Embedding store.
             Args:
-                embeddings (Iterable[Tuple[str, List[float]]]):
-                    Iterable of content and embedding of the document.
+                embeddings (Iterable[Tuple[str, List[float], int]]):
+                    Iterable of vertex id, embedding of the document, and the last_updated_time as int.
                 metadatas (List[dict]):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
         logger.info(f"request_id={req_id_cv.get()} ENTRY add_embeddings()")
-        added = self.faiss.add_embeddings(embeddings, metadatas)
+        transformed_embeddings = (embedding[:2] for embedding in embeddings)
+        added = self.faiss.add_embeddings(transformed_embeddings, metadatas)
         logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
         return added
 
