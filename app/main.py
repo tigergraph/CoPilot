@@ -316,8 +316,8 @@ def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphC
     return res
     
 @app.post("/{graphname}/supportai/queryvdbmilvus/{index_name}")
-def query_vdb_milvus(graphname, index_name, query: SupportAIQuestion,):
-    retriever = MilvusRetriever(embedding_service, get_llm_service(llm_config), milvus_embedding_store)
+def query_vdb_milvus(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    retriever = MilvusRetriever(embedding_service, get_llm_service(llm_config), milvus_embedding_store, conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"])
     return res
 

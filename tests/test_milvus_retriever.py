@@ -18,7 +18,7 @@ class TestMilvusRetriever(unittest.TestCase):
         mock_milvus_embedding_store.retrieve_similar_ids.return_value = mock_search_result
         mock_generate_response.return_value = "Mocked response"
 
-        retriever = MilvusRetriever(embedding_service=MagicMock(), llm_service=MagicMock(), milvus_embedding_store=mock_milvus_embedding_store)
+        retriever = MilvusRetriever(embedding_service=MagicMock(), llm_service=MagicMock(), milvus_embedding_store=mock_milvus_embedding_store, connection=MagicMock())
 
         result = retriever.retrieve_answer(question="What is the meaning of life?", top_k=5)
 
