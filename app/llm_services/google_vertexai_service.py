@@ -24,6 +24,10 @@ class GoogleVertexAI(LLM_Model):
     @property
     def generate_function_prompt(self):
         return self._read_prompt_file(self.prompt_path+"generate_function.txt")
+    
+    @property
+    def entity_relationship_extraction_prompt(self):
+        return self._read_prompt_file(self.prompt_path+"entity_relationship_extraction.txt")
 
     @property
     def model(self):
