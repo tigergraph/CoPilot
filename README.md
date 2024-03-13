@@ -29,42 +29,6 @@ InquiryAI is currently in alpha and is being actively developed. The roadmap for
 ## SupportAI
 SupportAI is the second component of TigerGraph CoPilot. It is designed to ingest a set of documents, extract a knowledge graph from the information, and enable hybrid search of the documents and graph data through natural language queries. This functionality will enrich RAG (Retrieval-Augmented Generation) pipelines with graph data, enabling more accurate and informative responses to user queries. SupportAI is available in alpha Q2 2024.
 
-Sequence diagram for user's query through CoPilot's SupportAI
-```mermaid
-sequenceDiagram
-    User->>+CoPilot: "What does getVertex mean?"
-    CoPilot->>+LLM: Embed user query
-    Note right of LLM: This is a secure call <br/>using user's configuration <br/>settings. May contain PII
-    LLM-->>-CoPilot: Vector embedding
-    CoPilot->>+TigerGraph: Retrieve documents based on embedded user query
-    TigerGraph->>+Milvus: Get vectors similar to the embedded query
-    Milvus-->>-TigerGraph: Related vertex IDs
-    TigerGraph->>+TigerGraph: Get document content with vertex IDs, if access permits
-    Note right of TigerGraph: This is a secure call <br/>using TigerGraph RBAC
-    TigerGraph-->>-CoPilot: Document content and context
-    CoPilot->>+LLM: User's query with document content as context
-    Note right of LLM: This is a secure call <br/>using user's configuration <br/>settings. May contain PII
-    LLM-->>-CoPilot: Text response
-    CoPilot-->>-User: Text response and retrieved context
-```
-
-Sequence diagram for populating vector ids in Milvus and synced to TigerGraph
-```mermaid
-sequenceDiagram
-    User->>+TigerGraph: Extract text & generate vertex with metadata
-    loop Eventual Consistency Checker
-        CoPilot->>+TigerGraph: GSQL query for unprocessed vertices within lease
-    Note right of CoPilot: Each CoPilot replica will pick up <br/> an amount of unprocessed vertices <br/> based on some metadata in the vertex
-        TigerGraph-->>-CoPilot: Vertices needing processing
-    end
-    CoPilot->>+LLM: Generate vector embedding for document’s content
-    LLM-->>-CoPilot: Vector embedding
-    CoPilot->>+Milvus: Insert vector embedding, vertex ID
-    Milvus-->>-CoPilot: Vector ID
-    CoPilot->>+TigerGraph: Update vertex with Milvus vector ID & set "processed" timestamp
-    TigerGraph-->>-CoPilot: Confirmation of update
-```
-
 ## QueryAI
 QueryAI is the third component of TigerGraph CoPilot. It is designed to be used as a developer tool to help generate graph queries in GSQL from an English language description. This will enable developers to write GSQL queries more quickly and accurately, and will be especially useful for those who are new to GSQL. QueryAI is available in alpha Q4 2024.
 
