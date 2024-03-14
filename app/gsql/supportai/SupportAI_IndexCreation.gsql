@@ -1,0 +1,11 @@
+CREATE SCHEMA_CHANGE JOB add_supportai_indexes {
+    ALTER VERTEX Document ADD INDEX doc_date_added_index ON (date_added);
+    ALTER VERTEX Document ADD INDEX doc_date_processing_index ON (date_processing);
+    ALTER VERTEX Document ADD INDEX doc_date_processing_indexdate_processed_index ON (date_processed);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_date_added_index ON (date_added);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_date_processing_index ON (date_processing);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_date_processed_index ON (date_processed);
+    ALTER VERTEX Concept ADD INDEX concept_date_added_index ON (date_added);
+    ALTER VERTEX Concept ADD INDEX concept_date_processing_index ON (date_processing);
+    ALTER VERTEX Concept ADD INDEX concept_date_processed_index ON (date_processed);
+}

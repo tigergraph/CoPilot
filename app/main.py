@@ -285,8 +285,13 @@ def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql")
     with open(file_path, "r") as f:
         schema = f.read()
-    res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
-    return {"status": json.dumps(res)}
+    schema_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
+
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_IndexCreation.gsql")
+    with open(file_path, "r") as f:
+        index = f.read()
+    index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(graphname, index))
+    return {"schema_creation_status": json.dumps(schema_res), "index_creation_status": json.dumps(index_res)}
 
 @app.post("/{graphname}/supportai/batch_ingest")
 async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection)):
