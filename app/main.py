@@ -52,22 +52,20 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
     
-if MILVUS_CONFIG is None or not os.path.exists(MILVUS_CONFIG):
+if MILVUS_CONFIG is None or (MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)):
     milvus_config = {
             "host": "localhost",
             "port": "19530",
             "enabled": "false"
         }
-elif MILVUS_CONFIG[-5:] != ".json":
+elif MILVUS_CONFIG.endswith(".json"):
+    with open(MILVUS_CONFIG, "r") as f:
+        milvus_config = json.load(f)
+else:
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
-    except Exception as e:
-        raise Exception("MILVUS_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
-else:
-    if os.path.exists(MILVUS_CONFIG):
-        with open(MILVUS_CONFIG, "r") as f:
-            milvus_config = json.load(f)
-        
+    except json.JSONDecodeError as e:
+        raise Exception("MILVUS_CONFIG must be a .json file or a JSON string, failed with error: " + str(e))
 
 
 
@@ -118,8 +116,8 @@ if milvus_config.get("enabled") == "true":
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
-        username=milvus_config["username"],
-        password=milvus_config["password"]
+        username=milvus_config.get("username", ""),
+        password=milvus_config.get("password", "")
     )
 
 @app.middleware("http")
@@ -177,6 +175,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
 @app.post("/{graphname}/registercustomquery")
 def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+    logger.debug(f"Using embedding store: {embedding_store}")
     vec = embedding_service.embed_query(query_info.docstring)
     res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
                                                                           "description": query_info.description,
