@@ -43,8 +43,9 @@ class MilvusEmbeddingStore(EmbeddingStore):
         """
         logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
         texts = [text for text, _ in embeddings]
-        self.milvus.add_texts(texts=texts, metadatas=metadatas)
+        added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
         logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
+        return added
 
     def remove_embeddings(self, ids):
         """ Remove Embeddings.
