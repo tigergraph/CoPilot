@@ -9,6 +9,9 @@ from app.log import req_id_cv
 
 logger = logging.getLogger(__name__)
 
+class NoDocumentsFoundException(Exception):
+    pass
+
 class MapQuestionToSchemaException(Exception):
     pass
 
