@@ -1,0 +1,6 @@
+CREATE LOADING load_documents_content_csv {
+    DEFINE FILENAME MyDataSource;
+    LOAD MyDataSource TO VERTEX Document VALUES($0, _, gsql_current_time_epoch(), _, _) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+    LOAD MyDataSource TO VERTEX Content VALUES($0, $1, gsql_current_time_epoch()) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+    LOAD MyDataSource TO EDGE HAS_CONTENT VALUES($0 Document, $0 Content) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+}

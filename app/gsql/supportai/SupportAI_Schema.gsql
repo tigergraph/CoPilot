@@ -1,12 +1,12 @@
 CREATE SCHEMA_CHANGE JOB add_supportai_schema {
-    ADD VERTEX HNSWEntrypoint(PRIMARY_ID id STRING, emb_dimension INT, ef_construction UINT, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, embedding LIST<DOUBLE>, date_added DATETIME, date_processing DATETIME, date_processed DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Document(PRIMARY_ID id STRING, embedding LIST<DOUBLE>, date_added DATETIME, date_processing DATETIME, date_processed DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, embedding LIST<DOUBLE>, concept_type STRING, human_curated BOOL, date_added DATETIME, date_processing DATETIME, date_processed DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Relationship(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, short_name STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Content(PRIMARY_ID id STRING, text STRING, date_added DATETIME) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX HNSWEntrypoint(PRIMARY_ID id STRING, emb_dimension INT, ef_construction UINT, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, embedding LIST<DOUBLE>, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Document(PRIMARY_ID id STRING, embedding LIST<DOUBLE>, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, embedding LIST<DOUBLE>, concept_type STRING, human_curated BOOL, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Relationship(PRIMARY_ID id STRING, definition STRING, embedding LIST<DOUBLE>, short_name STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Content(PRIMARY_ID id STRING, text STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD DIRECTED EDGE HAS_CONTENT(FROM Document, TO Content|FROM DocumentChunk, TO Content) WITH REVERSE_EDGE="reverse_HAS_CONTENT";
     ADD DIRECTED EDGE LINK_TO(FROM Concept, TO Concept|FROM Entity, TO Entity|FROM DocumentChunk, TO DocumentChunk|FROM Relationship, TO Relationship|FROM Document, TO Document, level_set SET<INT>) WITH REVERSE_EDGE="reverse_LINK_TO";
     ADD DIRECTED EDGE IS_CHILD_OF(FROM Concept, TO Concept) WITH REVERSE_EDGE="reverse_IS_CHILD_OF";
