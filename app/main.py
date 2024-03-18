@@ -194,7 +194,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 
 @app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> NaturalLanguageQueryResponse:
+def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> CoPilotResponse:
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
@@ -214,7 +214,8 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
 
-    resp = NaturalLanguageQueryResponse
+    resp = CoPilotResponse
+    resp.response_type = "inquiryai"
 
     try:
         steps = agent.question_for_agent(query.query)
@@ -362,6 +363,8 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
 
 @app.post("/{graphname}/supportai/answerquestion")
 def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    resp = CoPilotResponse
+    resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
@@ -393,4 +396,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     else:
         raise Exception("Method not implemented")
     
+    resp.natural_language_response = res["response"]
+    resp.query_sources = res["retrieved"]
+
     return res

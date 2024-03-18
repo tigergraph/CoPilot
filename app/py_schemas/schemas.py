@@ -15,9 +15,10 @@ class GSQLQueryInfo(BaseModel):
     docstring: str
     param_types: dict = {}
 
-class NaturalLanguageQueryResponse(BaseModel):
+class CoPilotResponse(BaseModel):
     natural_language_response: str
     answered_question: bool
+    response_type: str
     query_sources: Dict = None
 
 class BatchDocumentIngest(BaseModel):
