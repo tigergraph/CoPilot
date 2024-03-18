@@ -293,6 +293,117 @@ def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection
     index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(graphname, index))
     return {"schema_creation_status": json.dumps(schema_res), "index_creation_status": json.dumps(index_res)}
 
+@app.post("/{graphname}/supportai/create_ingest")
+async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnection = Depends(get_db_connection)):
+    if ingest_config.file_format.lower() == "json":
+        abs_path = os.path.abspath(__file__)
+        file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql")
+        with open(file_path, "r") as f:
+            ingest_template = f.read()
+        ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
+        doc_id = ingest_config.loader_config.get("doc_id_field", "doc_id")
+        doc_text = ingest_config.loader_config.get("content_field", "content")
+        ingest_template = ingest_template.replace('"doc_id"', '"{}"'.format(doc_id))
+        ingest_template = ingest_template.replace('"content"', '"{}"'.format(doc_text))
+
+    if ingest_config.file_format.lower() == "csv":
+        abs_path = os.path.abspath(__file__)
+        file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadCSV.gsql")
+        with open(file_path, "r") as f:
+            ingest_template = f.read()
+        ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
+        separator = ingest_config.get("separator", "|")
+        header = ingest_config.get("header", "true")
+        eol = ingest_config.get("eol", "\n")
+        quote= ingest_config.get("quote", "double")
+        ingest_template = ingest_template.replace('"|"', '"{}"'.format(separator))
+        ingest_template = ingest_template.replace('"true"', '"{}"'.format(header))
+        ingest_template = ingest_template.replace('"\\n"', '"{}"'.format(eol))
+        ingest_template = ingest_template.replace('"double"', '"{}"'.format(quote))
+
+    abs_path = os.path.abspath(__file__)
+    file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_DataSourceCreation.gsql")
+    with open(file_path, "r") as f:
+        data_stream_conn = f.read()
+
+    # assign unique identifier to the data stream connection
+   
+    data_stream_conn = data_stream_conn.replace("@source_name@", "SupportAI_" + graphname +"_" + str(uuid.uuid4().hex))
+
+    # check the data source and create the appropriate connection
+    if ingest_config.data_source.lower() == "s3":
+        data_conn = ingest_config.data_source_config
+        if data_conn.get("aws_access_key") is None or data_conn.get("aws_secret_key") is None:
+            raise Exception("AWS credentials not provided")
+        connector = {"type": "s3",
+                     "access.key": data_conn["aws_access_key"],
+                     "secret.key": data_conn["aws_secret_key"]}
+        
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
+
+    elif ingest_config.data_source.lower() == "azure":
+        if ingest_config.data_source_config.get("account_key") is not None:
+            connector = {"type": "abs",
+                         "account.key": ingest_config.data_source_config["account_key"]}
+        elif ingest_config.data_source_config.get("client_id") is not None:
+            # verify that the client secret is also provided
+            if ingest_config.data_source_config.get("client_secret") is None:
+                raise Exception("Client secret not provided")
+            # verify that the tenant id is also provided
+            if ingest_config.data_source_config.get("tenant_id") is None:
+                raise Exception("Tenant id not provided")
+            connector = {"type": "abs",
+                         "client.id": ingest_config.data_source_config["client_id"],
+                         "client.secret": ingest_config.data_source_config["client_secret"],
+                         "tenant.id": ingest_config.data_source_config["tenant_id"]}
+        else:
+            raise Exception("Azure credentials not provided")
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
+    elif ingest_config.data_source.lower() == "gcs":
+        # verify that the correct fields are provided
+        if ingest_config.data_source_config.get("project_id") is None:
+            raise Exception("Project id not provided")
+        if ingest_config.data_source_config.get("private_key_id") is None:
+            raise Exception("Private key id not provided")
+        if ingest_config.data_source_config.get("private_key") is None:
+            raise Exception("Private key not provided")
+        if ingest_config.data_source_config.get("client_email") is None:
+            raise Exception("Client email not provided")
+        connector = {"type": "gcs",
+                     "project_id": ingest_config.data_source_config["project_id"],
+                     "private_key_id": ingest_config.data_source_config["private_key_id"],
+                     "private_key": ingest_config.data_source_config["private_key"],
+                     "client_email": ingest_config.data_source_config["client_email"]}
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
+    else:
+        raise Exception("Data source not implemented")
+
+    load_job_created = conn.gsql("USE GRAPH {}\n".format(graphname) + ingest_template)
+    
+    data_source_created = conn.gsql("USE GRAPH {}\n".format(graphname) + data_stream_conn)
+    return {"load_job_id": load_job_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]"),
+            "data_source_id": data_source_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")}
+
+@app.post("/{graphname}/supportai/ingest")
+async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection = Depends(get_db_connection)):
+    if loader_info.file_path is None:
+        raise Exception("File path not provided")
+    if loader_info.load_job_id is None:
+        raise Exception("Load job id not provided")
+    if loader_info.data_source_id is None:
+        raise Exception("Data source id not provided")
+    
+    try:    
+        res = conn.gsql("USE GRAPH {}\nRUN LOADING JOB -noprint {} USING {}=\"{}\"".format(graphname, loader_info.load_job_id, "DocumentContent", "$"+loader_info.data_source_id+":"+loader_info.file_path))
+    except Exception as e:
+        if "Running the following loading job in background with '-noprint' option:" in str(e):
+            res = str(e)
+        else:
+            raise e
+    return {"job_name": loader_info.load_job_id,
+            "job_id": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Jobid: ")[1].split("\n")[0],
+            "log_location": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Log directory: ")[1].split("\n")[0]}
+        
 @app.post("/{graphname}/supportai/batch_ingest")
 async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection)):
     req_id = req_id_cv.get()

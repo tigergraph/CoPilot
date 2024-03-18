@@ -1,5 +1,4 @@
 CREATE SCHEMA_CHANGE JOB add_supportai_schema {
-    ADD VERTEX HNSWEntrypoint(PRIMARY_ID id STRING, emb_dimension INT, ef_construction UINT, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, embedding LIST<DOUBLE>, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Document(PRIMARY_ID id STRING, embedding LIST<DOUBLE>, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, embedding LIST<DOUBLE>, concept_type STRING, human_curated BOOL, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
@@ -8,7 +7,6 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Content(PRIMARY_ID id STRING, text STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD DIRECTED EDGE HAS_CONTENT(FROM Document, TO Content|FROM DocumentChunk, TO Content) WITH REVERSE_EDGE="reverse_HAS_CONTENT";
-    ADD DIRECTED EDGE LINK_TO(FROM Concept, TO Concept|FROM Entity, TO Entity|FROM DocumentChunk, TO DocumentChunk|FROM Relationship, TO Relationship|FROM Document, TO Document, level_set SET<INT>) WITH REVERSE_EDGE="reverse_LINK_TO";
     ADD DIRECTED EDGE IS_CHILD_OF(FROM Concept, TO Concept) WITH REVERSE_EDGE="reverse_IS_CHILD_OF";
     ADD DIRECTED EDGE IS_HEAD_OF(FROM Entity, TO Relationship) WITH REVERSE_EDGE="reverse_IS_HEAD_OF";
     ADD DIRECTED EDGE HAS_TAIL(FROM Relationship, TO Entity) WITH REVERSE_EDGE="reverse_HAS_TAIL";
@@ -19,10 +17,5 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE IS_AFTER(FROM DocumentChunk, TO DocumentChunk) WITH REVERSE_EDGE="reverse_IS_AFTER";
     ADD DIRECTED EDGE HAS_CHILD(FROM Document, TO DocumentChunk) WITH REVERSE_EDGE="reverse_HAS_CHILD";
     ADD DIRECTED EDGE HAS_RELATIONSHIP(FROM Concept, TO Concept, relation_type STRING) WITH REVERSE_EDGE="reverse_HAS_RELATIONSHIP";
-    ADD UNDIRECTED EDGE ENTRYPOINT_OF(FROM HNSWEntrypoint, TO DocumentChunk|
-                                      FROM HNSWEntrypoint, TO Document|
-                                      FROM HNSWEntrypoint, TO Concept|
-                                      FROM HNSWEntrypoint, TO Entity|
-                                      FROM HNSWEntrypoint, TO Relationship);
     ADD DIRECTED EDGE CONTAINS_DOCUMENT(FROM DocumentCollection, TO Document) WITH REVERSE_EDGE="reverse_CONTAINS_DOCUMENT";
 }
