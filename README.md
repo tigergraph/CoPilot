@@ -176,10 +176,10 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 
 ## Create Milvus configuration file (optional)
-Note:  Milvus is not necessary for deployment or development currently. Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration.  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
+Note:  Milvus is not necessary for deployment or development currently. Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
 ```json
 {
-    "host": "localhost",
+    "host": "milvus-standalone",
     "port": 19530,
     "username": "",
     "password": "",
@@ -306,7 +306,7 @@ docker exec copilot-tests bash -c "conda run --no-capture-output -n py39 ./run_t
 
 ## Running Locally
 ```sh
-docker-compose -f ./docker-compose.yml up -d
+docker-compose -f ./docker-compose.yml up -d --build
 ```
 
 ## Test Script Options
