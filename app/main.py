@@ -222,6 +222,10 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
+            if "action_input" in steps["output"]:
+                resp.natural_language_response = generate_func_output["action_input"]
+            else:
+                resp.natural_language_response = steps["output"]
             resp.natural_language_response = steps["output"]
             resp.query_sources = {"function_call": generate_func_output["function_call"],
                                 "result": json.loads(generate_func_output["result"]),
