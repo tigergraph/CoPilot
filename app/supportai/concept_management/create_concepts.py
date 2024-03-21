@@ -49,8 +49,8 @@ class CommunityConceptCreator(BaseConceptCreator):
     def create_concepts(self, min_community_size=10, max_community_size=100):
         res = self.conn.runInstalledQuery("Build_Community_Concepts", {"v_type_set": ["Entity", "Relationship"],
                                                                        "e_type_set": ["IS_HEAD_OF", "HAS_TAIL"],
-                                                                        "min_community_size": min_community_size,
-                                                                        "max_community_size": max_community_size
+                                                                        "min_comm_size": min_community_size,
+                                                                        "max_comm_size": max_community_size
                                                                         })
         return res
     
@@ -58,14 +58,15 @@ class HigherLevelConceptCreator(BaseConceptCreator):
     def __init__(self, conn, llm, embedding_service):
         super().__init__(conn, llm, embedding_service)
         self._check_query_install("Build_Community_Concepts")
+        self._check_query_install("getEntityRelationshipConceptCooccurrence")
         self._check_query_install("Build_Concept_Tree")
 
-    def create_concepts(self, min_community_size=10, max_community_size=100):
-        self.conn.runInstalledQuery("Build_Concept_Tree", {"min_cooccurrence": min_community_size})
+    def create_concepts(self, min_community_size=5, max_community_size=100):
+        self.conn.runInstalledQuery("Build_Concept_Tree", {"min_cooccurence": min_community_size})
         res = self.conn.runInstalledQuery("Build_Community_Concepts", {"v_type_set": ["Concept"],
                                                                        "e_type_set": ["HAS_RELATIONSHIP", "reverse_HAS_RELATIONSHIP",
                                                                                       "IS_CHILD_OF", "reverse_IS_CHILD_OF"],
-                                                                        "min_community_size": min_community_size,
-                                                                        "max_community_size": max_community_size
+                                                                        "min_comm_size": min_community_size,
+                                                                        "max_comm_size": max_community_size
                                                                         })
         return res
