@@ -8,8 +8,7 @@ import pyTigerGraph as tg
 class TestCRUDInquiryAI(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
-        # db_config = os.getenv("DB_CONFIG")
-        db_config = "./configs/db_config.json"
+        db_config = os.getenv("DB_CONFIG")
         with open(db_config, "r") as file:
             db_config = json.load(file)
         self.username = db_config["username"]

@@ -25,13 +25,9 @@ from app.py_schemas.schemas import *
 from app.log import req_id_cv
 from app.supportai.retrievers import *
 
-# LLM_SERVICE = os.getenv("LLM_CONFIG")
-# DB_CONFIG = os.getenv("DB_CONFIG")
-# MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
-
-LLM_SERVICE = "./configs/llm_config.json"
-DB_CONFIG = "./configs/db_config.json"
-MILVUS_CONFIG = "./configs/milvus_config.json"
+LLM_SERVICE = os.getenv("LLM_CONFIG")
+DB_CONFIG = os.getenv("DB_CONFIG")
+MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
