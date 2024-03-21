@@ -176,6 +176,10 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
 def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
+
+    if not isinstance(query_list, list):
+        query_list = [query_list]
+
     for query_info in query_list:
         logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
 

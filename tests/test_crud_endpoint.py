@@ -16,19 +16,12 @@ class TestCRUDInquiryAI(unittest.TestCase):
         self.use_token = db_config["getToken"]
         self.conn = tg.TigerGraphConnection(db_config["hostname"], username=self.username, password=self.password)
 
-    def test_register_custom_query(self):
+    def test_register_custom_query_list(self):
         self.conn.graphname="DigitalInfra"
         if self.use_token:
             self.conn.getToken()
-        # Test case 1: Verify that the endpoint returns a 200 status code
-        headers = {
-            'accept': 'application/json',
-            'Authorization': 'Basic dXNlcl8xOk15UGFzc3dvcmQxIQ==',
-            'Content-Type': 'application/json'
-        }
 
-        query_list = [
-            
+        query_list = [ 
             {
                 "function_header": "ms_dependency_chain",
                 "description": "Finds dependents of a given microservice up to k hops.",
@@ -46,11 +39,31 @@ class TestCRUDInquiryAI(unittest.TestCase):
             }
         ]
 
-        response = self.client.post("/DigitalInfra/registercustomquery", headers=headers, json=query_list, auth=(self.username, self.password))
+        response = self.client.post("/DigitalInfra/registercustomquery", json=query_list, auth=(self.username, self.password))
         print ("-----------------------")
         print ()
         print ("response json")
         print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+    def test_register_custom_query_single(self):
+        self.conn.graphname = "DigitalInfra"
+        if self.use_token:
+            self.conn.getToken()
+
+        single_query = {
+                "function_header": "ms_dependency_chain",
+                "description": "Finds dependents of a given microservice up to k hops.",
+                "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
+                "param_types": {"microservice": "str", "depth": "int"}
+            }
+
+        response = self.client.post("/DigitalInfra/registercustomquery", json=single_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
 
 if __name__ == "__main__":
     unittest.main()
