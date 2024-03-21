@@ -15,10 +15,10 @@ class TestMilvusEmbeddingStore(unittest.TestCase):
         mock_embedding_model.embed_documents.return_value = embedded_documents
         mock_milvus_function.return_value = None
 
-        embedding_store = MilvusEmbeddingStore(embedding_service=mock_embedding_model, host="localhost", port=19530)
+        embedding_store = MilvusEmbeddingStore(embedding_service=mock_embedding_model, host="localhost", port=19530, support_ai_instance=True)
         embedding_store.add_embeddings(embeddings=[(query, embedded_documents)])
 
-        mock_milvus_function.assert_called_once_with(texts=[query], metadatas=None)
+        mock_milvus_function.assert_called_once_with(texts=[query], metadatas=[])
 
     @patch('langchain_community.vectorstores.milvus.Milvus.similarity_search_by_vector') 
     def test_retrieve_embeddings(self, mock_milvus_function):
@@ -31,7 +31,7 @@ class TestMilvusEmbeddingStore(unittest.TestCase):
         ]
         mock_milvus_function.return_value = docs
 
-        embedding_store = MilvusEmbeddingStore(embedding_service=MagicMock(), host="localhost", port=19530)
+        embedding_store = MilvusEmbeddingStore(embedding_service=MagicMock(), host="localhost", port=19530, support_ai_instance=True)
         result = embedding_store.retrieve_similar(query_embedding=embedded_query, top_k=4)
 
         mock_milvus_function.assert_called_once_with(embedding=embedded_query, k=4)

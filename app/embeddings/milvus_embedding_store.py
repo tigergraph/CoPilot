@@ -10,7 +10,7 @@ from pymilvus import connections, utility
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
-    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "vertex_id", username: str = "", password: str = ""):
+    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = ""):
         milvus_connection = {
             "host": host,
             "port": port,
@@ -32,8 +32,10 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.vector_field = vector_field
         self.vertex_field = vertex_field
         self.text_field = text_field
+        self.support_ai_instance = support_ai_instance
 
-        self.load_documents(milvus_connection, collection_name)
+        if (not self.support_ai_instance):
+            self.load_documents(milvus_connection, collection_name)
     
     def load_documents(self, milvus_connection, collection_name):
         # manual connection to check if the collection exists the first time
@@ -77,6 +79,22 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
+        if metadatas is None:
+                metadatas = []
+                
+        # add fields required by Milvus if they do not exist
+        if self.support_ai_instance:
+            logger.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
+            for metadata in metadatas:
+                if self.vertex_field not in metadata:
+                    metadata[self.vertex_field] = ""
+        else:
+            for metadata in metadatas:
+                if "seq_num" not in metadata:
+                    metadata["seq_num"] = 1
+                if "source" not in metadata:
+                    metadata["source"] = "somesource"
+
         logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
         texts = [text for text, _ in embeddings]
         added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
