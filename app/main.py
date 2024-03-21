@@ -192,15 +192,23 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+    results = []
+
+    if not isinstance(query_list, list):
+        query_list = [query_list]
+
+    for query_info in query_list:
+        logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+
+        vec = embedding_service.embed_query(query_info.docstring)
+        res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
                                                                           "description": query_info.description,
                                                                           "param_types": query_info.param_types,
                                                                           "custom_query": True}])
-    return res
+        results.append(res)
+    return results
 
 # TODO: RUD of CRUD with custom queries
 
