@@ -416,3 +416,4 @@ def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connec
     comm_concepts.create_concepts()
     high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
     high_level_concepts.create_concepts()
+    return {"status": "success"}
