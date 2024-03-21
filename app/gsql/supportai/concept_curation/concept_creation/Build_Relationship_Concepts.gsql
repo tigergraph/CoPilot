@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=10) { 
+CREATE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=5) { 
   MapAccum<STRING, SumAccum<INT>> @@relationship_count;
   SetAccum<STRING> @@impt_relationships;
   SetAccum<STRING> @@created_concepts;
@@ -15,9 +15,11 @@ CREATE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=10) {
         WHERE lower(ir.short_name) IN @@impt_relationships
         POST-ACCUM
           STRING tmp = lower(ir.short_name),
-          @@created_concepts += tmp,
-          INSERT INTO Concept VALUES (tmp, _, _, "RELATIONSHIP_LEAF", now(), FALSE),
-          INSERT INTO DESCRIBES_RELATIONSHIP VALUES (tmp, ir);
+          IF tmp != "" THEN
+            @@created_concepts += tmp,
+            INSERT INTO Concept VALUES (tmp, _, _, "RELATIONSHIP_LEAF", now(), FALSE),
+            INSERT INTO DESCRIBES_RELATIONSHIP VALUES (tmp, ir)
+          END;
   
   PRINT @@created_concepts;
 }

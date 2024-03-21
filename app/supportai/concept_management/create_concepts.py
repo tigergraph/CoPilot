@@ -53,3 +53,19 @@ class CommunityConceptCreator(BaseConceptCreator):
                                                                         "max_community_size": max_community_size
                                                                         })
         return res
+    
+class HigherLevelConceptCreator(BaseConceptCreator):
+    def __init__(self, conn, llm, embedding_service):
+        super().__init__(conn, llm, embedding_service)
+        self._check_query_install("Build_Community_Concepts")
+        self._check_query_install("Build_Concept_Tree")
+
+    def create_concepts(self, min_community_size=10, max_community_size=100):
+        self.conn.runInstalledQuery("Build_Concept_Tree", {"min_cooccurrence": min_community_size})
+        res = self.conn.runInstalledQuery("Build_Community_Concepts", {"v_type_set": ["Concept"],
+                                                                       "e_type_set": ["HAS_RELATIONSHIP", "reverse_HAS_RELATIONSHIP",
+                                                                                      "IS_CHILD_OF", "reverse_IS_CHILD_OF"],
+                                                                        "min_community_size": min_community_size,
+                                                                        "max_community_size": max_community_size
+                                                                        })
+        return res

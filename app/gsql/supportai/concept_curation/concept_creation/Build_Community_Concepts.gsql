@@ -30,11 +30,15 @@ FOREACH (compId,size) IN @@comp_sizes_map DO
       @@num_concepts_created += 1;
       v = SELECT s FROM Start:s WHERE s.@min_cc_id == compId
           POST-ACCUM
-            INSERT INTO Concept VALUES("InCommunity"+to_string(compId), _, _, "COMMUNITY_LEAF", now(), FALSE),
             IF s.type == "Relationship" THEN
+              INSERT INTO Concept VALUES("InCommunity"+to_string(compId), _, _, "COMMUNITY_LEAF", now(), FALSE),
               INSERT INTO DESCRIBES_RELATIONSHIP VALUES("InCommunity"+to_string(compId), s)
             ELSE IF s.type == "Entity" THEN
+              INSERT INTO Concept VALUES("InCommunity"+to_string(compId), _, _, "COMMUNITY_LEAF", now(), FALSE),
               INSERT INTO DESCRIBES_ENTITY VALUES("InCommunity"+to_string(compId), s)
+            ELSE IF s.type == "Concept" THEN
+              INSERT INTO Concept VALUES("InCommunity"+to_string(compId), _, _, "AND", now(), FALSE),
+              INSERT INTO IS_CHILD_OF VALUES(s, "InCommunity"+to_string(compId))
             END;
   END;
 END;
