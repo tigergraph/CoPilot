@@ -5,3 +5,4 @@ wandb/
 report_url.txt
 volumes/*
 configs/SERVICE_ACCOUNT_CREDS.json
+.vscode/*
