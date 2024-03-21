@@ -93,7 +93,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 if "seq_num" not in metadata:
                     metadata["seq_num"] = 1
                 if "source" not in metadata:
-                    metadata["source"] = "somesource"
+                    metadata["source"] = ""
 
         logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
         texts = [text for text, _ in embeddings]
