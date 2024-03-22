@@ -7,3 +7,4 @@ volumes/*
 configs/SERVICE_ACCOUNT_CREDS.json
 npm-debug.log
 .vscode/*
+udfs/milvus/venv/*

@@ -1,6 +1,4 @@
 #include "ExprUtil.hpp"
-#include <string>
-#include <unordered_set>
 
 std::vector<float> stringToFloatVector(const std::string& str, char delimiter = ',') {
     std::vector<float> result;
@@ -19,7 +17,8 @@ std::vector<float> stringToFloatVector(const std::string& str, char delimiter = 
 
     return result;
 }
-inline ListAccum<std::string> searchInMilvus(
+
+inline std::vector<std::pair<std::string, std::string>> searchInMilvus(
     const std::string milvus_host, const int64_t milvus_port, const std::string& collection_name,
     const std::string& vector_field_name, const std::string& vertex_id_field_name, const std::string& query_vector_str,
     const std::string& metric_type, const int64_t top_k) {

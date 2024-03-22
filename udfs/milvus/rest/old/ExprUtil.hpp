@@ -18,9 +18,9 @@ public:
         curl_global_cleanup();
     }
 
-    ListAccum<std::string> search(const std::string& collection_name, const std::string& vector_field_name,
+    std::vector<std::pair<std::string, std::string>> search(const std::string& collection_name, const std::string& vector_field_name,
                         const std::string& vertex_id_field_name, const std::vector<float>& query_vector, const std::string& metric_type, const int64_t top_k) const {
-        ListAccum<std::string> vertexIdList;
+        std::vector<std::pair<std::string, std::string>> results_list;
 
         Json::Value search_body;
         search_body["collectionName"] = collection_name;
@@ -69,7 +69,7 @@ public:
                     std::string pk = item["pk"].asString();
                     std::string vertex_id_str = item[vertex_id_field_name].asString();
                     std::cout << "Vector ID: " << pk << "\tVertex ID: " << vertex_id_str << std::endl;
-                    vertexIdList += vertex_id_str;
+                    results_list.emplace_back(pk, vertex_id_str);
                 }
             }
 
@@ -77,7 +77,8 @@ public:
             curl_slist_free_all(headers);
         }
 
-        return vertexIdList;
+
+        return results_list;
     }
 
 private:
