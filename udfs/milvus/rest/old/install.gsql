@@ -1,5 +1,0 @@
-PUT ExprUtil FROM "./ExprUtil.hpp"
-PUT ExprFunctions FROM "./ExprFunctions.hpp"
-
-PUT ExprUtil FROM "/home/tigergraph/udfs/milvus/ExprUtil.hpp"
-PUT ExprFunctions FROM "/home/tigergraph/udfs/milvus/ExprFunctions.hpp"
