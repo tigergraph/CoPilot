@@ -5,7 +5,6 @@
 #include "milvus/include/MilvusClient.h"
 #include "milvus/include/types/ConnectParam.h"
 #include "milvus/include/types/SearchResults.h"
-#include "milvus/include/types/FieldData.h"
 
 class MilvusUtil {
 public:
@@ -35,20 +34,35 @@ public:
         args.AddOutputField(vertex_id_field_name);
 
         milvus::SearchResults results;
-        auto status = client->Search(args, results);
+
+        std::cout << "Loading collection before search " << std::endl;
+        auto status = client->LoadCollection(collection_name);
+
+        std::cout << "Searching!" << std::endl;
+        status = client->Search(args, results);
         CheckStatus("Search failed:", status);
 
         for (const auto& result : results.Results()) {
-            auto ids = result.Ids().StrIDArray();
+            auto ids = result.Ids().IntIDArray();
+            auto vertex_id_field = result.OutputField(vertex_id_field_name);
+            auto& distances = result.Scores();
 
-            // Iterate over the results and extract vector_id and vertex_id
+            auto vertex_id_field_ptr = std::dynamic_pointer_cast<milvus::VarCharFieldData>(vertex_id_field);
+            auto& vertex_id_data = vertex_id_field_ptr->Data();
+
+            std::cout << "Iterate over the results and extract vector_id and vertex_id" << std::endl;
+
             for (size_t i = 0; i < ids.size(); ++i) {
-                std::string vector_id = ids[i];
-                std::string vertex_id = "";
-                results_list.emplace_back(vector_id, vertex_id);
+                std::string vector_id_str = std::to_string(ids[i]);
+                std::string vertex_id_str = vertex_id_data[i]; 
+                std::cout << "Vector ID: " << vector_id_str << "\tDistance: " << distances[i]
+                        << "\tVertex ID: " << vertex_id_str << std::endl;
+                
+                results_list.emplace_back(vector_id_str, vertex_id_str);
             }
         }
 
+        std::cout << "Returning results list " << std::endl;
         return results_list;
     }
 
