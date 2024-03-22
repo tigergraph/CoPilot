@@ -1,0 +1,25 @@
+CREATE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=5) { 
+  MapAccum<STRING, SumAccum<INT>> @@relationship_count;
+  SetAccum<STRING> @@impt_relationships;
+  SetAccum<STRING> @@created_concepts;
+  rels = {Relationship.*};
+  res = SELECT s FROM rels:s ACCUM @@relationship_count += (lower(s.short_name) -> 1);
+  
+  FOREACH (key, val) IN @@relationship_count DO
+    IF val >= occurence_min THEN
+      @@impt_relationships += key;
+    END;
+  END;
+  
+  res = SELECT ir FROM rels:ir
+        WHERE lower(ir.short_name) IN @@impt_relationships
+        POST-ACCUM
+          STRING tmp = lower(ir.short_name),
+          IF tmp != "" THEN
+            @@created_concepts += tmp,
+            INSERT INTO Concept VALUES (tmp, _, _, "RELATIONSHIP_LEAF", now(), FALSE),
+            INSERT INTO DESCRIBES_RELATIONSHIP VALUES (tmp, ir)
+          END;
+  
+  PRINT @@created_concepts;
+}

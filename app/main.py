@@ -24,6 +24,7 @@ from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import *
 from app.log import req_id_cv
 from app.supportai.retrievers import *
+from app.supportai.concept_management.create_concepts import *
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
@@ -112,12 +113,31 @@ embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 if milvus_config.get("enabled") == "true":
     logger.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
+
+    logger.info(f"Setting up Milvus embedding store for InquiryAI")
     embedding_store = MilvusEmbeddingStore(
+            embedding_service,
+            host=milvus_config["host"],
+            port=milvus_config["port"],
+            collection_name="tg_inquiry_documents", 
+            support_ai_instance=False,
+            username=milvus_config.get("username", ""),
+            password=milvus_config.get("password", "")
+    )
+
+    support_collection_name=milvus_config.get("collection_name", "tg_support_documents")
+    logger.info(f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}")
+    support_ai_embedding_store = MilvusEmbeddingStore(
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
+        support_ai_instance=True,
+        collection_name=support_collection_name, 
         username=milvus_config.get("username", ""),
-        password=milvus_config.get("password", "")
+        password=milvus_config.get("password", ""),
+        vector_field=milvus_config.get("vector_field", "document_vector"),
+        text_field=milvus_config.get("text_field", "document_content"),
+        vertex_field=milvus_config.get("vertex_field", "vertex_id")
     )
 
 @app.middleware("http")
@@ -173,15 +193,23 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+    results = []
+
+    if not isinstance(query_list, list):
+        query_list = [query_list]
+
+    for query_info in query_list:
+        logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+
+        vec = embedding_service.embed_query(query_info.docstring)
+        res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
                                                                           "description": query_info.description,
                                                                           "param_types": query_info.param_types,
                                                                           "custom_query": True}])
-    return res
+        results.append(res)
+    return results
 
 # TODO: RUD of CRUD with custom queries
 
@@ -404,3 +432,15 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     resp.query_sources = res["retrieved"]
 
     return res
+
+@app.get("/{graphname}/supportai/buildconcepts")
+def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
+    rels_concepts.create_concepts()
+    ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
+    ents_concepts.create_concepts()
+    comm_concepts = CommunityConceptCreator(conn, llm_config, embedding_service)
+    comm_concepts.create_concepts()
+    high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
+    high_level_concepts.create_concepts()
+    return {"status": "success"}
