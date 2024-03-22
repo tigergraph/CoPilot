@@ -1,0 +1,140 @@
+CREATE QUERY getEntityRelationshipConceptCooccurrence(VERTEX<Concept> c1, VERTEX<Concept> c2) RETURNS(INT){
+  SetAccum<VERTEX<Concept>> @@initialCo, @@coLeafs, @@tempCo;
+  OrAccum @visited, @excludeCo, @@exclude;
+  MapAccum<STRING, SetAccum<VERTEX<Concept>>> @@coItrMap;
+  ArrayAccum<SetAccum<VERTEX<Concept>>> @@arrayCo[];
+  MinAccum<STRING> @parentType;
+  MapAccum<STRING, INT> @@debugLogs;
+
+  INT iter = 0;
+  //Include & Exclude Logic
+  
+  includeConcept = SELECT c FROM Concept:c WHERE c == c1 OR c == c2;
+
+  #includeConcept = {includedConcepts};
+  excludeConcept = {};
+
+  DOC_INC(ANY) = {};
+  DOC_EXC(ANY) = {};
+  DOC_TEMP(ANY) = {};
+
+  IF (includeConcept.size() > 0 OR excludeConcept.size() > 0) THEN
+
+    seedIncludeHCC = SELECT s FROM includeConcept:s
+                      ACCUM s.@excludeCo = FALSE, @@initialCo += s;
+
+    // Resize array accum with no of input HCC
+    @@arrayCo.reallocate(@@initialCo.size());
+
+    FOREACH cItem IN @@initialCo DO
+
+      @@coLeafs = cItem;
+      startCo = {cItem};
+
+      WHILE startCo.size() !=0 DO
+
+      startCo = SELECT t FROM startCo:s -(<IS_CHILD_OF:e)- Concept:t
+                  WHERE t.@visited == FALSE
+                  ACCUM
+                    @@coLeafs += t,
+                    t.@parentType = s.concept_type,
+                    t.@excludeCo = s.@excludeCo
+                  POST-ACCUM
+                    t.@visited = TRUE;
+
+      END;
+
+      @@arrayCo[iter] += @@coLeafs;
+      @@coLeafs.clear();
+      iter = iter + 1;
+
+    END;
+
+    //Process for each Group of Leafs
+    FOREACH i IN RANGE[0, iter-1] DO
+
+      @@tempCo = @@arrayCo[i];
+      coInArr = {@@tempCo};
+      coInArr = SELECT s FROM coInArr:s
+                  ACCUM
+                    IF (s.@parentType == "AND") THEN
+                      @@coItrMap += ("AND" -> s)
+                    ELSE IF (s.@parentType == "OR") THEN
+                      @@coItrMap += ("OR" -> s)
+                    ELSE
+                      @@coItrMap += ("OTHER" -> s)
+                    END;
+
+      @@exclude = FALSE;
+      DOC_TEMP = {};
+
+      FOREACH (Key, Value) IN @@coItrMap DO
+        @@tempCo = Value;
+        FOREACH itm IN @@tempCo DO
+
+          seed = {itm};
+          CoEach = SELECT s FROM seed:s
+                    ACCUM @@exclude += s.@excludeCo;
+
+          #  can make this simpler by combining entity and relationship in one query
+          DOC_2HOP_1 = SELECT d FROM CoEach:s -(_>)- (Entity|Relationship):d; # -(_>)- Document:d;
+          #DOC_2HOP_2 = SELECT d FROM CoEach:s -(_>)- Relationship -(_>)- Document:d;
+          
+          IF (DOC_TEMP.size() == 0) THEN
+            DOC_TEMP = DOC_2HOP_1;
+          END;
+          
+          IF (DOC_2HOP_1.size() > 0) THEN
+            IF (Key == "AND") THEN
+              DOC_TEMP = DOC_TEMP INTERSECT DOC_2HOP_1;
+            ELSE
+              DOC_TEMP = DOC_TEMP UNION DOC_2HOP_1;
+            END;
+          /*
+          ELSE IF (DOC_2HOP_2.size() > 0) THEN
+            IF (Key == "AND") THEN
+              DOC_TEMP = DOC_TEMP INTERSECT DOC2_HOP_2;
+            ELSE
+              DOC_TEMP = DOC_TEMP UNION DOC2_HOP_2;
+            END;
+         END;
+         */
+        END;
+      END; 
+      IF (@@exclude != TRUE) THEN
+        IF(DOC_INC.size() == 0) THEN
+          DOC_INC = DOC_TEMP;
+        END;
+        DOC_INC = DOC_INC INTERSECT DOC_TEMP;
+      ELSE
+        IF(DOC_EXC.size() == 0) THEN
+          DOC_EXC = DOC_TEMP;
+        END;
+        DOC_EXC = DOC_EXC INTERSECT DOC_TEMP;
+      END;
+
+      @@coItrMap.clear();
+
+    END; // End of Array Loop
+
+    MYDOCS = DOC_INC;
+
+  END;
+
+  IF(includeConcept.size() == 0) THEN
+
+    MyEntities = {Entity.*};
+    MyRels = {Relationship.*};
+    MYDOCS = MyEntities UNION MyRels;
+
+  END;
+
+  //Remove docs from exclude list
+
+  MYDOCS = MYDOCS MINUS DOC_EXC;
+
+  #PRINT MYDOCS.size() as numberOfMatchingDocs;
+  #PRINT MYDOCS as RetrievedDocs;
+  PRINT MYDOCS.size();
+  RETURN MYDOCS.size();
+}

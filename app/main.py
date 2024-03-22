@@ -24,6 +24,7 @@ from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import *
 from app.log import req_id_cv
 from app.supportai.retrievers import *
+from app.supportai.concept_management.create_concepts import *
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
@@ -431,3 +432,15 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     resp.query_sources = res["retrieved"]
 
     return res
+
+@app.get("/{graphname}/supportai/buildconcepts")
+def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
+    rels_concepts.create_concepts()
+    ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
+    ents_concepts.create_concepts()
+    comm_concepts = CommunityConceptCreator(conn, llm_config, embedding_service)
+    comm_concepts.create_concepts()
+    high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
+    high_level_concepts.create_concepts()
+    return {"status": "success"}
