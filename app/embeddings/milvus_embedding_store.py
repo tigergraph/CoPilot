@@ -1,11 +1,14 @@
 from datetime import datetime
 import logging
-from typing import Iterable, Tuple, List
+from typing import Iterable, Tuple, List, Optional, Union
+
+from fastapi import HTTPException
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 from app.log import req_id_cv
 from langchain_community.vectorstores import Milvus
 from pymilvus import connections, utility
+from langchain_core.documents.base import Document
 
 logger = logging.getLogger(__name__)
 
@@ -101,16 +104,104 @@ class MilvusEmbeddingStore(EmbeddingStore):
         logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
         return added
 
-    def remove_embeddings(self, ids):
-        """ Remove Embeddings.
-            Remove embeddings from the vector store.
-            Args:
-                ids (str):
-                    ID of the document to remove from the embedding store  
-        """
-        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
-        self.milvus.delete(ids)
-        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
+    def upsert_embeddings(self, id: str, embeddings: Iterable[Tuple[str, List[float]]], metadatas: Optional[List[dict]] = None):
+        try:
+            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY upsert_document()")
+
+            if metadatas is None:
+                    metadatas = []
+                    
+            # add fields required by Milvus if they do not exist
+            if self.support_ai_instance:
+                logger.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
+                for metadata in metadatas:
+                    if self.vertex_field not in metadata:
+                        metadata[self.vertex_field] = ""
+            else:
+                for metadata in metadatas:
+                    if "seq_num" not in metadata:
+                        metadata["seq_num"] = 1
+                    if "source" not in metadata:
+                        metadata["source"] = ""
+
+            documents = []
+
+            # Iterate over embeddings and metadatas simultaneously
+            for (text, embedding), metadata in zip(embeddings, metadatas or []):
+                # Create a document with text as page content
+                document = Document(page_content=text)
+
+                # Add embedding to metadata
+                if metadata is None:
+                    metadata = {}
+                # metadata["embedding"] = embedding
+
+                # Add metadata to document
+                document.metadata = metadata
+
+                # Append document to the list
+                documents.append(document)
+
+            # Perform upsert operation
+            if id is not None and id.strip():
+                logger.info(f"id: {id}")
+                logger.info(f"documents: {documents}")
+                upserted = self.milvus.upsert(ids=[int(id)], documents=documents)
+            else:
+                logger.info(f"documents: {documents}")
+                upserted = self.milvus.upsert(documents=documents)
+
+            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT upsert_document()")
+            
+            # Check if upsertion was successful
+            if upserted:
+                success_message = f"document upserted {upserted}"
+                logger.info(success_message)
+                return success_message
+            else:
+                error_message = f"Failed to upsert document {upserted}"
+                logger.error(error_message)
+                raise Exception(error_message)
+        
+        except Exception as e:
+            error_message = f"An error occurred while upserting document: {str(e)}"
+            logger.error(error_message)
+            raise e
+    
+    def remove_embeddings(self, ids: Optional[List[str]] = None, expr: Optional[str] = None):
+        try:
+            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
+            
+            # Check if ids or expr are provided
+            if ids is None and expr is None:
+                raise ValueError("Either id list/string or expr string must be provided.")
+
+            # Perform deletion based on provided IDs or expression
+            if expr:
+                # Delete by IDs
+                deleted = self.milvus.delete(expr=expr)
+                deleted_message = f"Deleted by expression: {expr} {deleted}"
+            elif ids:
+                # Delete by expression
+                deleted = self.milvus.delete(ids=ids)
+                deleted_message = f"Deleted by IDs: {ids} {deleted}"
+
+            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
+
+            # Check if deletion was successful
+            if deleted:
+                success_message = f"Embeddings {deleted_message}."
+                logger.info(success_message)
+                return success_message
+            else:
+                error_message = f"Failed to delete embeddings. {deleted_message}"
+                logger.error(error_message)
+                raise Exception(error_message)
+        
+        except Exception as e:
+            error_message = f"An error occurred while deleting embeddings: {str(e)}"
+            logger.error(error_message)
+            raise e
 
     def retrieve_similar(self, query_embedding, top_k=10):
         """ Retireve Similar.

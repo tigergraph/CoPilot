@@ -15,12 +15,11 @@ class TestCRUDInquiryAI(unittest.TestCase):
         self.password = db_config["password"]
         self.use_token = db_config["getToken"]
         self.conn = tg.TigerGraphConnection(db_config["hostname"], username=self.username, password=self.password)
-
-    def test_register_custom_query_list(self):
         self.conn.graphname="DigitalInfra"
         if self.use_token:
             self.conn.getToken()
 
+    def test_register_custom_query_list(self):
         query_list = [ 
             {
                 "function_header": "ms_dependency_chain",
@@ -39,7 +38,7 @@ class TestCRUDInquiryAI(unittest.TestCase):
             }
         ]
 
-        response = self.client.post("/DigitalInfra/registercustomquery", json=query_list, auth=(self.username, self.password))
+        response = self.client.post("/DigitalInfra/register_docs", json=query_list, auth=(self.username, self.password))
         print ("-----------------------")
         print ()
         print ("response json")
@@ -47,10 +46,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_register_custom_query_single(self):
-        self.conn.graphname = "DigitalInfra"
-        if self.use_token:
-            self.conn.getToken()
-
         single_query = {
                 "function_header": "ms_dependency_chain",
                 "description": "Finds dependents of a given microservice up to k hops.",
@@ -58,12 +53,100 @@ class TestCRUDInquiryAI(unittest.TestCase):
                 "param_types": {"microservice": "str", "depth": "int"}
             }
 
-        response = self.client.post("/DigitalInfra/registercustomquery", json=single_query, auth=(self.username, self.password))
+        response = self.client.post("/DigitalInfra/register_docs", json=single_query, auth=(self.username, self.password))
         print ("-----------------------")
         print ()
         print ("response json")
         print (response.text)
         self.assertEqual(response.status_code, 200)
+
+    def test_delete_custom_query_expr(self):
+        delete_query = {
+            "ids": "",
+            "expr": "function_header in ['ms_dependency_chain']"
+        }
+
+        response = self.client.post("/DigitalInfra/delete_docs", json=delete_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+    def test_delete_custom_query_ids(self):
+        delete_query = {
+            "ids": "448543540718863740",
+            "expr": ""
+        }
+
+        response = self.client.post("/DigitalInfra/delete_docs", json=delete_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+    def test_delete_custom_query_noinput(self):
+        delete_query = {
+            "ids": "",
+            "expr": ""
+        }
+
+        response = self.client.post("/DigitalInfra/delete_docs", json=delete_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 500)
+
+    def test_upsert_custom_query_ids(self):
+        upsert_query = {
+            "ids": "448543540718863740",
+            "query_info": {
+                "function_header": "ms_dependency_chain_test_id",
+                "description": "Finds dependents of a given microservice up to k hops.",
+                "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
+                "param_types": {"microservice": "str", "depth": "int"}
+            }
+        }
+
+        response = self.client.post("/DigitalInfra/upsert_docs", json=upsert_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+    def test_upsert_custom_query_docs(self):
+        upsert_query = {
+            "ids": "",
+            "expr": {
+                "function_header": "ms_dependency_chain_test_docs",
+                "description": "Finds dependents of a given microservice up to k hops.",
+                "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
+                "param_types": {"microservice": "str", "depth": "int"}
+            }
+        }
+
+        response = self.client.post("/DigitalInfra/upsert_docs", json=upsert_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+    def test_upsert_custom_query_noinput(self):
+        upsert_query = {
+            "ids": "",
+            "expr": {}
+        }
+
+        response = self.client.post("/DigitalInfra/upsert_docs", json=upsert_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 422)
 
 if __name__ == "__main__":
     unittest.main()
