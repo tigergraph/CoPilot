@@ -10,7 +10,7 @@ from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
-from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException
+from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException, NoDocumentsFoundException
 import json
 import logging
 from app.log import req_id_cv
@@ -107,6 +107,11 @@ class GenerateFunction(BaseTool):
         )
 
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
+
+        if len(docs) == 0:
+            logger.warning(f"request_id={req_id_cv.get()} WARN no documents found")
+            raise NoDocumentsFoundException
+
         inputs = [{"question": question, 
                     "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
                     "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
@@ -114,8 +119,8 @@ class GenerateFunction(BaseTool):
                     "vertex_ids": target_vertex_ids,
                     "edge_attributes": target_edge_attributes,
                     "doc1": docs[0].page_content,
-                    "doc2": docs[1].page_content,
-                    "doc3": docs[2].page_content
+                    "doc2": docs[1].page_content if len(docs) > 1 else "",
+                    "doc3": docs[2].page_content if len(docs) > 2 else ""
                   }]
         doc_ids = [doc.metadata.get("function_header") for doc in docs]
         logger.debug(f"request_id={req_id_cv.get()} retrieved documents={doc_ids}")

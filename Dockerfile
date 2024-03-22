@@ -28,4 +28,4 @@ ENV MILVUS_CONFIG="/milvus_config.json"
 ENV LOGLEVEL="INFO"
 
 # 
-CMD ["/opt/conda/envs/py39/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]

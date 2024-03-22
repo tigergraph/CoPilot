@@ -24,6 +24,7 @@ from app.tools import MapQuestionToSchemaException
 from app.py_schemas.schemas import *
 from app.log import req_id_cv
 from app.supportai.retrievers import *
+from app.supportai.concept_management.create_concepts import *
 
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
@@ -52,22 +53,20 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
     
-if MILVUS_CONFIG is None or not os.path.exists(MILVUS_CONFIG):
+if MILVUS_CONFIG is None or (MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)):
     milvus_config = {
             "host": "localhost",
             "port": "19530",
             "enabled": "false"
         }
-elif MILVUS_CONFIG[-5:] != ".json":
+elif MILVUS_CONFIG.endswith(".json"):
+    with open(MILVUS_CONFIG, "r") as f:
+        milvus_config = json.load(f)
+else:
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
-    except Exception as e:
-        raise Exception("MILVUS_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
-else:
-    if os.path.exists(MILVUS_CONFIG):
-        with open(MILVUS_CONFIG, "r") as f:
-            milvus_config = json.load(f)
-        
+    except json.JSONDecodeError as e:
+        raise Exception("MILVUS_CONFIG must be a .json file or a JSON string, failed with error: " + str(e))
 
 
 
@@ -114,12 +113,31 @@ embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 if milvus_config.get("enabled") == "true":
     logger.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
+
+    logger.info(f"Setting up Milvus embedding store for InquiryAI")
     embedding_store = MilvusEmbeddingStore(
+            embedding_service,
+            host=milvus_config["host"],
+            port=milvus_config["port"],
+            collection_name="tg_inquiry_documents", 
+            support_ai_instance=False,
+            username=milvus_config.get("username", ""),
+            password=milvus_config.get("password", "")
+    )
+
+    support_collection_name=milvus_config.get("collection_name", "tg_support_documents")
+    logger.info(f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}")
+    support_ai_embedding_store = MilvusEmbeddingStore(
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
-        username=milvus_config["username"],
-        password=milvus_config["password"]
+        support_ai_instance=True,
+        collection_name=support_collection_name, 
+        username=milvus_config.get("username", ""),
+        password=milvus_config.get("password", ""),
+        vector_field=milvus_config.get("vector_field", "document_vector"),
+        text_field=milvus_config.get("text_field", "document_content"),
+        vertex_field=milvus_config.get("vertex_field", "vertex_id")
     )
 
 @app.middleware("http")
@@ -175,14 +193,23 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    logger.debug(f"Using embedding store: {embedding_store}")
+    results = []
+
+    if not isinstance(query_list, list):
+        query_list = [query_list]
+
+    for query_info in query_list:
+        logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+
+        vec = embedding_service.embed_query(query_info.docstring)
+        res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
                                                                           "description": query_info.description,
                                                                           "param_types": query_info.param_types,
                                                                           "custom_query": True}])
-    return res
+        results.append(res)
+    return results
 
 # TODO: RUD of CRUD with custom queries
 
@@ -195,7 +222,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
 
 
 @app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> NaturalLanguageQueryResponse:
+def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> CoPilotResponse:
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
@@ -215,13 +242,18 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
 
-    resp = NaturalLanguageQueryResponse
+    resp = CoPilotResponse
+    resp.response_type = "inquiryai"
 
     try:
         steps = agent.question_for_agent(query.query)
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
+            if "action_input" in steps["output"]:
+                resp.natural_language_response = generate_func_output["action_input"]
+            else:
+                resp.natural_language_response = steps["output"]
             resp.natural_language_response = steps["output"]
             resp.query_sources = {"function_call": generate_func_output["function_call"],
                                 "result": json.loads(generate_func_output["result"]),
@@ -479,6 +511,8 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
 
 @app.post("/{graphname}/supportai/answerquestion")
 def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    resp = CoPilotResponse
+    resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
@@ -510,4 +544,19 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     else:
         raise Exception("Method not implemented")
     
+    resp.natural_language_response = res["response"]
+    resp.query_sources = res["retrieved"]
+
     return res
+
+@app.get("/{graphname}/supportai/buildconcepts")
+def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
+    rels_concepts.create_concepts()
+    ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
+    ents_concepts.create_concepts()
+    comm_concepts = CommunityConceptCreator(conn, llm_config, embedding_service)
+    comm_concepts.create_concepts()
+    high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
+    high_level_concepts.create_concepts()
+    return {"status": "success"}

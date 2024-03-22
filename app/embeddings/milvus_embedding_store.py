@@ -5,23 +5,26 @@ from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 from app.log import req_id_cv
 from langchain_community.vectorstores import Milvus
+from pymilvus import connections, utility
 
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
-    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "vertex_id", username: str = "", password: str = ""):
+    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = ""):
+        milvus_connection = {
+            "host": host,
+            "port": port,
+            "user": username,
+            "password": password
+        }
+
         logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
         self.milvus = Milvus(
             embedding_function=embedding_service, 
             collection_name=collection_name, 
-                connection_args=dict(
-                host=host,
-                port=port,
-                username=username,
-                password=password
-            ),
+            connection_args=milvus_connection,
             auto_id = True,
-            drop_old = True,
+            drop_old = False,
             text_field=text_field,
             vector_field=vector_field
         )
@@ -29,7 +32,42 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.vector_field = vector_field
         self.vertex_field = vertex_field
         self.text_field = text_field
-        logger.info(f"Milvus initialized successfully")
+        self.support_ai_instance = support_ai_instance
+
+        if (not self.support_ai_instance):
+            self.load_documents(milvus_connection, collection_name)
+    
+    def load_documents(self, milvus_connection, collection_name):
+        # manual connection to check if the collection exists the first time
+        alias = "default"
+        connections.connect(alias=alias, **milvus_connection)
+        collection_not_exists = not utility.has_collection(collection_name, using=alias)
+        
+        if (collection_not_exists):
+            from langchain.document_loaders import DirectoryLoader, JSONLoader
+
+            def metadata_func(record: dict, metadata: dict) -> dict:
+                metadata["function_header"] = record.get("function_header")
+                metadata["description"] = record.get("description")
+                metadata["param_types"] = record.get("param_types")
+                metadata["custom_query"] = record.get("custom_query")
+
+                return metadata
+
+            logger.info("Milvus add initial load documents init()")
+            loader = DirectoryLoader("./app/pytg_documents/", 
+                                    glob="*.json",
+                                    loader_cls=JSONLoader,
+                                    loader_kwargs = {'jq_schema':'.', 
+                                                    'content_key': 'docstring',
+                                                    'metadata_func': metadata_func})
+            docs = loader.load()
+            self.milvus.upsert(documents=docs)
+            logger.info("Milvus finish initial load documents init()")
+
+            logger.info("Milvus initialized successfully")
+        else:
+            logger.info("Milvus already initialized, skipping initial document load")
 
     def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]=None):
         """ Add Embeddings.
@@ -41,10 +79,27 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
+        if metadatas is None:
+                metadatas = []
+                
+        # add fields required by Milvus if they do not exist
+        if self.support_ai_instance:
+            logger.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
+            for metadata in metadatas:
+                if self.vertex_field not in metadata:
+                    metadata[self.vertex_field] = ""
+        else:
+            for metadata in metadatas:
+                if "seq_num" not in metadata:
+                    metadata["seq_num"] = 1
+                if "source" not in metadata:
+                    metadata["source"] = ""
+
         logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
         texts = [text for text, _ in embeddings]
-        self.milvus.add_texts(texts=texts, metadatas=metadatas)
+        added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
         logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
+        return added
 
     def remove_embeddings(self, ids):
         """ Remove Embeddings.

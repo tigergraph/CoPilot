@@ -1,7 +1,7 @@
 # TigerGraph CoPilot
 
 ## Releases
-* **3/12/2024: CoPilot is available now in Alpha** (v0.0.1). It uses a Large Language Model (LLM) to convert your question into a function call, which is then executed on the graph in TigerGraph. We would love to hear your feedback to keep improving it so that it could bring more value to you. If you are trying it out, it would be helpful if you could fill out this sign up form so we can keep track of it (no spam, promised). And if you would just like to provide the feedback, please feel free to fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7) after you have played with CoPilot. Thank you for your interest and support!
+* **3/18/2024: CoPilot is available now in Alpha** (v0.0.1). It uses a Large Language Model (LLM) to convert your question into a function call, which is then executed on the graph in TigerGraph. We would love to hear your feedback to keep improving it so that it could bring more value to you. If you are trying it out, it would be helpful if you could fill out this [sign up form](https://info.tigergraph.com/copilotalpha) so we can keep track of it (no spam, promised). And if you would just like to provide the feedback, please feel free to fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7) after you have played with CoPilot. Thank you for your interest and support!
 
 ## Overview
 TigerGraph CoPilot is a natural language query service that allows users to ask questions about their graph data in plain English. The service uses a Large Language Model (LLM) to convert the user's question into a function call, which is then executed on the graph database. The service is designed to be easily extensible, allowing for the addition of new LLM providers and graph schemas. TigerGraph CoPilot consists of 3 components, InquiryAI (available now), SupportAI (available Q2 2024), and QueryAI (available Q4 2024). 
@@ -176,10 +176,10 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 
 ## Create Milvus configuration file (optional)
-Note:  Milvus is not necessary for deployment or development currently. Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration.  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
+Note:  Milvus is not necessary for deployment or development currently. Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
 ```json
 {
-    "host": "localhost",
+    "host": "milvus-standalone",
     "port": 19530,
     "username": "",
     "password": "",
@@ -306,7 +306,7 @@ docker exec copilot-tests bash -c "conda run --no-capture-output -n py39 ./run_t
 
 ## Running Locally
 ```sh
-docker-compose -f ./docker-compose.yml up -d
+docker-compose -f ./docker-compose.yml up -d --build
 ```
 
 ## Test Script Options
