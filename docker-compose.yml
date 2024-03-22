@@ -77,19 +77,19 @@ services:
       - "etcd"
       - "minio"
 
-  tigergraph:
-    image: tigergraph/tigergraph:latest
-    ports:
-      - "14022:22"
-      - "9000:9000"
-      - "14240:14240"
-    environment:
-      - ~/data:/home/tigergraph/mydata
-      - tg-data:/home/tigergraph
-    ulimits:
-      nofile:
-        soft: 1000000
-        hard: 1000000
+  # tigergraph:
+  #   image: tigergraph/tigergraph:latest
+  #   ports:
+  #     - "14022:22"
+  #     - "9000:9000"
+  #     - "14240:14240"
+  #   environment:
+  #     - ~/data:/home/tigergraph/mydata
+  #     - tg-data:/home/tigergraph
+  #   ulimits:
+  #     nofile:
+  #       soft: 1000000
+  #       hard: 1000000
 
 networks:
   default:
