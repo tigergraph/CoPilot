@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Union, Annotated, List, Dict
+from typing import Optional, Union, Annotated, List, Dict
 
 class NaturalLanguageQuery(BaseModel):
     query:str
@@ -81,3 +81,12 @@ class LoadingInfo(BaseModel):
     load_job_id: str
     data_source_id: str
     file_path: str
+
+class QueryDeleteRequest(BaseModel):
+    ids: Optional[Union[str, List[str]]]
+    expr: Optional[str]
+
+class QueryUperstRequest(BaseModel):
+    id: Optional[str]
+    query_info: Optional[GSQLQueryInfo]
+
