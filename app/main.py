@@ -208,38 +208,43 @@ def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInf
                                                                             "description": query_info.description,
                                                                             "param_types": query_info.param_types,
                                                                             "custom_query": True}])
-        results.append(res)
+        if res:
+            results.append(res)
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document")
+
     return results
 
 @app.post("/{graphname}/upsert_docs")
-def upsert_query(graphname, request_data: QueryUperstRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    id = request_data.id
-    query_info = request_data.query_info
-    
+def upsert_query(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     try:
-        # Perform upsert operation
-        # if not isinstance(query_list, list):
-        #     query_list = [query_list]
+        results = []
 
-        # results = []
+        if not isinstance(request_data, list):
+            request_data = [request_data]
 
-        # for query_info in query_list:
+        for request_info in request_data:
+            id = request_info.id
+            query_info = request_info.query_info
 
-        if not id and not query_info:
-            raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
-        
-        logger.debug(f"/{graphname}/upsertcustomquery request_id={req_id_cv.get()} upserting document")
+            if not id and not query_info:
+                raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
+            
+            logger.debug(f"/{graphname}/upsertcustomquery request_id={req_id_cv.get()} upserting document")
 
-        vec = embedding_service.embed_query(query_info.docstring)
-        res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
-                                                                                    "description": query_info.description,
-                                                                                    "param_types": query_info.param_types,
-                                                                                    "custom_query": True}])
-        
-        return res
+            vec = embedding_service.embed_query(query_info.docstring)
+            res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                                        "description": query_info.description,
+                                                                                        "param_types": query_info.param_types,
+                                                                                        "custom_query": True}])
+            if res:
+                results.append(res)
+            else:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document")
+        return results
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while upserting query with ID {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     
 @app.post("/{graphname}/delete_docs")
 def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
@@ -248,9 +253,9 @@ def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annot
     
     if ids and not isinstance(ids, list):
         try:
-            ids = [int(ids)]
+            ids = [ids]
         except ValueError:
-            raise ValueError("Invalid ID format. IDs must be integers or lists of integers.")
+            raise ValueError("Invalid ID format. IDs must be string or lists of strings.")
 
     logger.debug(f"/{graphname}/deletecustomquery request_id={req_id_cv.get()} deleting {ids}")
     
