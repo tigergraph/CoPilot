@@ -7,10 +7,10 @@ import json
 
 
 class LLMEntityRelationshipExtractor(BaseExtractor):
-    def __init__(self, llm_service: LLM_Model, allowed_vertex_types: List[str] = None, allowed_edge_types: List[str] = None, strict_mode: bool = False):
+    def __init__(self, llm_service: LLM_Model, allowed_entity_types: List[str] = None, allowed_relationship_types: List[str] = None, strict_mode: bool = False):
         self.llm_service = llm_service
-        self.allowed_vertex_types = allowed_vertex_types
-        self.allowed_edge_types = allowed_edge_types
+        self.allowed_vertex_types = allowed_entity_types
+        self.allowed_edge_types = allowed_relationship_types
         self.strict_mode = strict_mode
 
     def _extract_kg_from_doc(self, doc, chain, parser):
@@ -63,13 +63,13 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
                             "following input: {input}"),
                   ("human", "Mandatory: Make sure to answer in the correct format, specified here: {format_instructions}")]
         if self.allowed_vertex_types or self.allowed_edge_types:
-            prompt = prompt.append(("human", "Mandatory: Make sure to use the following allowed types:"))
+            prompt.append(("human", "Tip: Make sure to use the following types if they are applicable. "
+                                    "If the input does not contain any of the types, you may create your own."))
         if self.allowed_vertex_types:
-            prompt = prompt.append(("human", f"Allowed Vertex Types: {self.allowed_vertex_types}"))
+            prompt.append(("human", f"Allowed Node Types: {self.allowed_vertex_types}"))
         if self.allowed_edge_types:
-            prompt = prompt.append(("human", f"Allowed Edge Types: {self.allowed_edge_types}"))
-
-        prompt = ChatPromptTemplate(prompt)
+            prompt.append(("human", f"Allowed Edge Types: {self.allowed_edge_types}"))
+        prompt = ChatPromptTemplate.from_messages(prompt)
         chain = prompt | self.llm_service.model #| parser
         er =  self._extract_kg_from_doc(document, chain, parser)
         return er
