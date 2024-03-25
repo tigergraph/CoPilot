@@ -148,5 +148,15 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print (response.text)
         self.assertEqual(response.status_code, 422)
 
+    def test_retrieve_custom_query(self):
+        query = "how many microservices are there?"
+
+        response = self.client.post("/DigitalInfra/retrieve_docs", json=query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
 if __name__ == "__main__":
     unittest.main()

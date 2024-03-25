@@ -271,8 +271,9 @@ def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annot
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
     # TODO: Better polishing of this response
     logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
-    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
-    return tmp
+    res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
+    return res
+
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> CoPilotResponse:
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
