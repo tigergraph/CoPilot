@@ -26,14 +26,17 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
                 if isinstance(rels["source"], str) and isinstance(rels["target"], str):
                     formatted_rels.append(rels)
                 elif isinstance(rels["source"], dict) and isinstance(rels["target"], str):
-                    formatted_rels.append({"source": rels["source"]["id"], "target": rels["target"], "type": rels["type"], "definition": rels["definition"]})
+                    formatted_rels.append({"source": rels["source"]["id"], "target": rels["target"], "type": rels["relation_type"].replace(" ", "_").upper(), "definition": rels["definition"]})
                 elif isinstance(rels["source"], str) and isinstance(rels["target"], dict):
-                    formatted_rels.append({"source": rels["source"], "target": rels["target"]["id"], "type": rels["type"], "definition": rels["definition"]})
+                    formatted_rels.append({"source": rels["source"], "target": rels["target"]["id"], "type": rels["relation_type"].replace(" ", "_").upper(), "definition": rels["definition"]})
                 elif isinstance(rels["source"], dict) and isinstance(rels["target"], dict):
-                    formatted_rels.append({"source": rels["source"]["id"], "target": rels["target"]["id"], "type": rels["type"], "definition": rels["definition"]})
+                    formatted_rels.append({"source": rels["source"]["id"], "target": rels["target"]["id"], "type": rels["relation_type"].replace(" ", "_").upper(), "definition": rels["definition"]})
                 else:
                     raise Exception("Relationship parsing error")
-            return {"nodes": json_out["nodes"], "rels": formatted_rels}
+            formatted_nodes = []
+            for node in json_out["nodes"]:
+                formatted_nodes.append({"id": node["id"], "type": node["node_type"].replace(" ", "_").capitalize(), "definition": node["definition"]})
+            return {"nodes": formatted_nodes, "rels": formatted_rels}
         except:
             print("Error Processing: ", out)
         return {"nodes": [], "rels": []}
@@ -45,7 +48,10 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
         prompt = ChatPromptTemplate.from_messages(
                             [(
                             "system", self.llm_service.entity_relationship_extraction_prompt),
-                                ("human", "Use the given format to extract information from the following input: {input}"),
+                                ("human", "Tip: Make sure to answer in the correct format and do "
+                                            "not include any explanations. "
+                                            "Use the given format to extract information from the "
+                                            "following input: {input}"),
                                 ("human", "Mandatory: Make sure to answer in the correct format, specified here: {format_instructions}"),
                             ])
         chain = prompt | self.llm_service.model #| parser

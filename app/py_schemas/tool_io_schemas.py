@@ -26,15 +26,14 @@ class GenerateFunctionResponse(BaseModel):
     func_call_reasoning: str = Field(description="The reason why the function call was generated to answer the question.")
 
 class Node(BaseNode):
-    #properties: Optional[List[Property]] = Field(
-    #    None, description="List of node properties")
+    node_type: str = Field(description="Type of the node. Describe what the entity is.")
     definition: str = Field(description="Definition of the node. Describe what the entity is.")
 
 class Relationship(BaseRelationship):
-    #properties: Optional[List[Property]] = Field(
-    #    None, description="List of relationship properties"
-    #)
-    definition: str = Field(description="Definition of the relationship. Describe what the entity is.")
+    relation_type: str = Field(description="Type of the relationship. Describe what the relationship is.")
+    source: Node = Field(description="The source node of the relationship.")
+    target: Node = Field(description="The target node of the relationship.")
+    definition: str = Field(description="Definition of the relationship. Describe what the relationship is.")
 
 class KnowledgeGraph(BaseModel):
     """Generate a knowledge graph with entities and relationships."""
