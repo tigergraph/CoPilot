@@ -312,17 +312,17 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
                                 "reasoning": generate_func_output["reasoning"]}
             resp.answered_question = True
         except Exception as e:
-            resp.natural_language_response = steps["output"]
+            resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
             logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     except MapQuestionToSchemaException as e:
-        resp.natural_language_response = ""
+        resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
     except Exception as e:
-        resp.natural_language_response = ""
+        resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
