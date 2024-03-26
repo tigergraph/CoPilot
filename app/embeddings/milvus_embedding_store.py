@@ -232,9 +232,17 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 https://api.python.langchain.com/en/latest/documents/langchain_core.documents.base.Document.html#langchain_core.documents.base.Document
                 Document results for search.
         """
-        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
-        similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
-        sim_ids = [doc.metadata.get("function_header") for doc in similar]
-        logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
-        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
-        return similar
+        try:
+            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
+            similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+            sim_ids = [doc.metadata.get("function_header") for doc in similar]
+            logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
+            # Convert pk from int to str for each document
+            for doc in similar:
+                doc.metadata['pk'] = str(doc.metadata['pk'])
+            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
+            return similar
+        except Exception as e:
+            error_message = f"An error occurred while retrieving docuements: {str(e)}"
+            logger.error(error_message)
+            raise e
