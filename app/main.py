@@ -213,38 +213,43 @@ def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInf
                                                                             "description": query_info.description,
                                                                             "param_types": query_info.param_types,
                                                                             "custom_query": True}])
-        results.append(res)
+        if res:
+            results.append(res)
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document")
+
     return results
 
 @app.post("/{graphname}/upsert_docs")
-def upsert_query(graphname, request_data: QueryUperstRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    id = request_data.id
-    query_info = request_data.query_info
-    
+def upsert_query(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     try:
-        # Perform upsert operation
-        # if not isinstance(query_list, list):
-        #     query_list = [query_list]
+        results = []
 
-        # results = []
+        if not isinstance(request_data, list):
+            request_data = [request_data]
 
-        # for query_info in query_list:
+        for request_info in request_data:
+            id = request_info.id
+            query_info = request_info.query_info
 
-        if not id and not query_info:
-            raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
-        
-        logger.debug(f"/{graphname}/upsertcustomquery request_id={req_id_cv.get()} upserting document")
+            if not id and not query_info:
+                raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
+            
+            logger.debug(f"/{graphname}/upsertcustomquery request_id={req_id_cv.get()} upserting document")
 
-        vec = embedding_service.embed_query(query_info.docstring)
-        res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
-                                                                                    "description": query_info.description,
-                                                                                    "param_types": query_info.param_types,
-                                                                                    "custom_query": True}])
-        
-        return res
+            vec = embedding_service.embed_query(query_info.docstring)
+            res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                                        "description": query_info.description,
+                                                                                        "param_types": query_info.param_types,
+                                                                                        "custom_query": True}])
+            if res:
+                results.append(res)
+            else:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document")
+        return results
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred while upserting query with ID {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     
 @app.post("/{graphname}/delete_docs")
 def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
@@ -253,9 +258,9 @@ def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annot
     
     if ids and not isinstance(ids, list):
         try:
-            ids = [int(ids)]
+            ids = [ids]
         except ValueError:
-            raise ValueError("Invalid ID format. IDs must be integers or lists of integers.")
+            raise ValueError("Invalid ID format. IDs must be string or lists of strings.")
 
     logger.debug(f"/{graphname}/deletecustomquery request_id={req_id_cv.get()} deleting {ids}")
     
@@ -276,8 +281,9 @@ def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annot
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
     # TODO: Better polishing of this response
     logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
-    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
-    return tmp
+    res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
+    return res
+
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnection = Depends(get_db_connection)) -> CoPilotResponse:
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
@@ -317,17 +323,17 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
                                 "reasoning": generate_func_output["reasoning"]}
             resp.answered_question = True
         except Exception as e:
-            resp.natural_language_response = steps["output"]
+            resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
             logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
     except MapQuestionToSchemaException as e:
-        resp.natural_language_response = ""
+        resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
     except Exception as e:
-        resp.natural_language_response = ""
+        resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")

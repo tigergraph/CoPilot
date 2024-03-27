@@ -82,27 +82,43 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
-        if metadatas is None:
-                metadatas = []
-                
-        # add fields required by Milvus if they do not exist
-        if self.support_ai_instance:
-            for metadata in metadatas:
-                if self.vertex_field not in metadata:
-                    metadata[self.vertex_field] = ""
-        else:
-            for metadata in metadatas:
-                if "seq_num" not in metadata:
-                    metadata["seq_num"] = 1
-                if "source" not in metadata:
-                    metadata["source"] = ""
+        try:
+            if metadatas is None:
+                    metadatas = []
+                    
+            # add fields required by Milvus if they do not exist
+            if self.support_ai_instance:
+                for metadata in metadatas:
+                    if self.vertex_field not in metadata:
+                        metadata[self.vertex_field] = ""
+            else:
+                for metadata in metadatas:
+                    if "seq_num" not in metadata:
+                        metadata["seq_num"] = 1
+                    if "source" not in metadata:
+                        metadata["source"] = ""
 
-        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
-        texts = [text for text, _ in embeddings]
-        added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
-        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
-        return added
+            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
+            texts = [text for text, _ in embeddings]
+            added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
 
+            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
+
+            # Check if registration was successful
+            if added:
+                success_message = f"Document registered with id: {added[0]}"
+                logger.info(success_message)
+                return success_message
+            else:
+                error_message = f"Failed to regiter document {added}"
+                logger.error(error_message)
+                raise Exception(error_message)
+                    
+        except Exception as e:
+            error_message = f"An error occurred while registerin document: {str(e)}"
+            logger.error(error_message)
+            raise e
+        
     def upsert_embeddings(self, id: str, embeddings: Iterable[Tuple[str, List[float]]], metadatas: Optional[List[dict]] = None):
         try:
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY upsert_document()")
@@ -154,7 +170,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             
             # Check if upsertion was successful
             if upserted:
-                success_message = f"document upserted {upserted}"
+                success_message = f"Document upserted with id: {upserted[0]}"
                 logger.info(success_message)
                 return success_message
             else:
@@ -173,32 +189,33 @@ class MilvusEmbeddingStore(EmbeddingStore):
             
             # Check if ids or expr are provided
             if ids is None and expr is None:
-                raise ValueError("Either id list/string or expr string must be provided.")
+                raise ValueError("Either id string or expr string must be provided.")
 
             # Perform deletion based on provided IDs or expression
             if expr:
-                # Delete by IDs
-                deleted = self.milvus.delete(expr=expr)
-                deleted_message = f"Deleted by expression: {expr} {deleted}"
-            elif ids:
                 # Delete by expression
+                deleted = self.milvus.delete(expr=expr)
+                deleted_message = f"deleted by expression: {expr} {deleted}"
+            elif ids:
+                ids = [int(x) for x in ids]
+                # Delete by ids
                 deleted = self.milvus.delete(ids=ids)
-                deleted_message = f"Deleted by IDs: {ids} {deleted}"
+                deleted_message = f"deleted by id(s): {ids} {deleted}"
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
 
             # Check if deletion was successful
             if deleted:
-                success_message = f"Embeddings {deleted_message}."
+                success_message = f"Document(s) {deleted_message}."
                 logger.info(success_message)
                 return success_message
             else:
-                error_message = f"Failed to delete embeddings. {deleted_message}"
+                error_message = f"Failed to delete document(s). {deleted_message}"
                 logger.error(error_message)
                 raise Exception(error_message)
         
         except Exception as e:
-            error_message = f"An error occurred while deleting embeddings: {str(e)}"
+            error_message = f"An error occurred while deleting document(s): {str(e)}"
             logger.error(error_message)
             raise e
 
@@ -214,9 +231,17 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 https://api.python.langchain.com/en/latest/documents/langchain_core.documents.base.Document.html#langchain_core.documents.base.Document
                 Document results for search.
         """
-        logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
-        similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
-        sim_ids = [doc.metadata.get("function_header") for doc in similar]
-        logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
-        logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
-        return similar
+        try:
+            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
+            similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+            sim_ids = [doc.metadata.get("function_header") for doc in similar]
+            logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
+            # Convert pk from int to str for each document
+            for doc in similar:
+                doc.metadata['pk'] = str(doc.metadata['pk'])
+            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
+            return similar
+        except Exception as e:
+            error_message = f"An error occurred while retrieving docuements: {str(e)}"
+            logger.error(error_message)
+            raise e
