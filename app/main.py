@@ -367,8 +367,10 @@ def health():
 async def favicon():
     return FileResponse('app/static/favicon.ico')
 
-async def get_eventual_consistency_checker(graphname: str, conn=Depends(get_db_connection)):
-    check_interval_seconds = 10 * 60  # 10 minutes
+async def get_eventual_consistency_checker(graphname: str):
+    check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
+    credentials = HTTPBasicCredentials(username=db_config["username"], password=db_config["password"])
+    conn=get_db_connection(graphname, credentials)
 
     if graphname not in consistency_checkers:
         checker = EventualConsistencyChecker(check_interval_seconds, graphname, vertex_field, embedding_service, support_ai_embedding_store, conn)
@@ -504,7 +506,7 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
             "log_location": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Log directory: ")[1].split("\n")[0]}
         
 @app.post("/{graphname}/supportai/batch_ingest")
-async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection)):
+async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
     req_id = req_id_cv.get()
     status_manager.create_status(conn.username, req_id, graphname)
     ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
@@ -538,7 +540,7 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_d
     return res
     
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
-def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
@@ -577,7 +579,7 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
-def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -617,7 +619,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     return res
 
 @app.get("/{graphname}/supportai/buildconcepts")
-def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
