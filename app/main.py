@@ -29,6 +29,7 @@ from app.supportai.concept_management.create_concepts import *
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
+PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -70,7 +71,7 @@ else:
 
 
 
-app = FastAPI()
+app = FastAPI(root_path=PATH_PREFIX)
 
 app.add_middleware(
     CORSMiddleware,
