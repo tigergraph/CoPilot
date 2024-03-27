@@ -87,7 +87,6 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 
         # add fields required by Milvus if they do not exist
         if self.support_ai_instance:
-            logger.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
             for metadata in metadatas:
                 if self.vertex_field not in metadata:
                     metadata[self.vertex_field] = ""
