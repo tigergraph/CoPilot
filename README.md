@@ -188,7 +188,7 @@ Note:  Milvus is not necessary for deployment or development currently. Copy the
 ```
 ## Run the Docker Image
 ```sh
-docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 copilot:0.1
+docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 tigergraphml/copilot:latest
 ```
 
 # Using TigerGraph CoPilot
