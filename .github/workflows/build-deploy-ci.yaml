@@ -2,7 +2,7 @@ name: CoPilot Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "TCE-3753" ]
   workflow_dispatch:
 
 env:
@@ -39,7 +39,9 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ env.IMAGE }}
+        tags: ｜
+           ${{ env.IMAGE }}
+           tginternal/copilot:latest
 
   deploy:
     needs: [build-image]
