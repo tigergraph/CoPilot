@@ -54,18 +54,46 @@ class MapQuestionToSchema(BaseTool):
 
         RESTATE_QUESTION_PROMPT = PromptTemplate(
             template=self.prompt,
-            input_variables=["question", "vertices", "edges"],
+            input_variables=["question", "vertices", "edges", "edgesInfo"],
             partial_variables = {"format_instructions": parser.get_format_instructions()}
         )
+
         restate_chain = LLMChain(llm=self.llm, prompt=RESTATE_QUESTION_PROMPT)
+
+        vertices = self.conn.getVertexTypes()
+        edges = self.conn.getEdgeTypes()
         
-        restate_q = restate_chain.apply([{"vertices": self.conn.getVertexTypes(),
-                                          "question": query,
-                                          "edges": self.conn.getEdgeTypes()}])[0]["text"]
+        vertices_attrs_info = []
+        for vertex in vertices: 
+            vertex_attrs = self.conn.getVertexAttrs(vertex)
+            vertices_attrs_info.append(vertex_attrs)
+        
+        logger.info(vertices_attrs_info)
+
+        edges_info = []
+        for edge in edges:
+            source_vertex = self.conn.getEdgeSourceVertexType(edge)
+            target_vertex = self.conn.getEdgeTargetVertexType(edge)
+            edge_info = {"edge": edge,
+                         "source": source_vertex,
+                         "target": target_vertex}
+            edges_info.append(edge_info)
+
+        logger.info(edges_info)
+
+        restate_q = restate_chain.apply([{"vertices": vertices,
+                                        #   "verticesAttrs": vertices_attrs_info,
+                                          "edges": edges,
+                                          "edgesInfo": edges_info,
+                                          "question": query}])[0]["text"]
+
+        logger.info(f"restate_q: {restate_q}")
 
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
         
         parsed_q = parser.invoke(restate_q)
+
+        logger.info(f"parsed_q: {parsed_q}")
 
         logger.debug_pii(f"request_id={req_id_cv.get()} MapQuestionToSchema parsed for question={query} into normalized_form={parsed_q}")
 

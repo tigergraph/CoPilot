@@ -33,7 +33,7 @@ def validate_schema(conn, v_types, e_types, v_attrs, e_attrs):
             raise MapQuestionToSchemaException(v + " is not found in the data schema. Run MapQuestionToSchema to validate schema.")
 
     for e in e_types:
-        logger.debug(f"request_id={req_id_cv.get()} validate_schema() validating edge_type={v}")
+        logger.debug(f"request_id={req_id_cv.get()} validate_schema() validating edge_type={e}")
         if e in edges:
             attrs = [x["AttributeName"] for x in conn.getEdgeType(e)["Attributes"]]
             for attr in e_attrs.get(e, []):
@@ -49,10 +49,10 @@ def validate_function_call(conn, generated_call: str, retrieved_docs: list) -> s
     # handle installed queries
     logger.info(f"request_id={req_id_cv.get()} ENTRY validate_function_call()")
     generated_call = generated_call.strip().strip("\n").strip("\t")
-    # logger.info(f"generated_call: {generated_call}")
+    logger.info(f"generated_call: {generated_call}")
     # logger.info(f"retrived_docs: {retrieved_docs}")
     valid_headers = [doc.metadata.get("function_header") for doc in retrieved_docs]
-    # logger.info(f"valid_headers: {valid_headers}")
+    logger.info(f"valid_headers: {valid_headers}")
     endpoints = conn.getEndpoints(dynamic=True) # installed queries in database
     # logger.info(f"avaliable_endpoints: {endpoints}")
     installed_queries = [q.split("/")[-1] for q in endpoints]

@@ -81,6 +81,16 @@ class TestInquiryAI(unittest.TestCase):
         print ("response json")
         print (response.text)
         self.assertEqual(response.status_code, 200)
+        
+        data_5 = {
+            'query': 'How many calls are there between microservices'
+        }
 
+        response = self.client.post("/DigitalInfra/query", headers=headers, json=data_5, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
 if __name__ == "__main__":
     unittest.main()

@@ -11,5 +11,5 @@ First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
 
-Follow the output directions below on how to structure your response:
-{format_instructions}
+Follow the output directions below on how to structure your response: 
+{format_instructions} 

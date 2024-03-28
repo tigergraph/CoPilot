@@ -18,7 +18,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
             "host": host,
             "port": port,
             "user": username,
-            "password": password
+            "password": password,
+            "timeout": 60000
         }
 
         logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")

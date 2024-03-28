@@ -69,6 +69,7 @@ class TigerGraphAgent():
         logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
         try:
             resp = self.agent({"input": question})
+            logger.info(f"question for agent: {resp}")
             logger.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return resp
         except Exception as e:
