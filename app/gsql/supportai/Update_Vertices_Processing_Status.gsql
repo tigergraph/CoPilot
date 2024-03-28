@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed_vertices) FOR GRAPH testDB { 
+CREATE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed_vertices) { 
   start = {processed_vertices};
   
   res = SELECT s FROM start:s

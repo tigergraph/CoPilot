@@ -2,12 +2,16 @@ import asyncio
 import logging
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from app.supportai.chunkers import BaseChunker
+from app.supportai.extractors import BaseExtractor
 from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 
 class EventualConsistencyChecker:
-    def __init__(self, interval_seconds, graphname, vertex_field, embedding_service: EmbeddingModel, embedding_store: MilvusEmbeddingStore, conn: TigerGraphConnection):
+    def __init__(self, interval_seconds, graphname, vertex_field,
+                 embedding_service: EmbeddingModel, embedding_store: MilvusEmbeddingStore,
+                 conn: TigerGraphConnection, chunker: BaseChunker, extractor: BaseExtractor):
         self.interval_seconds = interval_seconds
         self.graphname = graphname
         self.conn = conn
@@ -15,14 +19,35 @@ class EventualConsistencyChecker:
         self.vertex_field = vertex_field
         self.embedding_service = embedding_service
         self.embedding_store = embedding_store
+        self.chunker = chunker
+        self.extractor = extractor
+
+        self._check_query_install("Scan_For_Updates")
+        self._check_query_install("Update_Vertices_Processing_Status")
+        
+    def _install_query(self, query_name):
+        logger.info(f"Installing query {query_name}")
+        with open(f"app/gsql/supportai/{query_name}.gsql", "r") as f:
+            query = f.read()
+        res = self.conn.gsql("USE GRAPH "+self.conn.graphname+"\n"+query+"\n INSTALL QUERY "+query_name)
+        return res
+
+
+    def _check_query_install(self, query_name):
+        logger.info(f"Checking if query {query_name} is installed")
+        endpoints = self.conn.getEndpoints(dynamic=True) # installed queries in database
+        installed_queries = [q.split("/")[-1] for q in endpoints]
+
+        if query_name not in installed_queries:
+            return self._install_query(query_name)
+        else:
+            return True
 
     async def fetch_and_process_vertex(self):
-        vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates")
+        vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates")[0]["@@v_and_text"]
+        logger.info("Fetching vertex ids from TigerGraph: {}".format(vertex_ids_content_map))
 
-        if isinstance(vertex_ids_content_map, list):
-            vertex_ids_content_map = vertex_ids_content_map[0]
-
-        vertex_ids = [int(vertex_id) for vertex_id in vertex_ids_content_map.keys()]
+        vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
         logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
         self.embedding_store.remove_embeddings(expr=f"{self.vertex_field} in {str(vertex_ids)}")
 
