@@ -44,7 +44,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
     def check_collection_exists(self):
         alias = "default"
         connections.connect(alias=alias, **self.milvus_connection)
-        collection_not_exists = not utility.has_collection(self.collection_name, using=alias)
+        return utility.has_collection(self.collection_name, using=alias)
     
     def load_documents(self):        
         if (not self.check_collection_exists()):
