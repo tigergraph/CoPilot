@@ -95,6 +95,9 @@ class EventualConsistencyChecker:
                     chunks = self._chunk_document(content)
                     for i, chunk in enumerate(chunks):
                         self._upsert_chunk(vertex_id, f"{vertex_id}_chunk_{i}", chunk)
+                        extracted = self._extract_entities(chunk)
+                        self._upsert_entities(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["nodes"])
+                        self._upsert_rels(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["rels"])
                     
 
                 logger.info(f"Extracting and upserting entities from the content")
