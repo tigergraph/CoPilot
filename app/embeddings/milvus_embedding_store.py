@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
     def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = ""):
-        milvus_connection = {
+        self.milvus_connection = {
             "host": host,
             "port": port,
             "user": username,
@@ -25,7 +25,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.milvus = Milvus(
             embedding_function=embedding_service, 
             collection_name=collection_name, 
-            connection_args=milvus_connection,
+            connection_args=self.milvus_connection,
             auto_id = True,
             drop_old = False,
             text_field=text_field,
@@ -36,17 +36,18 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.vertex_field = vertex_field
         self.text_field = text_field
         self.support_ai_instance = support_ai_instance
+        self.collection_name = collection_name
 
         if (not self.support_ai_instance):
-            self.load_documents(milvus_connection, collection_name)
+            self.load_documents()
     
-    def load_documents(self, milvus_connection, collection_name):
-        # manual connection to check if the collection exists the first time
+    def check_collection_exists(self):
         alias = "default"
-        connections.connect(alias=alias, **milvus_connection)
-        collection_not_exists = not utility.has_collection(collection_name, using=alias)
-        
-        if (collection_not_exists):
+        connections.connect(alias=alias, **self.milvus_connection)
+        collection_not_exists = not utility.has_collection(self.collection_name, using=alias)
+    
+    def load_documents(self):        
+        if (not self.check_collection_exists()):
             from langchain.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
@@ -186,6 +187,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
     def remove_embeddings(self, ids: Optional[List[str]] = None, expr: Optional[str] = None):
         try:
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
+
+            if (not self.check_collection_exists()):
+                logger.info(f"request_id={req_id_cv.get()} Milvus collection {self.collection_name} does not exist")
+                logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
+                return f"Milvus collection {self.collection_name} does not exist"
             
             # Check if ids or expr are provided
             if ids is None and expr is None:
