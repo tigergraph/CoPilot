@@ -6,12 +6,14 @@ from app.supportai.chunkers import BaseChunker
 from app.supportai.extractors import BaseExtractor
 from pyTigerGraph import TigerGraphConnection
 import time
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
 class EventualConsistencyChecker:
     def __init__(self, interval_seconds, graphname, vertex_field,
-                 embedding_service: EmbeddingModel, embedding_store: MilvusEmbeddingStore,
+                 embedding_service: EmbeddingModel, embedding_indices: List[str], 
+                 embedding_stores: Dict[str, MilvusEmbeddingStore],
                  conn: TigerGraphConnection, chunker: BaseChunker, extractor: BaseExtractor):
         self.interval_seconds = interval_seconds
         self.graphname = graphname
@@ -19,7 +21,8 @@ class EventualConsistencyChecker:
         self.is_initialized = False
         self.vertex_field = vertex_field
         self.embedding_service = embedding_service
-        self.embedding_store = embedding_store
+        self.embedding_indices = embedding_indices
+        self.embedding_stores = embedding_stores
         self.chunker = chunker
         self.extractor = extractor
 
@@ -44,14 +47,14 @@ class EventualConsistencyChecker:
         else:
             return True
         
-    def _chunk_document(self, content):
+    async def _chunk_document(self, content):
         return self.chunker.chunk(content)
     
-    def _extract_entities(self, content):
+    async def _extract_entities(self, content):
         return self.extractor.extract(content)
     
     # TODO: Change to loading job for all chunks in document at once
-    def _upsert_chunk(self, doc_id, chunk_id, chunk):
+    async def _upsert_chunk(self, doc_id, chunk_id, chunk):
         date_added = int(time.time())
         self.conn.upsertVertex("DocumentChunk", chunk_id, attributes={"epoch_added": date_added, "idx": int(chunk_id.split("_")[-1])})
         self.conn.upsertVertex("Content", chunk_id, attributes={"text": chunk, "epoch_added": date_added})
@@ -61,61 +64,59 @@ class EventualConsistencyChecker:
             self.conn.upsertEdge("DocumentChunk", chunk_id, "IS_AFTER", "DocumentChunk", doc_id+"_chunk_"+str(int(chunk_id.split("_")[-1])-1))
     
     # TODO: Change to loading job for all entities in document at once
-    def _upsert_entities(self, src_id, src_type, entities):
+    async def _upsert_entities(self, src_id, src_type, entities):
         date_added = int(time.time())
-        self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "epoch_added": date_added, "embedding": []}) for x in entities])
-        self.conn.upsertVertices("Concept", [(x["type"], {"description": "", "concept_type": "EntityType", "epoch_added": date_added, "embedding": []}) for x in entities])
+        self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "epoch_added": date_added}) for x in entities])
+        self.conn.upsertVertices("Concept", [(x["type"], {"description": "", "concept_type": "EntityType", "epoch_added": date_added,}) for x in entities])
         self.conn.upsertEdges("Concept", "DESCRIBES_ENTITY", "Entity", [(x["type"], x["id"], {}) for x in entities])
         self.conn.upsertEdges(src_type, "CONTAINS_ENTITY", "Entity", [(src_id, x["id"], {}) for x in entities])
 
     # TODO: Change to loading job for all relationships in document at once
-    def _upsert_rels(self, src_id, src_type, relationships):
+    async def _upsert_rels(self, src_id, src_type, relationships):
         date_added = int(time.time())
-        self.conn.upsertVertices("Relationship", [(x["source"]+":"+x["type"]+":"+x["target"], {"definition": x["definition"], "short_name": x["type"], "epoch_added": date_added, "embedding": []}) for x in relationships])
+        self.conn.upsertVertices("Relationship", [(x["source"]+":"+x["type"]+":"+x["target"], {"definition": x["definition"], "short_name": x["type"], "epoch_added": date_added}) for x in relationships])
         self.conn.upsertEdges("Entity", "IS_HEAD_OF", "Relationship", [(x["source"], x["source"]+":"+x["type"]+":"+x["target"], {}) for x in relationships])
         self.conn.upsertEdges("Relationship", "HAS_TAIL", "Entity", [(x["source"]+":"+x["type"]+":"+x["target"], x["target"], {}) for x in relationships])
         self.conn.upsertEdges(src_type, "MENTIONS_RELATIONSHIP", "Relationship", [(src_id, x["source"]+":"+x["type"]+":"+x["target"], {}) for x in relationships])
 
     async def fetch_and_process_vertex(self):
-        v_types_to_scan = ["Document"]
+        v_types_to_scan = self.embedding_indices
         for v_type in v_types_to_scan:
-            if v_type == "Document":
-                vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates")[0]["@@v_and_text"]
+            logger.info(f"Fetching vertex ids and content for vertex type: {v_type}")
+            vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates", {"v_type": v_type})[0]["@@v_and_text"]
 
-                vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
-                logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
-                self.embedding_store.remove_embeddings(expr=f"{self.vertex_field} in {str(vertex_ids)}")
+            vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
+            logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
+            self.embedding_stores[self.graphname+"_"+v_type].remove_embeddings(expr=f"{self.vertex_field} in {str(vertex_ids)}")
 
-                for vertex_id, content in vertex_ids_content_map.items():
+            logger.info(f"Embedding content from vertex type: {v_type}")
+            for vertex_id, content in vertex_ids_content_map.items():
+                if content != "":
                     vec = self.embedding_service.embed_query(content)
-                    self.embedding_store.add_embeddings([(content, vec)], [{self.vertex_field: vertex_id}])
-
-                logger.info(f"Chunking the content")
+                    self.embedding_stores[self.graphname+"_"+v_type].add_embeddings([(content, vec)], [{self.vertex_field: vertex_id}])
+            
+            if v_type == "Document":
+                logger.info(f"Chunking the content from vertex type: {v_type}")
                 for vertex_id, content in vertex_ids_content_map.items():
-                    chunks = self._chunk_document(content)
+                    chunks = await self._chunk_document(content)
                     for i, chunk in enumerate(chunks):
-                        self._upsert_chunk(vertex_id, f"{vertex_id}_chunk_{i}", chunk)
-                        extracted = self._extract_entities(chunk)
-                        if len(extracted["nodes"]) > 0:
-                            self._upsert_entities(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["nodes"])
-                        if len(extracted["rels"]) > 0:
-                            self._upsert_rels(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["rels"])
-                    
-
-                logger.info(f"Extracting and upserting entities from the content")
+                        await self._upsert_chunk(vertex_id, f"{vertex_id}_chunk_{i}", chunk)
+            
+            if v_type == "Document" or v_type == "DocumentChunk":
+                logger.info(f"Extracting and upserting entities from the content from vertex type: {v_type}")
                 for vertex_id, content in vertex_ids_content_map.items():
-                    extracted = self._extract_entities(content)
+                    extracted = await self._extract_entities(content)
                     if len(extracted["nodes"]) > 0:
-                        self._upsert_entities(vertex_id, "Document", extracted["nodes"])
+                        await self._upsert_entities(vertex_id, v_type, extracted["nodes"])
                     if len(extracted["rels"]) > 0:
-                        self._upsert_rels(vertex_id, "Document", extracted["rels"])
+                        await self._upsert_rels(vertex_id, v_type, extracted["rels"])
 
-                logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
-                if vertex_ids:
-                    vertex_ids = [(vertex_id, "Document") for vertex_id in vertex_ids]
-                    self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
+            logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
+            if vertex_ids:
+                vertex_ids = [(vertex_id, v_type) for vertex_id in vertex_ids]
+                self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
             else:
-                logger.error(f"Unsupported vertex type {v_type}")
+                logger.error(f"No changes detected for vertex type: {v_type}")
 
     async def run_periodic_task(self):
         while True:

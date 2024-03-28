@@ -3,9 +3,6 @@ CREATE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed
   
   res = SELECT s FROM start:s
         POST-ACCUM
-          IF s.type == "Document" OR s.type == "DocumentChunk" OR s.type == "Concept" THEN
-            s.epoch_processed = datetime_to_epoch(now())
-          END;
-  
+            s.epoch_processed = datetime_to_epoch(now());
   PRINT res;
 }

@@ -194,6 +194,24 @@ async def get_eventual_consistency_checker(graphname: str):
     conn=get_db_connection(graphname, credentials)
 
     if graphname not in consistency_checkers:
+        vector_indices = {}
+        if milvus_config.get("enabled") == "true":
+            vertex_field = milvus_config.get("vertex_field", "vertex_id")
+            index_names = milvus_config.get("indexes", ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"])
+            for index_name in index_names:
+                vector_indices[graphname+"_"+index_name] = MilvusEmbeddingStore(
+                    embedding_service,
+                    host=milvus_config["host"],
+                    port=milvus_config["port"],
+                    support_ai_instance=True,
+                    collection_name=graphname+"_"+index_name, 
+                    username=milvus_config.get("username", ""),
+                    password=milvus_config.get("password", ""),
+                    vector_field=milvus_config.get("vector_field", "document_vector"),
+                    text_field=milvus_config.get("text_field", "document_content"),
+                    vertex_field=vertex_field
+                )
+
         # TODO: chunker and extractor needs to be configurable
         from app.supportai.chunkers.semantic_chunker import SemanticChunker
         chunker = SemanticChunker(embedding_service, "percentile", 0.95)
@@ -203,7 +221,8 @@ async def get_eventual_consistency_checker(graphname: str):
 
         checker = EventualConsistencyChecker(check_interval_seconds,
                                              graphname, vertex_field,
-                                             embedding_service, support_ai_embedding_store, 
+                                             embedding_service, index_names,
+                                             vector_indices, 
                                              conn, chunker, extractor)
         await checker.initialize()
         consistency_checkers[graphname] = checker
