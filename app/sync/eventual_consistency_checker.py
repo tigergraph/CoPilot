@@ -63,7 +63,7 @@ class EventualConsistencyChecker:
     # TODO: Change to loading job for all entities in document at once
     def _upsert_entities(self, src_id, src_type, entities):
         date_added = int(time.time())
-        self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "epoch_added": date_added, "embedding": self.embedding_service.embed_query(x["definition"])}) for x in entities])
+        self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "epoch_added": date_added, "embedding": []}) for x in entities])
         self.conn.upsertVertices("Concept", [(x["type"], {"description": "", "concept_type": "EntityType", "epoch_added": date_added, "embedding": []}) for x in entities])
         self.conn.upsertEdges("Concept", "DESCRIBES_ENTITY", "Entity", [(x["type"], x["id"], {}) for x in entities])
         self.conn.upsertEdges(src_type, "CONTAINS_ENTITY", "Entity", [(src_id, x["id"], {}) for x in entities])
@@ -71,7 +71,7 @@ class EventualConsistencyChecker:
     # TODO: Change to loading job for all relationships in document at once
     def _upsert_rels(self, src_id, src_type, relationships):
         date_added = int(time.time())
-        self.conn.upsertVertices("Relationship", [(x["source"]+":"+x["type"]+":"+x["target"], {"definition": x["definition"], "short_name": x["type"], "epoch_added": date_added, "embedding": self.embedding_service.embed_query(x["definition"])}) for x in relationships])
+        self.conn.upsertVertices("Relationship", [(x["source"]+":"+x["type"]+":"+x["target"], {"definition": x["definition"], "short_name": x["type"], "epoch_added": date_added, "embedding": []}) for x in relationships])
         self.conn.upsertEdges("Entity", "IS_HEAD_OF", "Relationship", [(x["source"], x["source"]+":"+x["type"]+":"+x["target"], {}) for x in relationships])
         self.conn.upsertEdges("Relationship", "HAS_TAIL", "Entity", [(x["source"]+":"+x["type"]+":"+x["target"], x["target"], {}) for x in relationships])
         self.conn.upsertEdges(src_type, "MENTIONS_RELATIONSHIP", "Relationship", [(src_id, x["source"]+":"+x["type"]+":"+x["target"], {}) for x in relationships])
