@@ -188,33 +188,19 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
     conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
     return conn
 
-async def get_eventual_consistency_checker(graphname: str, init_config: SupportAIInitConfig):
+async def get_eventual_consistency_checker(graphname: str):
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
     credentials = HTTPBasicCredentials(username=db_config["username"], password=db_config["password"])
     conn=get_db_connection(graphname, credentials)
 
     if graphname not in consistency_checkers:
-        chunker = init_config.chunker
-        extractor = init_config.extractor
-        if chunker.lower() == "regex":
-            from app.supportai.chunkers.regex_chunker import RegexChunker
-            chunker = RegexChunker(init_config.chunker_params["pattern"])
-        elif chunker.lower() == "characters":
-            from app.supportai.chunkers.character_chunker import CharacterChunker
-            chunker = CharacterChunker(init_config.chunker_params["chunk_size"], init_config.chunker_params.get("overlap", 0))
-        elif chunker.lower() == "semantic":
-            from app.supportai.chunkers.semantic_chunker import SemanticChunker
-            chunker = SemanticChunker(embedding_service,
-                                      init_config.chunker_params.get("breakpoint_threshold_type", "percentile"),
-                                      init_config.chunker_params.get("breakpoint_threshold_amount", 0.95))
-        else:
-            raise ValueError(f"Chunker {chunker} not supported")
+        # TODO: chunker and extractor needs to be configurable
+        from app.supportai.chunkers.semantic_chunker import SemanticChunker
+        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
         
-        if extractor.lower() == "llm":
-            from app.supportai.extractors import LLMEntityRelationshipExtractor
-            extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
-        else:
-            raise ValueError(f"Extractor {extractor} not supported")
+        from app.supportai.extractors import LLMEntityRelationshipExtractor
+        extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
+
         checker = EventualConsistencyChecker(check_interval_seconds,
                                              graphname, vertex_field,
                                              embedding_service, support_ai_embedding_store, 
@@ -408,7 +394,7 @@ def health():
 async def favicon():
     return FileResponse('app/static/favicon.ico')
 
-@app.post("/{graphname}/supportai/initializeschema")
+@app.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
     # need to open the file using the absolute path
     abs_path = os.path.abspath(__file__)
@@ -421,13 +407,18 @@ def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection
     with open(file_path, "r") as f:
         index = f.read()
     index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(graphname, index))
+
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql")
+    with open(file_path, "r") as f:
+        scan_for_updates = f.read()
+    res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+scan_for_updates+"\n INSTALL QUERY Scan_For_Updates")
+
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Update_Vertices_Processing_Status.gsql")
+    with open(file_path, "r") as f:
+        update_vertices = f.read()
+    res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+update_vertices+"\n INSTALL QUERY Update_Vertices_Processing_Status")
     return {"schema_creation_status": json.dumps(schema_res), "index_creation_status": json.dumps(index_res)}
 
-@app.post("/{graphname}/supportai/initializescan")
-def initialize_scan(graphname, init_config: SupportAIInitConfig, conn: TigerGraphConnection = Depends(get_db_connection), checker=Depends(get_eventual_consistency_checker)):
-    return {"status": "success",
-            "chunker": init_config.chunker,
-            "extractor": init_config.extractor}
 
 @app.post("/{graphname}/supportai/create_ingest")
 async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):

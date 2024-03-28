@@ -45,7 +45,6 @@ class EventualConsistencyChecker:
 
     async def fetch_and_process_vertex(self):
         vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates")[0]["@@v_and_text"]
-        logger.info("Fetching vertex ids from TigerGraph: {}".format(vertex_ids_content_map))
 
         vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
         logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
@@ -56,7 +55,9 @@ class EventualConsistencyChecker:
             self.embedding_store.add_embeddings([(content, vec)], [{self.vertex_field: vertex_id}])
 
         logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
-        self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"vertex_ids": vertex_ids})
+        if vertex_ids:
+            vertex_ids = [(vertex_id, "Document") for vertex_id in vertex_ids]
+            self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
 
     async def run_periodic_task(self):
         while True:
