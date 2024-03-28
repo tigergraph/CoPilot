@@ -96,15 +96,19 @@ class EventualConsistencyChecker:
                     for i, chunk in enumerate(chunks):
                         self._upsert_chunk(vertex_id, f"{vertex_id}_chunk_{i}", chunk)
                         extracted = self._extract_entities(chunk)
-                        self._upsert_entities(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["nodes"])
-                        self._upsert_rels(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["rels"])
+                        if len(extracted["nodes"]) > 0:
+                            self._upsert_entities(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["nodes"])
+                        if len(extracted["rels"]) > 0:
+                            self._upsert_rels(f"{vertex_id}_chunk_{i}", "DocumentChunk", extracted["rels"])
                     
 
                 logger.info(f"Extracting and upserting entities from the content")
                 for vertex_id, content in vertex_ids_content_map.items():
                     extracted = self._extract_entities(content)
-                    self._upsert_entities(vertex_id, "Document", extracted["nodes"])
-                    self._upsert_rels(vertex_id, "Document", extracted["rels"])
+                    if len(extracted["nodes"]) > 0:
+                        self._upsert_entities(vertex_id, "Document", extracted["nodes"])
+                    if len(extracted["rels"]) > 0:
+                        self._upsert_rels(vertex_id, "Document", extracted["rels"])
 
                 logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
                 if vertex_ids:
