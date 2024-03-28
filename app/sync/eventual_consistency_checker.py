@@ -22,7 +22,7 @@ class EventualConsistencyChecker:
         if isinstance(vertex_ids_content_map, list):
             vertex_ids_content_map = vertex_ids_content_map[0]
 
-        vertex_ids = [int(vertex_id) for vertex_id in vertex_ids_content_map.keys()]
+        vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
         logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
         self.embedding_store.remove_embeddings(expr=f"{self.vertex_field} in {str(vertex_ids)}")
 
