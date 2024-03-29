@@ -31,7 +31,6 @@ from app.sync.eventual_consistency_checker import EventualConsistencyChecker
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
-PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -73,7 +72,7 @@ else:
 
 
 
-app = FastAPI(root_path=PATH_PREFIX)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -443,7 +442,8 @@ def initialize(graphname, conn: TigerGraphConnection = Depends(get_db_connection
 
 
 @app.post("/{graphname}/supportai/create_ingest")
-async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     if ingest_config.file_format.lower() == "json":
         abs_path = os.path.abspath(__file__)
         file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql")
@@ -534,7 +534,8 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
             "data_source_id": data_source_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")}
 
 @app.post("/{graphname}/supportai/ingest")
-async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
     if loader_info.load_job_id is None:
@@ -554,7 +555,8 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
             "log_location": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Log directory: ")[1].split("\n")[0]}
         
 @app.post("/{graphname}/supportai/batch_ingest")
-async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     req_id = req_id_cv.get()
     status_manager.create_status(conn.username, req_id, graphname)
     ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
@@ -588,13 +590,15 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnection = Depends(get_d
     return res
     
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
-def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
     return res
 
 @app.post("/{graphname}/supportai/search")
-def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
@@ -627,7 +631,8 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
-def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -667,7 +672,8 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     return res
 
 @app.get("/{graphname}/supportai/buildconcepts")
-def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
@@ -680,5 +686,5 @@ def build_concepts(graphname, conn: TigerGraphConnection = Depends(get_db_connec
 
 
 @app.get("/{graphname}/supportai/forceupdate")
-def force_update(graphname, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+async def force_update(graphname: str, conn: TigerGraphConnection = Depends(get_db_connection)):
     return {"status": "success"}
