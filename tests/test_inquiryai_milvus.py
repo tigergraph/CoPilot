@@ -97,7 +97,7 @@ class TestInquiryAI(unittest.TestCase):
             'query': 'What is the email of William Torres?'
         }
 
-        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_5, auth=(self.username, self.password))
+        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_6, auth=(self.username, self.password))
         print ("-----------------------")
         print ()
         print ("response json")
@@ -108,7 +108,7 @@ class TestInquiryAI(unittest.TestCase):
             'query': 'Give me the names of 5 people in the graph'
         }
 
-        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_5, auth=(self.username, self.password))
+        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_7, auth=(self.username, self.password))
         print ("-----------------------")
         print ()
         print ("response json")
