@@ -274,7 +274,6 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
 
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    # TODO: Better polishing of this response
     logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
     return res
@@ -305,6 +304,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
+        logger.info(f"steps: {steps}")
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]

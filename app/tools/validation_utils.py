@@ -49,17 +49,14 @@ def validate_function_call(conn, generated_call: str, retrieved_docs: list) -> s
     # handle installed queries
     logger.info(f"request_id={req_id_cv.get()} ENTRY validate_function_call()")
     generated_call = generated_call.strip().strip("\n").strip("\t")
-    logger.info(f"generated_call: {generated_call}")
-    # logger.info(f"retrived_docs: {retrieved_docs}")
+    # logger.info(f"generated_call: {generated_call}")
     valid_headers = [doc.metadata.get("function_header") for doc in retrieved_docs]
-    logger.info(f"valid_headers: {valid_headers}")
+    # logger.info(f"valid_headers: {valid_headers}")
     endpoints = conn.getEndpoints(dynamic=True) # installed queries in database
-    # logger.info(f"avaliable_endpoints: {endpoints}")
     installed_queries = [q.split("/")[-1] for q in endpoints]
-    # logger.info(f"installed_queries: {installed_queries}")
+
     if "runInstalledQuery(" == generated_call[:18]:
         query_name = generated_call.split(",")[0].split("runInstalledQuery(")[1].strip("'")
-        # logger.info(f"query_name: {query_name}")
         logger.debug(f"request_id={req_id_cv.get()} validate_function_call() validating query_name={query_name}")
         logger.debug_pii(f"request_id={req_id_cv.get()} validate_function_call() validating query_call={generated_call}")
         if query_name in valid_headers and query_name in installed_queries:

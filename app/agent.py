@@ -73,5 +73,6 @@ class TigerGraphAgent():
             logger.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return resp
         except Exception as e:
+            logger.info(f"error message: {resp}")
             logger.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
             raise e
