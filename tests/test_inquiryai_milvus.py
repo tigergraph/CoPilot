@@ -92,5 +92,28 @@ class TestInquiryAI(unittest.TestCase):
         print ("response json")
         print (response.text)
         self.assertEqual(response.status_code, 200)
+
+        data_6 = {
+            'query': 'What is the email of William Torres?'
+        }
+
+        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_5, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
+        data_7 = {
+            'query': 'Give me the names of 5 people in the graph'
+        }
+
+        response = self.client.post("/Demo_Graph1/query", headers=headers, json=data_5, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
 if __name__ == "__main__":
     unittest.main()

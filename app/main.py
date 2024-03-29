@@ -304,7 +304,6 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
-        logger.info(f"steps: {steps}")
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
