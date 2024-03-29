@@ -13,14 +13,32 @@ from langchain_core.documents.base import Document
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
-    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = ""):
-        self.milvus_connection = {
-            "host": host,
-            "port": port,
-            "user": username,
-            "password": password
-        }
+    def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = "", alias: str = "alias"):
+        self.milvus_alias = alias
+        if (host.startswith("http")):
+            if (host.endswith(str(port))):
+                uri = host
+            else:
+                uri = f"{host}:{port}"
+                
+            self.milvus_connection = {
+                "alias": self.milvus_alias,
+                "uri": uri,
+                "user": username,
+                "password": password,
+                "timeout": 30
+            }
+        else:
+            self.milvus_connection = {
+                "alias": self.milvus_alias,
+                "host": host,
+                "port": port,
+                "user": username,
+                "password": password,
+                "timeout": 30
+            }
 
+        connections.connect(**self.milvus_connection)
         logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
         self.milvus = Milvus(
             embedding_function=embedding_service, 
@@ -42,9 +60,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
             self.load_documents()
     
     def check_collection_exists(self):
-        alias = "default"
-        connections.connect(alias=alias, **self.milvus_connection)
-        return utility.has_collection(self.collection_name, using=alias)
+        connections.connect(**self.milvus_connection)
+        return utility.has_collection(self.collection_name, using=self.milvus_alias)
     
     def load_documents(self):        
         if (not self.check_collection_exists()):
