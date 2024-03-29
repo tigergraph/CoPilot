@@ -71,13 +71,24 @@ public:
                 Json::CharReaderBuilder readerBuilder;
                 Json::Value json_response;
                 std::unique_ptr<Json::CharReader> const reader(readerBuilder.newCharReader());
-                reader->parse(readBuffer.c_str(), readBuffer.c_str() + readBuffer.size(), &json_response, nullptr);
+                std::string parseErrors;
+
+                bool parsingSuccessful = reader->parse(readBuffer.c_str(), readBuffer.c_str() + readBuffer.size(), &json_response, &parseErrors);
                 
-                for (const auto& item : json_response["data"]) {
-                    std::string pk = item["pk"].asString();
-                    std::string vertex_id_str = item[vertex_id_field_name].asString();
-                    std::cout << "Vector ID: " << pk << "\tVertex ID: " << vertex_id_str << std::endl;
-                    vertexIdList += vertex_id_str;
+                if (parsingSuccessful) {
+                    std::string styledJson = Json::writeString(Json::StreamWriterBuilder(), json_response);
+                    std::cout << "Raw JSON response:\n" << styledJson << std::endl;
+                } else {
+                    std::cerr << "Failed to parse JSON: " << parseErrors << std::endl;
+                }
+
+                if (parsingSuccessful) {
+                    for (const auto& item : json_response["data"]) {
+                        std::string pk = item["pk"].asString();
+                        std::string vertex_id_str = item[vertex_id_field_name].asString();
+                        std::cout << "Vector ID: " << pk << "\tVertex ID: " << vertex_id_str << std::endl;
+                        vertexIdList += vertex_id_str;
+                    }
                 }
             }
 
