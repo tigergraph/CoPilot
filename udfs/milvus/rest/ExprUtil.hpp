@@ -40,8 +40,16 @@ public:
         CURL* curl = curl_easy_init();
         if (curl) {
             CURLcode res;
-            std::string readBuffer;
-            std::string url = "http://" + host + ":" + std::to_string(port) + "/v1/vector/search";
+            std::string readBuffer;            
+            std::string url;
+            
+            if ((host.substr(0, 4) == "http" && host.find(":") != std::string::npos) || host.find(std::to_string(port)) != std::string::npos) {
+                url = host + "/v1/vector/search";
+            } else if (host.substr(0, 4) == "http") {
+                url = host + ":" + std::to_string(port) + "/v1/vector/search";
+            } else {
+                url = "http://" + host + ":" + std::to_string(port) + "/v1/vector/search";
+            }
 
             Json::StreamWriterBuilder writerBuilder;
             std::string requestBody = Json::writeString(writerBuilder, search_body);
