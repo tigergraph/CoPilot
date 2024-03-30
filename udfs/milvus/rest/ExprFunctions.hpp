@@ -19,9 +19,9 @@ std::vector<float> stringToFloatVector(const std::string& str, char delimiter = 
    return result;
 }
 inline ListAccum<std::string> searchInMilvus(
-   const std::string milvus_host, const int64_t milvus_port, const std::string& collection_name,
+   const std::string milvus_host, int milvus_port, const std::string& collection_name,
    const std::string& vector_field_name, const std::string& vertex_id_field_name, const std::string& query_vector_str,
-   const std::string& metric_type, const int64_t top_k) {
+   const std::string& metric_type, int top_k) {
    
    MilvusUtil milvus_util(milvus_host, milvus_port);
    
