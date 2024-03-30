@@ -33,7 +33,7 @@ public:
         search_body["outputFields"] = Json::arrayValue;
         search_body["outputFields"].append("pk");
         search_body["outputFields"].append(vertex_id_field_name);
-        search_body["topk"] = top_k;
+        search_body["limit"] = top_k;
 
         // You may need to adjust 'search_body' to match the exact format expected by your Milvus server version
 
@@ -71,13 +71,24 @@ public:
                 Json::CharReaderBuilder readerBuilder;
                 Json::Value json_response;
                 std::unique_ptr<Json::CharReader> const reader(readerBuilder.newCharReader());
-                reader->parse(readBuffer.c_str(), readBuffer.c_str() + readBuffer.size(), &json_response, nullptr);
+                std::string parseErrors;
+
+                bool parsingSuccessful = reader->parse(readBuffer.c_str(), readBuffer.c_str() + readBuffer.size(), &json_response, &parseErrors);
                 
-                for (const auto& item : json_response["data"]) {
-                    std::string pk = item["pk"].asString();
-                    std::string vertex_id_str = item[vertex_id_field_name].asString();
-                    std::cout << "Vector ID: " << pk << "\tVertex ID: " << vertex_id_str << std::endl;
-                    vertexIdList += vertex_id_str;
+                if (parsingSuccessful) {
+                    std::cout << "JSON successfully parsed" << std::endl;
+                } else {
+                    // If parsing was unsuccessful, print the errors encountered
+                    std::cerr << "Failed to parse JSON: " << parseErrors << std::endl;
+                }
+
+                if (parsingSuccessful) {
+                    for (const auto& item : json_response["data"]) {
+                        std::string pk = item["pk"].asString();
+                        std::string vertex_id_str = item[vertex_id_field_name].asString();
+                        std::cout << "Vector ID: " << pk << "\tVertex ID: " << vertex_id_str << std::endl;
+                        vertexIdList += vertex_id_str;
+                    }
                 }
             }
 
