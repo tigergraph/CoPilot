@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ExprUtil.hpp"
 
 std::vector<float> stringToFloatVector(const std::string& str, char delimiter = ',') {
@@ -29,4 +30,4 @@ inline ListAccum<std::string> searchInMilvus(
 
    std::cout << "Beginning the search on: " << collection_name << std::endl;
    return milvus_util.search(collection_name, vector_field_name, vertex_id_field_name, query_vector, metric_type, top_k);
-}
+};
