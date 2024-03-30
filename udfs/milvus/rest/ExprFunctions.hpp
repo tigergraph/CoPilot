@@ -1,4 +1,3 @@
-#include <iostream>
 #include "ExprUtil.hpp"
 
 std::vector<float> stringToFloatVector(const std::string& str, char delimiter = ',') {
