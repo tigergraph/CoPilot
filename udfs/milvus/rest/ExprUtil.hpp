@@ -8,7 +8,7 @@
 
 class MilvusUtil {
 public:
-    MilvusUtil(const std::string& host, const int64_t port) {
+    MilvusUtil(const std::string& host, int port) {
         this->host = host;
         this->port = port;
         curl_global_init(CURL_GLOBAL_ALL);
@@ -19,7 +19,7 @@ public:
     }
 
     ListAccum<std::string> search(const std::string& collection_name, const std::string& vector_field_name,
-                        const std::string& vertex_id_field_name, const std::vector<float>& query_vector, const std::string& metric_type, const int64_t top_k) const {
+                        const std::string& vertex_id_field_name, const std::vector<float>& query_vector, const std::string& metric_type, int top_k) const {
         ListAccum<std::string> vertexIdList;
 
         Json::Value search_body;
@@ -33,7 +33,7 @@ public:
         search_body["outputFields"] = Json::arrayValue;
         search_body["outputFields"].append("pk");
         search_body["outputFields"].append(vertex_id_field_name);
-        search_body["topk"] = top_k;
+        search_body["limit"] = top_k;
 
         // You may need to adjust 'search_body' to match the exact format expected by your Milvus server version
 
@@ -43,7 +43,7 @@ public:
             std::string readBuffer;            
             std::string url;
             
-            if ((host.substr(0, 4) == "http" && host.find(":") != std::string::npos) || host.find(std::to_string(port)) != std::string::npos) {
+            if (host.substr(0, 4) == "http" && host.find(":") != std::string::npos && host.find(std::to_string(port)) != std::string::npos) {
                 url = host + "/v1/vector/search";
             } else if (host.substr(0, 4) == "http") {
                 url = host + ":" + std::to_string(port) + "/v1/vector/search";
@@ -76,9 +76,9 @@ public:
                 bool parsingSuccessful = reader->parse(readBuffer.c_str(), readBuffer.c_str() + readBuffer.size(), &json_response, &parseErrors);
                 
                 if (parsingSuccessful) {
-                    std::string styledJson = Json::writeString(Json::StreamWriterBuilder(), json_response);
-                    std::cout << "Raw JSON response:\n" << styledJson << std::endl;
+                    std::cout << "JSON successfully parsed" << std::endl;
                 } else {
+                    // If parsing was unsuccessful, print the errors encountered
                     std::cerr << "Failed to parse JSON: " << parseErrors << std::endl;
                 }
 
@@ -101,7 +101,7 @@ public:
 
 private:
     std::string host;
-    int64_t port;
+    int port;
 
     static size_t WriteCallback(void *contents, size_t size, size_t nmemb, std::string *userp) {
         userp->append((char*)contents, size * nmemb);
