@@ -1,30 +1,19 @@
-CREATE QUERY HNSW_Search_Sub(
-  STRING milvus_host,
-  UINT milvus_port,
-  STRING vertex_type,
-  STRING input,
-  STRING index_name,
-  UINT k=10
-) RETURNS(SET<VERTEX>) {
-  ListAccum<STRING> @@vertexIds = searchInMilvus(milvus_host,
-                                                 milvus_port,
-                                                 index_name,
-                                                 "embedding",
-                                                 "vertex_id",
-                                                 input,
-                                                 "L2",
-                                                 k);
-
-  SetAccum<VERTEX> @@vertices;
-
-  start = {vertex_type};
-
-  res = SELECT s FROM start:s WHERE s.vertex_id IN @@vertexIds 
-        POST-ACCUM @@vertices += s;
-
-  IF @@vertices.size() < k THEN
-    RETURN HNSW_Search_Sub(milvus_host, milvus_port, vertex_type, input, index_name, k*2);
-  END;
-
-  RETURN @@vertices;
+CREATE QUERY HNSW_Search_Sub(STRING v_type, STRING milvus_host, 
+  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2", INT top_k, STRING query_vector_as_string) RETURNS(SetAccum<VERTEX>) { 
+    SetAccum<VERTEX> @@return_set;
+    ListAccum<STRING> @@vertexIds;
+    @@vertexIds = searchInMilvus(milvus_host, milvus_port, 
+      collection_name, vector_field_name, vertex_id_field_name, query_vector_as_string, metric_type, top_k); 
+    
+    start = {v_type};
+    res = SELECT s FROM start:s
+          POST-ACCUM
+            FOREACH id IN @@vertexIds DO
+              IF id == s.id THEN
+                @@return_set += s
+              END
+            END;
+    
+    RETURN @@return_set;
 }

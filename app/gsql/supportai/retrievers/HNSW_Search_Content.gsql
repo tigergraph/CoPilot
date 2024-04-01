@@ -1,4 +1,6 @@
-CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING embedding, STRING index_name, UINT k=1) { 
+CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING v_type, STRING milvus_host, 
+  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2", INT top_k, STRING query_vector_as_string) { 
   SetAccum<VERTEX> @@start_set;
   MapAccum<STRING, STRING> @@final_retrieval;
   
