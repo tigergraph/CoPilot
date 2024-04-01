@@ -9,6 +9,12 @@ class SupportAIQuestion(BaseModel):
     method: str = "hybrid"
     method_params: dict = {}
 
+class SupportAIInitConfig(BaseModel):
+    chunker: str
+    chunker_params: dict
+    extractor: str
+    extractor_params: dict
+
 class GSQLQueryInfo(BaseModel):
     function_header: str
     description: str

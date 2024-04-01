@@ -86,6 +86,19 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print (response.text)
         self.assertEqual(response.status_code, 200)
 
+    def test_delete_custom_query_idlist(self):
+        delete_query = {
+            "ids": ["448631022823408704", "448631022823408707"],
+            "expr": ""
+        }
+
+        response = self.client.post("/DigitalInfra/delete_docs", json=delete_query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
+
     def test_delete_custom_query_noinput(self):
         delete_query = {
             "ids": "",
@@ -147,6 +160,16 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print ("response json")
         print (response.text)
         self.assertEqual(response.status_code, 422)
+
+    def test_retrieve_custom_query(self):
+        query = "how many microservices are there?"
+
+        response = self.client.post("/DigitalInfra/retrieve_docs", json=query, auth=(self.username, self.password))
+        print ("-----------------------")
+        print ()
+        print ("response json")
+        print (response.text)
+        self.assertEqual(response.status_code, 200)
 
 if __name__ == "__main__":
     unittest.main()

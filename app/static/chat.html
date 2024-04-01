@@ -245,7 +245,7 @@
                 sessionStorage.setItem('sessionId', sessionId);
 
                 // Connect to WebSocket
-                socket = new WebSocket(`ws://${hostname}:${port}/${graphname}/ws?session_id=${sessionId}`);
+                socket = new WebSocket(`wss://${hostname}:${port}/${graphname}/ws?session_id=${sessionId}`);
                 
                 console.log(modal);
 

@@ -52,7 +52,7 @@ class BaseIngestion():
         
     def document_er_extraction(self, document: Union[Document, DocumentChunk]):
         extractor = LLMEntityRelationshipExtractor(self.llm_service)
-        return extractor.extract(document.text)
+        return extractor.extract(document)
     
     def documents_er_extraction(self, documents: List[Document]):
         for doc in documents:
@@ -81,6 +81,8 @@ class BaseIngestion():
         if chunk.entities != []:
             try:
                 self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "date_added": date_added, "embedding": self.embedding_service.embed_query(x["definition"])}) for x in chunk.entities])
+                self.conn.upsertVertices("Concept", [(x["type"], {"description": "", "concept_type": "EntityType", "date_added": date_added, "embedding": []}) for x in chunk.entities])
+                concept_count = self.conn.upsertEdges("Concept", "DESCRIBES_ENTITY", "Entity", [(x["type"], x["id"], {}) for x in chunk.entities])
                 self.conn.upsertEdges("DocumentChunk", "CONTAINS_ENTITY", "Entity", [(chunk_id, x["id"], {}) for x in chunk.entities])
             except Exception as e:
                 self.status.progress.chunk_failures[chunk_id].append(e)
@@ -113,6 +115,8 @@ class BaseIngestion():
         if document.entities != []:
             try:
                 self.conn.upsertVertices("Entity", [(x["id"], {"definition": x["definition"], "date_added": date_added, "embedding": self.embedding_service.embed_query(x["definition"])}) for x in document.entities])
+                self.conn.upsertVertices("Concept", [(x["type"], {"description": "", "concept_type": "EntityType", "date_added": date_added, "embedding": []}) for x in document.entities])
+                self.conn.upsertEdges("Concept", "DESCRIBES_ENTITY", "Entity", [(x["type"], x["id"], {}) for x in document.entities])
                 self.conn.upsertEdges("Document", "CONTAINS_ENTITY", "Entity", [(doc_id, x["id"], {}) for x in document.entities])
             except Exception as e:
                 self.status.progress.doc_failures[doc_id].append(e)
