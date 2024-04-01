@@ -1,3 +1,4 @@
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.storage.azure_blob_store import AzureBlobStore
 from app.storage.google_blob_store import GoogleBlobStore
 from app.storage.s3_blob_store import S3BlobStore
@@ -10,11 +11,10 @@ from app.supportai.extractors import LLMEntityRelationshipExtractor
 
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
 
 
 class BaseIngestion():
-    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnection, status: Status):
+    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnectionProxy, status: Status):
         self.embedding_service = embedding_service
         self.llm_service = llm_service
         self.conn = conn
@@ -133,7 +133,7 @@ class BaseIngestion():
 
 
 class BatchIngestion(BaseIngestion):
-    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnection, status: Status):
+    def __init__(self, embedding_service, llm_service, conn: TigerGraphConnectionProxy, status: Status):
         super().__init__(embedding_service=embedding_service, llm_service=llm_service, conn=conn, status=status)
 
     def _ingest(self, documents: List[Document], chunker, chunker_params):

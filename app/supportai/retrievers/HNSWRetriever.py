@@ -1,8 +1,8 @@
 from app.supportai.retrievers import BaseRetriever
-from pyTigerGraph import TigerGraphConnection
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
 class HNSWRetriever(BaseRetriever):
-    def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
+    def __init__(self, embedding_service, llm_service, connection: TigerGraphConnectionProxy):
         super().__init__(embedding_service, llm_service, connection)
         self._check_query_install("HNSW_Search_Sub")
         self._check_query_install("HNSW_Search_Content")

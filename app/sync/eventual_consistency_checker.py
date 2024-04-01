@@ -2,11 +2,12 @@ import asyncio
 import logging
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.supportai.chunkers import BaseChunker
 from app.supportai.extractors import BaseExtractor
-from pyTigerGraph import TigerGraphConnection
 import time
 from typing import Dict, List
+from app.metrics.prometheus_metrics import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class EventualConsistencyChecker:
     def __init__(self, interval_seconds, graphname, vertex_field,
                  embedding_service: EmbeddingModel, embedding_indices: List[str], 
                  embedding_stores: Dict[str, MilvusEmbeddingStore],
-                 conn: TigerGraphConnection, chunker: BaseChunker, extractor: BaseExtractor):
+                 conn: TigerGraphConnectionProxy, chunker: BaseChunker, extractor: BaseExtractor):
         self.interval_seconds = interval_seconds
         self.graphname = graphname
         self.conn = conn
@@ -114,7 +115,9 @@ class EventualConsistencyChecker:
             logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
             if vertex_ids:
                 vertex_ids = [(vertex_id, v_type) for vertex_id in vertex_ids]
-                self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
+                with metrics.tg_query_duration_seconds.labels("Update_Vertices_Processing_Status").time():
+                    metrics.tg_query_count.labels("Update_Vertices_Processing_Status").inc()
+                    self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
             else:
                 logger.error(f"No changes detected for vertex type: {v_type}")
 
