@@ -1,14 +1,16 @@
 from app.embeddings.embedding_services import EmbeddingModel
+from app.embeddings.base_embedding_store import EmbeddingStore
 from app.llm_services.base_llm import LLM_Model
 #from app.supportai.entity_relationship_extraction import BaseExtractor
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
 class BaseRetriever():
-    def __init__(self, embedding_service: EmbeddingModel, llm_service: LLM_Model, connection=None):
+    def __init__(self, embedding_service: EmbeddingModel, embedding_store: EmbeddingStore, llm_service: LLM_Model, connection=None):
         self.emb_service = embedding_service
         self.llm_service = llm_service
         self.conn = connection
+        self.embedding_store = embedding_store
 
     def _install_query(self, query_name):
         with open(f"app/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
