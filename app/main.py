@@ -29,6 +29,7 @@ from app.supportai.concept_management.create_concepts import *
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
+PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -70,7 +71,7 @@ else:
 
 
 
-app = FastAPI()
+app = FastAPI(root_path=PATH_PREFIX)
 
 app.add_middleware(
     CORSMiddleware,
@@ -116,13 +117,14 @@ if milvus_config.get("enabled") == "true":
 
     logger.info(f"Setting up Milvus embedding store for InquiryAI")
     embedding_store = MilvusEmbeddingStore(
-            embedding_service,
-            host=milvus_config["host"],
-            port=milvus_config["port"],
-            collection_name="tg_inquiry_documents", 
-            support_ai_instance=False,
-            username=milvus_config.get("username", ""),
-            password=milvus_config.get("password", "")
+        embedding_service,
+        host=milvus_config["host"],
+        port=milvus_config["port"],
+        collection_name="tg_inquiry_documents", 
+        support_ai_instance=False,
+        username=milvus_config.get("username", ""),
+        password=milvus_config.get("password", ""),
+        alias=milvus_config.get("alias", "default")
     )
 
     support_collection_name=milvus_config.get("collection_name", "tg_support_documents")
@@ -137,7 +139,8 @@ if milvus_config.get("enabled") == "true":
         password=milvus_config.get("password", ""),
         vector_field=milvus_config.get("vector_field", "document_vector"),
         text_field=milvus_config.get("text_field", "document_content"),
-        vertex_field=milvus_config.get("vertex_field", "vertex_id")
+        vertex_field=milvus_config.get("vertex_field", "vertex_id"),
+        alias=milvus_config.get("alias", "default")
     )
 
 @app.middleware("http")
