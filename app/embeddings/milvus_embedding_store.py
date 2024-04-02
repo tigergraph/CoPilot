@@ -294,6 +294,43 @@ class MilvusEmbeddingStore(EmbeddingStore):
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             logger.error(error_message)
             raise e
+        
+    def add_connection_parameters(self, query_params: dict) -> dict:
+        """ Add Connection Parameters.
+            Add connection parameters to the query parameters.
+            Args:
+                query_params (dict):
+                    Dictionary containing the parameters for the GSQL query.
+            Returns:
+                A dictionary containing the connection parameters.
+        """
+        if self.milvus_connection.get("uri", "") != "":
+            if self.milvus_connection.get("user", "") != "":
+                user = self.milvus_connection.get("user", "")
+                pwd = self.milvus_connection.get("password", "")
+                host = self.milvus_connection.get("uri", "")
+                # build uri with user and password
+                method = host.split(":")[0]
+                host = host.split("://")[1]
+                query_params["milvus_host"] = f"{method}://{user}:{pwd}@{host}"
+            else:
+                query_params["milvus_host"] = self.milvus_connection.get("uri", "")
+            query_params["milvus_port"] = int(host.split(":")[-1])
+        else:
+            if self.milvus_connection.get("user", "") != "":
+                user = self.milvus_connection.get("user", "")
+                pwd = self.milvus_connection.get("password", "")
+                host = self.milvus_connection.get("host", "")
+                # build uri with user and password
+                method = host.split(":")[0]
+                host = host.split("://")[1]
+                query_params["milvus_host"] = f"{method}://{user}:{pwd}@{host}"
+            else:
+                query_params["milvus_host"] = self.milvus_connection.get("host", "")
+            query_params["milvus_port"] = int(self.milvus_connection.get("port", ""))
+        query_params["vector_field_name"] = "document_vector"
+        query_params["vertex_id_field_name"] = "vertex_id"
+        return query_params
 
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec

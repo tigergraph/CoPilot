@@ -614,7 +614,7 @@ async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: Tiger
 async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     checker = await get_eventual_consistency_checker(graphname)
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["indicies"],
                                query.method_params["top_k"],
@@ -623,7 +623,7 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],
@@ -631,7 +631,7 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],
@@ -650,7 +650,7 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                         query.method_params["indices"],
                                         query.method_params["top_k"],
@@ -659,7 +659,7 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                         query.method_params["index"],
                                         query.method_params["top_k"],
@@ -667,7 +667,7 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],
