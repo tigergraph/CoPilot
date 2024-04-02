@@ -196,7 +196,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/register_docs")
-def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -219,7 +219,7 @@ def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInf
     return results
 
 @app.post("/{graphname}/upsert_docs")
-def upsert_query(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     try:
         results = []
 
@@ -250,7 +250,7 @@ def upsert_query(graphname, request_data: Union[QueryUperstRequest, List[QueryUp
         raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     
 @app.post("/{graphname}/delete_docs")
-def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     ids = request_data.ids
     expr = request_data.expr
     
@@ -277,7 +277,6 @@ def delete_query(graphname, request_data: QueryDeleteRequest, credentials: Annot
 
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    # TODO: Better polishing of this response
     logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
     return res
@@ -365,7 +364,6 @@ def health():
     return {"status": "healthy",
             "llm_completion_model": llm_config["completion_service"]["llm_model"],
             "embedding_service": llm_config["embedding_service"]["embedding_model_service"]}
-
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():

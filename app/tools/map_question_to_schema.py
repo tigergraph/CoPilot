@@ -54,14 +54,36 @@ class MapQuestionToSchema(BaseTool):
 
         RESTATE_QUESTION_PROMPT = PromptTemplate(
             template=self.prompt,
-            input_variables=["question", "vertices", "edges"],
+            input_variables=["question", "vertices", "verticesAttrs", "edges", "edgesInfo"],
             partial_variables = {"format_instructions": parser.get_format_instructions()}
         )
+
         restate_chain = LLMChain(llm=self.llm, prompt=RESTATE_QUESTION_PROMPT)
+
+        vertices = self.conn.getVertexTypes()
+        edges = self.conn.getEdgeTypes()
         
-        restate_q = restate_chain.apply([{"vertices": self.conn.getVertexTypes(),
-                                          "question": query,
-                                          "edges": self.conn.getEdgeTypes()}])[0]["text"]
+        vertices_info = []
+        for vertex in vertices: 
+            vertex_attrs = self.conn.getVertexAttrs(vertex)
+            vertex_info = {"vertex": vertex,
+                           "attributes": vertex_attrs}
+            vertices_info.append(vertex_info)
+        
+        edges_info = []
+        for edge in edges:
+            source_vertex = self.conn.getEdgeSourceVertexType(edge)
+            target_vertex = self.conn.getEdgeTargetVertexType(edge)
+            edge_info = {"edge": edge,
+                         "source": source_vertex,
+                         "target": target_vertex}
+            edges_info.append(edge_info)
+
+        restate_q = restate_chain.apply([{"vertices": vertices,
+                                          "verticesAttrs": vertices_info,
+                                          "edges": edges,
+                                          "edgesInfo": edges_info,
+                                          "question": query}])[0]["text"]
 
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
         
