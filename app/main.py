@@ -594,9 +594,9 @@ def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphC
     return res
 
 @app.post("/{graphname}/supportai/search")
-def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["indicies"],
                                query.method_params["top_k"],
@@ -605,7 +605,7 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],
@@ -613,7 +613,7 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],
@@ -627,11 +627,11 @@ def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Dep
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
-def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection), checker = Depends(get_eventual_consistency_checker)):
+def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnection = Depends(get_db_connection)):
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                         query.method_params["indices"],
                                         query.method_params["top_k"],
@@ -640,7 +640,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                         query.method_params["index"],
                                         query.method_params["top_k"],
@@ -648,7 +648,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnect
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question,
                                query.method_params["index"],
                                query.method_params["top_k"],

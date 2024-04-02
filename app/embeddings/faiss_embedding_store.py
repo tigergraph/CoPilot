@@ -84,3 +84,6 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         logger.debug(f"request_id={req_id_cv.get()} retrieve_similar() retrieved={sim_ids}")
         logger.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
         return similar
+    
+    def add_connection_parameters(self, query_params: dict) -> dict:
+        return super().add_connection_parameters(query_params)

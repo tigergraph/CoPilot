@@ -2,22 +2,23 @@ from app.supportai.retrievers import BaseRetriever
 from pyTigerGraph import TigerGraphConnection
 
 class HNSWSiblingRetriever(BaseRetriever):
-    def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
-        super().__init__(embedding_service, llm_service, connection)
+    def __init__(self, embedding_service, embedding_store, llm_service, connection: TigerGraphConnection):
+        super().__init__(embedding_service, embedding_store, llm_service, connection)
         self._check_query_install("HNSW_Search_Sub")
-        self._check_query_install("Chunk_Sibling_Retrieval")
+        self._check_query_install("HNSW_Chunk_Sibling_Search")
 
     def search(self, question, index, top_k=1, lookback=3, lookahead=3, withHyDE=False):
         if withHyDE:
             query_embedding = self._hyde_embedding(question)
         else:
             query_embedding = self._generate_embedding(question)
-        res = self.conn.runInstalledQuery("Chunk_Sibling_Retrieval", 
-                                          {"embedding": query_embedding,
-                                           "index_name": index, 
+        res = self.conn.runInstalledQuery("HNSW_Chunk_Sibling_Search", self.embedding_store.add_connection_parameters(
+                                          {"v_type": index,
+                                           "query_vector_as_string": query_embedding,
+                                           "collection_name": self.conn.graphname+"_"+index, 
                                            "lookback": lookback,
                                            "lookahead": lookahead,
-                                           "k": top_k})
+                                           "top_k": top_k}))
         return res
 
     def retrieve_answer(self, question, index, top_k=1, lookback=3, lookahead=3, withHyDE=False):
