@@ -3,6 +3,7 @@ from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
 import logging
 from pymilvus import connections, utility
+from time import time
 from typing import Iterable, Tuple, List, Optional, Union
 
 from fastapi import HTTPException
@@ -228,17 +229,21 @@ class MilvusEmbeddingStore(EmbeddingStore):
             # Perform deletion based on provided IDs or expression
             if expr:
                 # Delete by expression
-                with metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete"):
-                    metrics.milvus_query_total.labels(self.collection_name, "delete").inc
-                    deleted = self.milvus.delete(expr=expr)
-                    deleted_message = f"deleted by expression: {expr} {deleted}"
+                start_time = time()
+                metrics.milvus_query_total.labels(self.collection_name, "delete").inc()
+                deleted = self.milvus.delete(expr=expr)
+                end_time = time()
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete").observe(end_time - start_time)
+                deleted_message = f"deleted by expression: {expr} {deleted}"
             elif ids:
                 ids = [int(x) for x in ids]
                 # Delete by ids
-                with metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete"):
-                    metrics.milvus_query_total.labels(self.collection_name, "delete").inc
-                    deleted = self.milvus.delete(ids=ids)
-                    deleted_message = f"deleted by id(s): {ids} {deleted}"
+                start_time = time()
+                metrics.milvus_query_total.labels(self.collection_name, "delete").inc()
+                deleted = self.milvus.delete(ids=ids)
+                end_time = time()
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete").observe(end_time - start_time)
+                deleted_message = f"deleted by id(s): {ids} {deleted}"
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
 
@@ -272,9 +277,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
         try:
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
 
-            with metrics.milvus_query_duration_seconds.labels(self.collection_name, "similarity_search_by_vector"):
-                metrics.milvus_query_total.labels(self.collection_name, "similarity_search_by_vector").inc
-                similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+            start_time = time()
+            metrics.milvus_query_total.labels(self.collection_name, "similarity_search_by_vector").inc()
+            similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+            end_time = time()
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, "similarity_search_by_vector").observe(end_time - start_time)
 
             sim_ids = [doc.metadata.get("function_header") for doc in similar]
             logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")

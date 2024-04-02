@@ -7,23 +7,38 @@ class TigerGraphConnectionProxy:
         self._tg_connection = tg_connection
         metrics.tg_active_connections.inc()
 
-    def runInstalledQuery(self, query_name, params):
+    def __getattr__(self, name):
+        original_attr = getattr(self._tg_connection, name)
+
+        if callable(original_attr):
+            def hooked(*args, **kwargs):
+                if name == "runInstalledQuery":
+                    return self._runInstalledQuery(*args, **kwargs)
+                else:
+                    return original_attr(*args, **kwargs)
+
+            return hooked
+        else:
+            return original_attr
+
+    def _runInstalledQuery(self, query_name, params):
         start_time = time.time()
+        metrics.tg_inprogress_requests.labels(query_name=query_name).inc()
         try:
-            with metrics.tg_inprogress_requests.labels(query_name):
-                result = self._tg_connection.runInstalledQuery(query_name, params)
+            result = self._tg_connection.runInstalledQuery(query_name, params)
             success = True
         except Exception as e:
             success = False
             raise e
         finally:
+            metrics.tg_inprogress_requests.labels(query_name=query_name).dec()
             duration = time.time() - start_time
-            metrics.tg_query_duration_seconds.labels(query_name).observe(duration)
-            metrics.tg_query_count.labels(query_name).inc()
+            metrics.tg_query_duration_seconds.labels(query_name=query_name).observe(duration)
+            metrics.tg_query_count.labels(query_name=query_name).inc()
             if not success:
-                metrics.tg_query_error_total.labels(query_name, "error_type").inc()
+                metrics.tg_query_error_total.labels(query_name=query_name, error_type="error").inc()
             else:
-                metrics.tg_query_success_total.labels(query_name).inc()
+                metrics.tg_query_success_total.labels(query_name=query_name).inc()
         return result
 
     def __del__(self):

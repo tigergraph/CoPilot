@@ -87,12 +87,12 @@ class PrometheusMetrics(metaclass=SingletonMeta):
             self.milvus_query_duration_seconds = Histogram(
                 'milvus_query_duration_seconds', 
                 'Duration of Milvus queries', 
-                ['collection_name']
+                ['collection_name', "method_name"]
             )
             self.milvus_query_total = Counter(
                 'milvus_query_total', 
                 'Number of Milvus queries called', 
-                ['collection_name']
+                ['collection_name', "method_name"]
             )
 
             self.initialized = True

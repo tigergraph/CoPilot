@@ -189,8 +189,9 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
             graphname = graphname,
             apiToken = apiToken
         )
-    conn = TigerGraphConnectionProxy(conn)
+
     conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
+    conn = TigerGraphConnectionProxy(conn)
     
     return conn
 
@@ -227,7 +228,8 @@ async def get_eventual_consistency_checker(graphname: str):
 
         checker = EventualConsistencyChecker(check_interval_seconds,
                                              graphname, vertex_field,
-                                             embedding_service, index_names,
+                                             embedding_service, 
+                                             index_names,
                                              vector_indices, 
                                              conn, chunker, extractor)
         await checker.initialize()
