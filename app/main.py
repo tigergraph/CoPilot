@@ -204,7 +204,7 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
         query_list = [query_list]
 
     for query_info in query_list:
-        logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
+        logger.debug(f"/{graphname}/register_docs request_id={req_id_cv.get()} registering {query_info.function_header}")
 
         vec = embedding_service.embed_query(query_info.docstring)
         res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
@@ -214,7 +214,7 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
         if res:
             results.append(res)
         else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document(s)")
 
     return results
 
@@ -233,7 +233,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
             if not id and not query_info:
                 raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
             
-            logger.debug(f"/{graphname}/upsertcustomquery request_id={req_id_cv.get()} upserting document")
+            logger.debug(f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)")
 
             vec = embedding_service.embed_query(query_info.docstring)
             res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
@@ -243,7 +243,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
             if res:
                 results.append(res)
             else:
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document")
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document(s)")
         return results
     
     except Exception as e:
@@ -260,7 +260,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
         except ValueError:
             raise ValueError("Invalid ID format. IDs must be string or lists of strings.")
 
-    logger.debug(f"/{graphname}/deletecustomquery request_id={req_id_cv.get()} deleting {ids}")
+    logger.debug(f"/{graphname}/delete_docs request_id={req_id_cv.get()} deleting document(s)")
     
     # Call the remove_embeddings method based on provided IDs or expression
     try:
@@ -277,7 +277,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
 
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
+    logger.debug_pii(f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
     return res
 
@@ -307,6 +307,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
+        logger.info(f"steps: {steps}")
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
