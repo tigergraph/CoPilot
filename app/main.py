@@ -34,6 +34,7 @@ from app.metrics.tg_proxy import TigerGraphConnectionProxy
 LLM_SERVICE = os.getenv("LLM_CONFIG")
 DB_CONFIG = os.getenv("DB_CONFIG")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
+PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -74,7 +75,7 @@ else:
         raise Exception("MILVUS_CONFIG must be a .json file or a JSON string, failed with error: " + str(e))
 
 
-app = FastAPI()
+app = FastAPI(root_path=PATH_PREFIX)
 
 app.add_middleware(
     CORSMiddleware,
@@ -591,15 +592,13 @@ def ingestion_status(graphname, status_id: str):
 @app.post("/{graphname}/supportai/createvdb")
 def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(config.index_name)) == 0:
-        with pmetrics.tg_query_duration_seconds.labels("HNSW_CreateEntrypoint").time():
-            res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
+        res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
 
 
-    with pmetrics.tg_query_duration_seconds.labels("HNSW_BuildIndex").time():
-        res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": config.index_name,
-                                                        "v_types": config.vertex_types,
-                                                        "M": config.M,
-                                                        "ef_construction": config.ef_construction})
+    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": config.index_name,
+                                                    "v_types": config.vertex_types,
+                                                    "M": config.M,
+                                                    "ef_construction": config.ef_construction})
     return res
 
 @app.get("/{graphname}/supportai/deletevdb/{index_name}")
