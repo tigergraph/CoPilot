@@ -1,9 +1,9 @@
 from app.supportai.retrievers import BaseRetriever
 from app.supportai.extractors import LLMEntityRelationshipExtractor
-from pyTigerGraph import TigerGraphConnection
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
 class EntityRelationshipRetriever(BaseRetriever):
-    def __init__(self, embedding_service, llm_service, connection: TigerGraphConnection):
+    def __init__(self, embedding_service, llm_service, connection: TigerGraphConnectionProxy):
         super().__init__(embedding_service, llm_service, connection)
         self._check_query_install("Entity_Relationship_Retrieval")
         self.extractor = LLMEntityRelationshipExtractor(llm_service)

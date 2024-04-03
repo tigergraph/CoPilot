@@ -1,3 +1,4 @@
+import time
 from langchain.agents import AgentType, initialize_agent
 from typing import List, Union
 import logging
@@ -6,6 +7,8 @@ from app.tools import GenerateFunction, MapQuestionToSchema
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 
+from app.metrics.prometheus_metrics import metrics
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.llm_services.base_llm import LLM_Model
 
 from app.log import req_id_cv
@@ -27,10 +30,11 @@ class TigerGraphAgent():
         embedding_store (EmbeddingStore):
             a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
     """
-    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnection", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):
+    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):
         self.conn = db_connection
 
         self.llm = llm_provider
+        self.model_name = embedding_model.model_name
 
         self.mq2s = MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt)
         self.gen_func = GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)
@@ -65,14 +69,22 @@ class TigerGraphAgent():
             question (str): 
                 The question to ask the agent
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
-        logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
+        start_time = time.time()
+        metrics.llm_inprogress_requests.labels(self.model_name).inc()
+
         try:
+            logger.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
+            logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
             resp = self.agent({"input": question})
             logger.info(f"question for agent: {resp}")
             logger.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return resp
         except Exception as e:
-            logger.info(f"error message: {resp}")
+            metrics.llm_query_error_total.labels(self.model_name).inc()
             logger.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
             raise e
+        finally:
+            metrics.llm_request_total.labels(self.model_name).inc()
+            metrics.llm_inprogress_requests.labels(self.model_name).dec()
+            duration = time.time() - start_time
+            metrics.llm_request_duration_seconds.labels(self.model_name).observe(duration)

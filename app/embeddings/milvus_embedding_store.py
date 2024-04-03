@@ -1,20 +1,29 @@
 from datetime import datetime
+from langchain_community.vectorstores import Milvus
+from langchain_core.documents.base import Document
 import logging
+from pymilvus import connections, utility
+from time import time
 from typing import Iterable, Tuple, List, Optional, Union
 
 from fastapi import HTTPException
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
+from app.metrics.prometheus_metrics import metrics
 from app.log import req_id_cv
-from langchain_community.vectorstores import Milvus
-from pymilvus import connections, utility
-from langchain_core.documents.base import Document
 
 logger = logging.getLogger(__name__)
 
 class MilvusEmbeddingStore(EmbeddingStore):
     def __init__(self, embedding_service: EmbeddingModel, host: str, port: str, support_ai_instance: bool, collection_name: str = "tg_documents", vector_field: str = "vector_field", text_field: str = "text", vertex_field: str = "", username: str = "", password: str = "", alias: str = "alias"):
+        self.embedding_service = embedding_service
+        self.vector_field = vector_field
+        self.vertex_field = vertex_field
+        self.text_field = text_field
+        self.support_ai_instance = support_ai_instance
+        self.collection_name = collection_name
         self.milvus_alias = alias
+
         if (host.startswith("http")):
             if (host.endswith(str(port))):
                 uri = host
@@ -39,6 +48,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             }
 
         connections.connect(**self.milvus_connection)
+        metrics.milvus_active_connections.labels(self.collection_name).inc
         logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
         self.milvus = Milvus(
             embedding_function=embedding_service, 
@@ -49,17 +59,12 @@ class MilvusEmbeddingStore(EmbeddingStore):
             text_field=text_field,
             vector_field=vector_field
         )
-        self.embedding_service = embedding_service
-        self.vector_field = vector_field
-        self.vertex_field = vertex_field
-        self.text_field = text_field
-        self.support_ai_instance = support_ai_instance
-        self.collection_name = collection_name
 
         if (not self.support_ai_instance):
             self.load_documents()
     
     def check_collection_exists(self):
+        connections.connect(**self.milvus_connection)
         return utility.has_collection(self.collection_name, using=self.milvus_alias)
     
     def load_documents(self):        
@@ -82,7 +87,15 @@ class MilvusEmbeddingStore(EmbeddingStore):
                                                     'content_key': 'docstring',
                                                     'metadata_func': metadata_func})
             docs = loader.load()
+            
+            operation_type = "load_upsert"
+            metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+            start_time = time()
+
             self.milvus.upsert(documents=docs)
+
+            duration = time() - start_time
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
             logger.info("Milvus finish initial load documents init()")
 
             logger.info("Milvus initialized successfully")
@@ -117,7 +130,15 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
             texts = [text for text, _ in embeddings]
+
+            operation_type = "add_texts"
+            metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+            start_time = time()
+
             added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
+
+            duration = time() - start_time
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
 
@@ -175,13 +196,28 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 documents.append(document)
 
             # Perform upsert operation
+            operation_type = "upsert"
             if id is not None and id.strip():
                 logger.info(f"id: {id}")
                 logger.info(f"documents: {documents}")
+
+
+                metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+                start_time = time()
+
                 upserted = self.milvus.upsert(ids=[int(id)], documents=documents)
+
+                duration = time() - start_time
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
             else:
+                metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+                start_time = time()
+
                 logger.info(f"documents: {documents}")
                 upserted = self.milvus.upsert(documents=documents)
+
+                duration = time() - start_time
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT upsert_document()")
             
@@ -216,12 +252,20 @@ class MilvusEmbeddingStore(EmbeddingStore):
             # Perform deletion based on provided IDs or expression
             if expr:
                 # Delete by expression
+                start_time = time()
+                metrics.milvus_query_total.labels(self.collection_name, "delete").inc()
                 deleted = self.milvus.delete(expr=expr)
+                end_time = time()
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete").observe(end_time - start_time)
                 deleted_message = f"deleted by expression: {expr} {deleted}"
             elif ids:
                 ids = [int(x) for x in ids]
                 # Delete by ids
+                start_time = time()
+                metrics.milvus_query_total.labels(self.collection_name, "delete").inc()
                 deleted = self.milvus.delete(ids=ids)
+                end_time = time()
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete").observe(end_time - start_time)
                 deleted_message = f"deleted by id(s): {ids} {deleted}"
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
@@ -255,7 +299,13 @@ class MilvusEmbeddingStore(EmbeddingStore):
         """
         try:
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
+
+            start_time = time()
+            metrics.milvus_query_total.labels(self.collection_name, "similarity_search_by_vector").inc()
             similar = self.milvus.similarity_search_by_vector(embedding=query_embedding, k=top_k)
+            end_time = time()
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, "similarity_search_by_vector").observe(end_time - start_time)
+
             sim_ids = [doc.metadata.get("function_header") for doc in similar]
             logger.debug(f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}")
             # Convert pk from int to str for each document
@@ -267,3 +317,43 @@ class MilvusEmbeddingStore(EmbeddingStore):
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             logger.error(error_message)
             raise e
+        
+    def add_connection_parameters(self, query_params: dict) -> dict:
+        """ Add Connection Parameters.
+            Add connection parameters to the query parameters.
+            Args:
+                query_params (dict):
+                    Dictionary containing the parameters for the GSQL query.
+            Returns:
+                A dictionary containing the connection parameters.
+        """
+        if self.milvus_connection.get("uri", "") != "":
+            if self.milvus_connection.get("user", "") != "":
+                user = self.milvus_connection.get("user", "")
+                pwd = self.milvus_connection.get("password", "")
+                host = self.milvus_connection.get("uri", "")
+                # build uri with user and password
+                method = host.split(":")[0]
+                host = host.split("://")[1]
+                query_params["milvus_host"] = f"{method}://{user}:{pwd}@{host}"
+            else:
+                query_params["milvus_host"] = self.milvus_connection.get("uri", "")
+            query_params["milvus_port"] = int(host.split(":")[-1])
+        else:
+            if self.milvus_connection.get("user", "") != "":
+                user = self.milvus_connection.get("user", "")
+                pwd = self.milvus_connection.get("password", "")
+                host = self.milvus_connection.get("host", "")
+                # build uri with user and password
+                method = host.split(":")[0]
+                host = host.split("://")[1]
+                query_params["milvus_host"] = f"{method}://{user}:{pwd}@{host}"
+            else:
+                query_params["milvus_host"] = self.milvus_connection.get("host", "")
+            query_params["milvus_port"] = int(self.milvus_connection.get("port", ""))
+        query_params["vector_field_name"] = "document_vector"
+        query_params["vertex_id_field_name"] = "vertex_id"
+        return query_params
+
+    def __del__(self):
+        metrics.milvus_active_connections.labels(self.collection_name).dec

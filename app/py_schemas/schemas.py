@@ -9,6 +9,12 @@ class SupportAIQuestion(BaseModel):
     method: str = "hybrid"
     method_params: dict = {}
 
+class SupportAIInitConfig(BaseModel):
+    chunker: str
+    chunker_params: dict
+    extractor: str
+    extractor_params: dict
+
 class GSQLQueryInfo(BaseModel):
     function_header: str
     description: str
@@ -70,6 +76,17 @@ class CreateVectorIndexConfig(BaseModel):
     vertex_types: List[str]
     M: int = 20
     ef_construction: int = 128
+
+class CreateIngestConfig(BaseModel):
+    data_source: str
+    data_source_config: Dict
+    loader_config: Dict = {"doc_id_field": str, "content_field": str}
+    file_format: str = "json"
+
+class LoadingInfo(BaseModel):
+    load_job_id: str
+    data_source_id: str
+    file_path: str
 
 class QueryDeleteRequest(BaseModel):
     ids: Optional[Union[str, List[str]]]

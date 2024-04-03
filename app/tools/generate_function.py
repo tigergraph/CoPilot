@@ -4,7 +4,7 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
@@ -23,7 +23,7 @@ class GenerateFunction(BaseTool):
     """
     name = "GenerateFunction"
     description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."
-    conn: "TigerGraphConnection" = None
+    conn: TigerGraphConnectionProxy = None
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool =True

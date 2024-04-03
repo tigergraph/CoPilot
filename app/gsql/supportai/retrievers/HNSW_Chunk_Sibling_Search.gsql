@@ -1,14 +1,25 @@
-CREATE DISTRIBUTED QUERY Chunk_Sibling_Retrieval(STRING embedding, STRING index_name, INT k=3, UINT lookback=3, INT lookahead=3) { 
+CREATE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_host, 
+  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT lookback=3, INT lookahead=3) { 
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
   MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@sibling_set;
   OrAccum @touched;
   SetAccum<VERTEX> @@start_set;
+  INT inc_top_k = top_k * 2;
   
-  all_chunks = {DocumentChunk.*};
-  @@start_set += HNSW_Search_Sub(embedding, index_name, k);
+  all_chunks = {v_type};
+  @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+
+  WHILE @@start_set.size() < top_k LIMIT 5 DO
+    @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
+    inc_top_k = inc_top_k * 2;
+  END;
+
+
   seeds = {@@start_set};
-  start = SELECT s FROM seeds:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  start = SELECT s FROM seeds:s LIMIT top_k;
+  start = SELECT s FROM start:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
   FOREACH i IN RANGE[1, lookback] DO
     start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
           ACCUM 
