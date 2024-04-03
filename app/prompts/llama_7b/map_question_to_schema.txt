@@ -1,6 +1,10 @@
 Replace the entites mentioned in the question to one of these choices: {vertices}.
+Choose a better mapping between vertex type or its attributes: {verticesAttrs}.
 Replace the relationships mentioned in the question to one of these choices: {edges}.
-Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same.
+Make sure the entities are either the source vertices or target vertices of the relationships: {edgesInfo}.
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
+Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same. 
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
 If there are no replacements to be made, restate the question.
 Example: How many universities are there?
 Response: How many vertices are University Vetexes?

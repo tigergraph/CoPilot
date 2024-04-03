@@ -18,6 +18,24 @@ public:
         curl_global_cleanup();
     }
 
+    std::vector<float> stringToFloatVector(const std::string& str, char delimiter = ',') {
+        std::vector<float> result;
+        std::stringstream ss(str);
+        std::string item;
+
+        while (std::getline(ss, item, delimiter)) {
+            try {
+            result.push_back(std::stof(item));
+            } catch (const std::invalid_argument& ia) {
+            std::cerr << "Invalid argument: " << ia.what() << '\n';
+            } catch (const std::out_of_range& oor) {
+            std::cerr << "Out of Range error: " << oor.what() << '\n';
+            }
+        }
+
+        return result;
+    }
+
     ListAccum<std::string> search(const std::string& collection_name, const std::string& vector_field_name,
                         const std::string& vertex_id_field_name, const std::vector<float>& query_vector, const std::string& metric_type, int top_k) const {
         ListAccum<std::string> vertexIdList;
