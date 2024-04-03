@@ -1,5 +1,4 @@
 from app.supportai.retrievers import BaseRetriever
-from app.metrics.prometheus_metrics import metrics
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
 class HNSWOverlapRetriever(BaseRetriever):
@@ -11,14 +10,13 @@ class HNSWOverlapRetriever(BaseRetriever):
     def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1):
         query_embedding = self._generate_embedding(question)
 
-        with metrics.tg_query_duration_seconds.labels("HNSW_Overlap_Search").time():
-            res = self.conn.runInstalledQuery("HNSW_Overlap_Search", self.embedding_store.add_connection_parameters(
-                                                {"query_vector_as_string": query_embedding,
-                                                "v_types": indices,
-                                                "collection_prefix": self.conn.graphname,
-                                                "top_k": top_k,
-                                                "num_hops": num_hops,
-                                                "num_seen_min": num_seen_min}))
+        res = self.conn.runInstalledQuery("HNSW_Overlap_Search", self.embedding_store.add_connection_parameters(
+                                            {"query_vector_as_string": query_embedding,
+                                            "v_types": indices,
+                                            "collection_prefix": self.conn.graphname,
+                                            "top_k": top_k,
+                                            "num_hops": num_hops,
+                                            "num_seen_min": num_seen_min}))
         return res
 
     def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1):

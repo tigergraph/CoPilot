@@ -370,21 +370,25 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
                                 "result": json.loads(generate_func_output["result"]),
                                 "reasoning": generate_func_output["reasoning"]}
             resp.answered_question = True
+            pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         except Exception as e:
             resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
             logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+            pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     except Exception as e:
         resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     return resp
 
 @app.post("/{graphname}/login")
