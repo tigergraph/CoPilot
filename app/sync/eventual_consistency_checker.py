@@ -115,9 +115,7 @@ class EventualConsistencyChecker:
             logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
             if vertex_ids:
                 vertex_ids = [(vertex_id, v_type) for vertex_id in vertex_ids]
-                with metrics.tg_query_duration_seconds.labels("Update_Vertices_Processing_Status").time():
-                    metrics.tg_query_count.labels("Update_Vertices_Processing_Status").inc()
-                    self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
+                self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
             else:
                 logger.error(f"No changes detected for vertex type: {v_type}")
 

@@ -87,9 +87,15 @@ class MilvusEmbeddingStore(EmbeddingStore):
                                                     'content_key': 'docstring',
                                                     'metadata_func': metadata_func})
             docs = loader.load()
-            with metrics.milvus_query_duration_seconds.labels(self.collection_name, "load_upsert"):
-                metrics.milvus_query_total.labels(self.collection_name, "load_upsert").inc
-                self.milvus.upsert(documents=docs)
+            
+            operation_type = "load_upsert"
+            metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+            start_time = time()
+
+            self.milvus.upsert(documents=docs)
+
+            duration = time() - start_time
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
             logger.info("Milvus finish initial load documents init()")
 
             logger.info("Milvus initialized successfully")
@@ -124,9 +130,15 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
             texts = [text for text, _ in embeddings]
-            with metrics.milvus_query_duration_seconds.labels(self.collection_name, "add_texts"):
-                metrics.milvus_query_total.labels(self.collection_name, "add_texts").inc
-                added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
+
+            operation_type = "add_texts"
+            metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+            start_time = time()
+
+            added = self.milvus.add_texts(texts=texts, metadatas=metadatas)
+
+            duration = time() - start_time
+            metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
 
@@ -184,17 +196,28 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 documents.append(document)
 
             # Perform upsert operation
+            operation_type = "upsert"
             if id is not None and id.strip():
                 logger.info(f"id: {id}")
                 logger.info(f"documents: {documents}")
-                with metrics.milvus_query_duration_seconds.labels(self.collection_name, "upsert"):
-                    metrics.milvus_query_total.labels(self.collection_name, "upsert").inc
-                    upserted = self.milvus.upsert(ids=[int(id)], documents=documents)
+
+
+                metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+                start_time = time()
+
+                upserted = self.milvus.upsert(ids=[int(id)], documents=documents)
+
+                duration = time() - start_time
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
             else:
-                with metrics.milvus_query_duration_seconds.labels(self.collection_name, "upsert"):
-                    metrics.milvus_query_total.labels(self.collection_name, "upsert").inc
-                    logger.info(f"documents: {documents}")
-                    upserted = self.milvus.upsert(documents=documents)
+                metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
+                start_time = time()
+
+                logger.info(f"documents: {documents}")
+                upserted = self.milvus.upsert(documents=documents)
+
+                duration = time() - start_time
+                metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
             logger.info(f"request_id={req_id_cv.get()} Milvus EXIT upsert_document()")
             
