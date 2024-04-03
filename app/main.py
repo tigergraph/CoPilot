@@ -704,4 +704,5 @@ async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(ge
 
 @app.get("/{graphname}/supportai/forceupdate")
 async def force_update(graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+    checker = await get_eventual_consistency_checker(graphname)
     return {"status": "success"}
