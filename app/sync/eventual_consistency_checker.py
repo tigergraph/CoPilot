@@ -2,11 +2,12 @@ import asyncio
 import logging
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.supportai.chunkers import BaseChunker
 from app.supportai.extractors import BaseExtractor
-from pyTigerGraph import TigerGraphConnection
 import time
 from typing import Dict, List
+from app.metrics.prometheus_metrics import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class EventualConsistencyChecker:
     def __init__(self, interval_seconds, graphname, vertex_field,
                  embedding_service: EmbeddingModel, embedding_indices: List[str], 
                  embedding_stores: Dict[str, MilvusEmbeddingStore],
-                 conn: TigerGraphConnection, chunker: BaseChunker, extractor: BaseExtractor):
+                 conn: TigerGraphConnectionProxy, chunker: BaseChunker, extractor: BaseExtractor):
         self.interval_seconds = interval_seconds
         self.graphname = graphname
         self.conn = conn

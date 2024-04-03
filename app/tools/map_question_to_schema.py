@@ -4,8 +4,8 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.py_schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
 from typing import List, Dict
 from .validation_utils import validate_schema, MapQuestionToSchemaException
@@ -22,7 +22,7 @@ class MapQuestionToSchema(BaseTool):
     """
     name = "MapQuestionToSchema"
     description = "Always run first to map the query to the graph's schema. GenerateFunction before using MapQuestionToSchema"
-    conn: "TigerGraphConnection" = None
+    conn: "TigerGraphConnectionProxy" = None
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool = True
@@ -30,8 +30,8 @@ class MapQuestionToSchema(BaseTool):
     def __init__(self, conn, llm, prompt):
         """ Initialize MapQuestionToSchema.
             Args:
-                conn (TigerGraphConnection):
-                    pyTigerGraph TigerGraphConnection connection to the database.
+                conn (TigerGraphConnectionProxy):
+                    pyTigerGraph TigerGraphConnection connection to the database; this is a proxy which includes metrics gathering.
                 llm (LLM_Model):
                     LLM_Model class to interact with an external LLM API.
                 prompt (str):
