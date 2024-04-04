@@ -57,11 +57,6 @@ class PrometheusMetrics(metaclass=SingletonMeta):
                 'Number of times a request to an LLM model is made', 
                 ['llm_model']
             )
-            self.llm_request_timeouts_total = Counter(
-                'llm_request_timeouts_total',
-                'Number of LLM request timeouts',
-                ['llm_model']
-            )
             self.llm_success_response_total = Counter(
                 'llm_success_response_total',
                 'Number of LLM responses that yielded a useful result',
@@ -87,12 +82,24 @@ class PrometheusMetrics(metaclass=SingletonMeta):
             self.milvus_query_duration_seconds = Histogram(
                 'milvus_query_duration_seconds', 
                 'Duration of Milvus queries', 
-                ['collection_name', "method_name"]
+                ['collection_name', 'method_name']
             )
             self.milvus_query_total = Counter(
                 'milvus_query_total', 
                 'Number of Milvus queries called', 
-                ['collection_name', "method_name"]
+                ['collection_name', 'method_name']
+            )
+
+            # collect metrics for CoPilot
+            self.copilot_endpoint_duration_seconds = Histogram(
+                'copilot_endpoint_duration_seconds', 
+                'Duration of the CoPilot endpoint execution', 
+                ['endpoint']
+            )
+            self.copilot_endpoint_total = Counter(
+                'copilot_endpoint_total', 
+                'Number of times the CoPilot endpoint is called', 
+                ['endpoint']
             )
 
             self.initialized = True

@@ -197,6 +197,10 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
     return conn
 
 async def get_eventual_consistency_checker(graphname: str):
+    if (not db_config.get("enable_consistency_checker", True)):
+        logger.debug("Eventual consistency checker disabled")
+        return
+
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
     credentials = HTTPBasicCredentials(username=db_config["username"], password=db_config["password"])
     conn=get_db_connection(graphname, credentials)
@@ -243,11 +247,19 @@ def read_root():
 
 @app.post("/{graphname}/getqueryembedding")
 def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    endpoint = "/{}/getqueryembedding"
+    start_time = time.time()
     logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/register_docs")
 def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    endpoint = "/{}/register_docs"
+    start_time = time.time()
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -267,10 +279,16 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document(s)")
 
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+
     return results
 
 @app.post("/{graphname}/upsert_docs")
 def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    endpoint = "/{}/upsert_docs"
+    start_time = time.time()
     try:
         results = []
 
@@ -299,9 +317,15 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
+    finally:
+        duration = time.time() - start_time
+        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     
 @app.post("/{graphname}/delete_docs")
 def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    endpoint = "/{}/delete_docs"
+    start_time = time.time()
     ids = request_data.ids
     expr = request_data.expr
     
@@ -325,15 +349,27 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
             raise HTTPException(status_code=400, detail="Either IDs or an expression must be provided.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        duration = time.time() - start_time
+        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
 
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
+    endpoint = "/{}/retrieve_docs"
+    start_time = time.time()
     logger.debug_pii(f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return res
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnectionProxy = Depends(get_db_connection)) -> CoPilotResponse:
+    endpoint = "/{}/query"
+    start_time = time.time()
     logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
@@ -390,6 +426,10 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+    
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return resp
 
 @app.post("/{graphname}/login")
@@ -433,6 +473,8 @@ async def favicon():
 
 @app.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+    endpoint = "/{}/supportai/initialize"
+    start_time = time.time()
     # need to open the file using the absolute path
     abs_path = os.path.abspath(__file__)
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql")
@@ -454,12 +496,18 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
     with open(file_path, "r") as f:
         update_vertices = f.read()
     res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+update_vertices+"\n INSTALL QUERY Update_Vertices_Processing_Status")
+    
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"schema_creation_status": json.dumps(schema_res), "index_creation_status": json.dumps(index_res)}
 
 
 @app.post("/{graphname}/supportai/create_ingest")
 async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/create_ingest"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     if ingest_config.file_format.lower() == "json":
         abs_path = os.path.abspath(__file__)
         file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql")
@@ -546,12 +594,18 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
     load_job_created = conn.gsql("USE GRAPH {}\n".format(graphname) + ingest_template)
     
     data_source_created = conn.gsql("USE GRAPH {}\n".format(graphname) + data_stream_conn)
+    
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"load_job_id": load_job_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]"),
             "data_source_id": data_source_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")}
 
 @app.post("/{graphname}/supportai/ingest")
 async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/ingest"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
     if loader_info.load_job_id is None:
@@ -566,13 +620,19 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
             res = str(e)
         else:
             raise e
+    finally:
+        duration = time.time() - start_time
+        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"job_name": loader_info.load_job_id,
             "job_id": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Jobid: ")[1].split("\n")[0],
             "log_location": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Log directory: ")[1].split("\n")[0]}
         
 @app.post("/{graphname}/supportai/batch_ingest")
 async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/batch_ingest"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     req_id = req_id_cv.get()
     status_manager.create_status(conn.username, req_id, graphname)
     ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
@@ -580,11 +640,21 @@ async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchD
         background_tasks.add_task(ingestion.ingest_blobs, doc_source)
     else:
         raise Exception("Document storage service not implemented")
+    
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"status": "request accepted", "request_id": req_id}
 
 @app.get("/{graphname}/supportai/ingestion_status")
 def ingestion_status(graphname, status_id: str):
+    endpoint = "/{}/supportai/ingestion_status"
+    start_time = time.time()
     status = status_manager.get_status(status_id)
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     if status:
         return {"status": status.to_dict()}
     else:
@@ -592,6 +662,8 @@ def ingestion_status(graphname, status_id: str):
     
 @app.post("/{graphname}/supportai/createvdb")
 def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+    endpoint = "/{}/supportai/createvdb"
+    start_time = time.time()
     if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(config.index_name)) == 0:
         res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
 
@@ -600,23 +672,41 @@ def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConne
                                                     "v_types": config.vertex_types,
                                                     "M": config.M,
                                                     "ef_construction": config.ef_construction})
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return res
 
 @app.get("/{graphname}/supportai/deletevdb/{index_name}")
 def delete_vdb(graphname, index_name, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+    endpoint = "/{}/supportai/deletevdb/{}"
+    start_time = time.time()
     res = conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname, index_name)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname, index_name)).inc()
     return res
     
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
 async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/queryvdb/{}"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname, index_name)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname, index_name)).inc()
     return res
 
 @app.post("/{graphname}/supportai/search")
 async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/search"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
@@ -646,11 +736,17 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
         retriever = EntityRelationshipRetriever(embedding_service, get_llm_service(llm_config), conn)
         res = retriever.search(query.question, query.method_params["top_k"])
 
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
 async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/answerquestion"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -687,11 +783,17 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     resp.natural_language_response = res["response"]
     resp.query_sources = res["retrieved"]
 
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+
     return res
 
 @app.get("/{graphname}/supportai/buildconcepts")
 async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/buildconcepts"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
@@ -700,10 +802,20 @@ async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(ge
     comm_concepts.create_concepts()
     high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
     high_level_concepts.create_concepts()
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"status": "success"}
 
 
 @app.get("/{graphname}/supportai/forceupdate")
 async def force_update(graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    checker = await get_eventual_consistency_checker(graphname)
+    endpoint = "/{}/supportai/forceupdate"
+    start_time = time.time()
+    await get_eventual_consistency_checker(graphname)
+
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
     return {"status": "success"}
