@@ -14,7 +14,7 @@ CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_
   FOREACH v_type IN v_types DO
     @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
   
-    WHILE @@tmp_start_set.size() < top_k DO
+    WHILE @@tmp_start_set.size() < top_k LIMIT 5 DO
       @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
       inc_top_k = inc_top_k * 2;
     END;
