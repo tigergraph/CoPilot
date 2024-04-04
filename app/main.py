@@ -256,8 +256,9 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     start_time = time.time()
     logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
 
+    res = embedding_service.embed_query(query.query)
     update_metrics(start_time, endpoint.format(graphname))
-    return embedding_service.embed_query(query.query)
+    return res
 
 @app.post("/{graphname}/register_docs")
 def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
