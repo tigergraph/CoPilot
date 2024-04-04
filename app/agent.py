@@ -2,6 +2,8 @@ from langchain.agents import AgentType, initialize_agent
 from typing import List, Union
 import logging
 
+from pyTigerGraph import TigerGraphConnection
+
 from app.tools import GenerateFunction, MapQuestionToSchema
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
@@ -73,4 +75,7 @@ class TigerGraphAgent():
             return resp
         except Exception as e:
             logger.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
+            import traceback
+            logger.debug(traceback.format_exc())
+            print(traceback.format_exc())
             raise e
