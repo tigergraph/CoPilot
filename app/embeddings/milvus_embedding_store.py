@@ -148,7 +148,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 logger.info(success_message)
                 return success_message
             else:
-                error_message = f"Failed to regiter document {added}"
+                error_message = f"Failed to register document {added}"
                 logger.error(error_message)
                 raise Exception(error_message)
                     

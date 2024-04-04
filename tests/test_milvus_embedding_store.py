@@ -13,7 +13,7 @@ class TestMilvusEmbeddingStore(unittest.TestCase):
         embedded_documents = [[0.1,0.2,0.3]]
         mock_embedding_model.embed_query.return_value = embedded_query
         mock_embedding_model.embed_documents.return_value = embedded_documents
-        mock_milvus_function.return_value = None
+        mock_milvus_function.return_value = ["1"]
 
         embedding_store = MilvusEmbeddingStore(embedding_service=mock_embedding_model, host="localhost", port=19530, support_ai_instance=True)
         embedding_store.add_embeddings(embeddings=[(query, embedded_documents)])
