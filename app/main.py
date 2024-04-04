@@ -241,6 +241,11 @@ async def get_eventual_consistency_checker(graphname: str):
         consistency_checkers[graphname] = checker
     return consistency_checkers[graphname]
 
+def update_metrics(start_time, label):
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(label).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(label).inc()    
+
 @app.get("/")
 def read_root():
     return {"config": llm_config["model_name"]}
@@ -251,9 +256,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     start_time = time.time()
     logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/register_docs")
@@ -279,10 +282,7 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document(s)")
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
-
+    update_metrics(start_time, endpoint.format(graphname))
     return results
 
 @app.post("/{graphname}/upsert_docs")
@@ -318,9 +318,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     finally:
-        duration = time.time() - start_time
-        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+        update_metrics(start_time, endpoint.format(graphname))
     
 @app.post("/{graphname}/delete_docs")
 def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
@@ -350,9 +348,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        duration = time.time() - start_time
-        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+        update_metrics(start_time, endpoint.format(graphname))
 
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
@@ -361,9 +357,7 @@ def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated
     logger.debug_pii(f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     res = embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return res
 
 @app.post("/{graphname}/query")
@@ -427,9 +421,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return resp
 
 @app.post("/{graphname}/login")
@@ -497,9 +489,7 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
         update_vertices = f.read()
     res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+update_vertices+"\n INSTALL QUERY Update_Vertices_Processing_Status")
     
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return {"schema_creation_status": json.dumps(schema_res), "index_creation_status": json.dumps(index_res)}
 
 
@@ -595,9 +585,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
     
     data_source_created = conn.gsql("USE GRAPH {}\n".format(graphname) + data_stream_conn)
     
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return {"load_job_id": load_job_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]"),
             "data_source_id": data_source_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")}
 
@@ -621,9 +609,7 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
         else:
             raise e
     finally:
-        duration = time.time() - start_time
-        pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-        pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+        update_metrics(start_time, endpoint.format(graphname))
     return {"job_name": loader_info.load_job_id,
             "job_id": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Jobid: ")[1].split("\n")[0],
             "log_location": res.split("Running the following loading job in background with '-noprint' option:")[1].split("Log directory: ")[1].split("\n")[0]}
@@ -641,9 +627,7 @@ async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchD
     else:
         raise Exception("Document storage service not implemented")
     
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return {"status": "request accepted", "request_id": req_id}
 
 @app.get("/{graphname}/supportai/ingestion_status")
@@ -652,9 +636,7 @@ def ingestion_status(graphname, status_id: str):
     start_time = time.time()
     status = status_manager.get_status(status_id)
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     if status:
         return {"status": status.to_dict()}
     else:
@@ -673,9 +655,7 @@ def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConne
                                                     "M": config.M,
                                                     "ef_construction": config.ef_construction})
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return res
 
 @app.get("/{graphname}/supportai/deletevdb/{index_name}")
@@ -684,9 +664,7 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnectionProxy = Depends(
     start_time = time.time()
     res = conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname, index_name)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname, index_name)).inc()
+    update_metrics(start_time, endpoint.format(graphname, index_name))
     return res
     
 @app.post("/{graphname}/supportai/queryvdb/{index_name}")
@@ -697,9 +675,7 @@ async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: Tiger
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname, index_name)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname, index_name)).inc()
+    update_metrics(start_time, endpoint.format(graphname, index_name))
     return res
 
 @app.post("/{graphname}/supportai/search")
@@ -737,9 +713,7 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
         res = retriever.search(query.question, query.method_params["top_k"])
 
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return res
 
 @app.post("/{graphname}/supportai/answerquestion")
@@ -783,9 +757,7 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     resp.natural_language_response = res["response"]
     resp.query_sources = res["retrieved"]
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
 
     return res
 
@@ -803,9 +775,7 @@ async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(ge
     high_level_concepts = HigherLevelConceptCreator(conn, llm_config, embedding_service)
     high_level_concepts.create_concepts()
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return {"status": "success"}
 
 
@@ -815,7 +785,5 @@ async def force_update(graphname: str, conn: TigerGraphConnectionProxy = Depends
     start_time = time.time()
     await get_eventual_consistency_checker(graphname)
 
-    duration = time.time() - start_time
-    pmetrics.copilot_endpoint_duration_seconds.labels(endpoint.format(graphname)).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(endpoint.format(graphname)).inc()
+    update_metrics(start_time, endpoint.format(graphname))
     return {"status": "success"}
