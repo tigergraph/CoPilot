@@ -82,6 +82,7 @@ class EventualConsistencyChecker:
 
     async def fetch_and_process_vertex(self):
         v_types_to_scan = self.embedding_indices
+        vertex_ids_content_map: dict = {}
         for v_type in v_types_to_scan:
             logger.info(f"Fetching vertex ids and content for vertex type: {v_type}")
             vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates", {"v_type": v_type})[0]["@@v_and_text"]
@@ -119,10 +120,14 @@ class EventualConsistencyChecker:
             else:
                 logger.error(f"No changes detected for vertex type: {v_type}")
 
+        return len(vertex_ids_content_map) != 0
+
     async def run_periodic_task(self):
         while True:
-            await self.fetch_and_process_vertex()
-            await asyncio.sleep(self.interval_seconds)
+            worked = await self.fetch_and_process_vertex()
+
+            if not worked:
+                await asyncio.sleep(self.interval_seconds)
 
     async def initialize(self):
         if not self.is_initialized:

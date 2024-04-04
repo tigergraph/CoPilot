@@ -24,8 +24,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.collection_name = collection_name
         self.milvus_alias = alias
 
-        if (host.startswith("http")):
-            if (host.endswith(str(port))):
+        if host.startswith("http"):
+            if host.endswith(str(port)):
                 uri = host
             else:
                 uri = f"{host}:{port}"
@@ -60,7 +60,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             vector_field=vector_field
         )
 
-        if (not self.support_ai_instance):
+        if not self.support_ai_instance:
             self.load_documents()
     
     def check_collection_exists(self):
@@ -68,7 +68,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         return utility.has_collection(self.collection_name, using=self.milvus_alias)
     
     def load_documents(self):        
-        if (not self.check_collection_exists()):
+        if not self.check_collection_exists():
             from langchain.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
@@ -240,7 +240,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         try:
             logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
 
-            if (not self.check_collection_exists()):
+            if not self.check_collection_exists():
                 logger.info(f"request_id={req_id_cv.get()} Milvus collection {self.collection_name} does not exist")
                 logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
                 return f"Milvus collection {self.collection_name} does not exist"
