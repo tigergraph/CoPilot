@@ -788,19 +788,3 @@ async def force_update(graphname: str, conn: TigerGraphConnectionProxy = Depends
 
     update_metrics(start_time, endpoint.format(graphname))
     return {"status": "success"}
-
-@app.post("/{graphname}/supportai/demo_ingest_chunk")
-async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    endpoint = "/{}/supportai/batch_ingest"
-    start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
-    req_id = req_id_cv.get()
-    status_manager.create_status(conn.username, req_id, graphname)
-    ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
-    if doc_source.service.lower() == "s3":
-        background_tasks.add_task(ingestion._ingest, doc_source)
-    else:
-        raise Exception("Document storage service not implemented")
-    
-    update_metrics(start_time, endpoint.format(graphname))
-    return {"status": "request accepted", "request_id": req_id}
