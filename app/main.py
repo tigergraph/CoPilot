@@ -197,7 +197,7 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
     return conn
 
 async def get_eventual_consistency_checker(graphname: str):
-    if (not db_config.get("enable_consistency_checker", True)):
+    if not db_config.get("enable_consistency_checker", True):
         logger.debug("Eventual consistency checker disabled")
         return
 
