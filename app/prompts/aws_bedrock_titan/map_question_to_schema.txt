@@ -1,6 +1,0 @@
-Replace the entites mentioned in the question to one of these choices: {vertices}.
-Replace the relationships mentioned in the question to one of these choices: {edges}.
-If there are words that are synonyms with the entities or relationships above, make sure to output the cannonical form found in the choices above.
-Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same.
-{format_instructions}
-QUESTION: {question}

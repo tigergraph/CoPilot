@@ -301,7 +301,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
         agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
+    elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
         agent = TigerGraphAgent(AWSBedrock(llm_config["completion_service"]), conn, embedding_service, embedding_store)
        

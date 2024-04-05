@@ -75,4 +75,6 @@ class TigerGraphAgent():
             return resp
         except Exception as e:
             logger.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
+            import traceback
+            print(traceback.format_exc())
             raise e
