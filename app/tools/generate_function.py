@@ -128,6 +128,7 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
+        print('generated...',generated)
         generated = func_parser.invoke(generated)
         logger.info(f"generated_function: {generated}")
 

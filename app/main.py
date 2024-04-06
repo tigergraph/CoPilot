@@ -577,23 +577,21 @@ def retrieve_answer(
         print(json.dumps(str(steps), indent=2))
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-            # try again if there were no steps taken
-            # TODO:
-            if len(steps["intermediate_steps"]) == 0:
-                pass
+            # TODO: try again if there were no steps taken?
+            # if len(steps["intermediate_steps"]) == 0:
+            # pass
             generate_func_output = steps["intermediate_steps"][-1][-1]
             print()
             print(json.dumps(str(steps["intermediate_steps"]), indent=2))
             print()
             print(generate_func_output)
             print()
+            resp.natural_language_response = steps["output"]
             resp.query_sources = {
                 "function_call": generate_func_output["function_call"],
                 "result": json.loads(generate_func_output["result"]),
                 "reasoning": generate_func_output["reasoning"],
             }
-            # # resp.query_sources =  generate_func_output
-
             resp.answered_question = True
             pmetrics.llm_success_response_total.labels(
                 embedding_service.model_name
