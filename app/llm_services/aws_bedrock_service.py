@@ -1,5 +1,5 @@
 from app.llm_services import LLM_Model
-from langchain.chat_models import BedrockChat
+from langchain_community.chat_models import BedrockChat
 import logging
 from app.log import req_id_cv
 import boto3
@@ -24,7 +24,7 @@ class AWSBedrock(LLM_Model):
         self.llm = BedrockChat(
             client=client,
             model_id=model_name,
-            model_kwargs={"temperature": 0, "stop_sequences": ["\n\nHuman:"]},
+            model_kwargs={"temperature": 0},
         )
 
         self.prompt_path = config["prompt_path"]

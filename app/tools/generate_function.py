@@ -138,6 +138,8 @@ class GenerateFunction(BaseTool):
         try:
             loc = {}
             exec("res = conn."+parsed_func, {"conn": self.conn}, loc)
+            print("*****exec results*****")
+            print(loc)
             logger.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
             return {"function_call": parsed_func,
                     "result": json.dumps(loc["res"]),

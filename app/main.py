@@ -1,4 +1,5 @@
 from typing import Optional, Union, Annotated, List, Dict
+import traceback
 from fastapi import FastAPI, BackgroundTasks, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
@@ -197,7 +198,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
     logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
     return embedding_service.embed_query(query.query)
 
-@app.post("/{graphname}/register_docs")
+@app.post("/{graphname}/registercustomquery")
 def register_query(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
@@ -302,9 +303,8 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
         agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created")
         agent = TigerGraphAgent(AWSBedrock(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-       
     else:
         logger.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
@@ -314,33 +314,45 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
+        print('******agent steps:')
+        import json
+        print(json.dumps(str(steps),indent=2))
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed. steps={steps}")
         try:
+            # try again if there were no steps taken
+            #TODO:
+            if len(steps["intermediate_steps"]) == 0:
+                pass
             generate_func_output = steps["intermediate_steps"][-1][-1]
-            if "action_input" in steps["output"]:
-                resp.natural_language_response = generate_func_output["action_input"]
-            else:
-                resp.natural_language_response = steps["output"]
-            resp.natural_language_response = steps["output"]
+            print()
+            print(json.dumps(str(steps["intermediate_steps"]),indent=2))
+            print()
+            print(generate_func_output) 
+            print()
             resp.query_sources = {"function_call": generate_func_output["function_call"],
                                 "result": json.loads(generate_func_output["result"]),
                                 "reasoning": generate_func_output["reasoning"]}
+            # # resp.query_sources =  generate_func_output
+
             resp.answered_question = True
-        except Exception as e:
+        except Exception:
             resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
             logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
-    except MapQuestionToSchemaException as e:
+            traceback.print_exc()
+    except MapQuestionToSchemaException:
         resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
-    except Exception as e:
+        traceback.print_exc()
+    except Exception:
         resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
         logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        traceback.print_exc()
     return resp
 
 @app.post("/{graphname}/login")
