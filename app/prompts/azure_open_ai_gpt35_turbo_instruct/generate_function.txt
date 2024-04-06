@@ -1,5 +1,7 @@
 Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
 Vertex Types: {vertex_types}
 Vertex Attributes: {vertex_attributes}
 Vertex IDs: {vertex_ids}

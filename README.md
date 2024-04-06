@@ -165,13 +165,18 @@ In addition to the `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `azure_d
 
 ## Create DB configuration file
 Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
+
+If you are running TigerGraph outside of docker compose, change the hostname to match its address (`http://localhost`, `https://your-TgCloud-hostname`). Once authentication is enabled in TigerGraph, set getToken to `true`.
+
+You can also disable the consistency_checker, which reconciles Milvus and TigerGraph data, within this config.  It is true by default
 ```json
 {
-    "hostname": "DATABASE_HOSTNAME_HERE",
-    "getToken": true,
+    "hostname": "http://tigergraph",
+    "getToken": false,
     "default_timeout": 300,
     "default_mem_threshold": 5000,
-    "default_thread_limit": 8
+    "default_thread_limit": 8,
+    "enable_consistency_checker": true
 }
 ```
 

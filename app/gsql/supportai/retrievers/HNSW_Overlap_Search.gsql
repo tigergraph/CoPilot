@@ -1,14 +1,27 @@
-CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING embedding, SET<STRING> embedding_indices, UINT k=1, UINT num_hops=5, UINT num_seen_min=1) { 
+CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host, 
+  UINT milvus_port, STRING collection_prefix, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
   SetAccum<VERTEX> @@start_set;
+  SetAccum<VERTEX> @@tmp_start_set;
   SumAccum<INT> @num_times_seen;
   MapAccum<STRING, STRING> @@relationship_info;
   MapAccum<STRING, STRING> @@entity_info;
   MapAccum<STRING, STRING> @@doc_chunk_info;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
   MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
+  INT inc_top_k = top_k * 2;
   
-  FOREACH index IN embedding_indices DO
-    @@start_set += HNSW_Search_Sub(embedding, index, k);
+  FOREACH v_type IN v_types DO
+    @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+  
+    WHILE @@tmp_start_set.size() < top_k LIMIT 5 DO
+      @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
+      inc_top_k = inc_top_k * 2;
+    END;
+    
+    tmp = {@@tmp_start_set};
+    tmp2 = SELECT s FROM tmp:s LIMIT top_k;
+    tmp3 = SELECT s FROM tmp2:s POST-ACCUM @@start_set += s;
   END;
   
   start = {@@start_set};
@@ -17,7 +30,6 @@ CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING embedding, SET<STRING> embed
   
   FOREACH i IN RANGE[0, num_hops-1] DO
     start = SELECT t FROM start:s -(:e)- :t
-            WHERE e.type != "LINK_TO" AND e.type != "reverse_LINK_TO" AND e.type != "ENTRYPOINT_OF"
             POST-ACCUM t.@num_times_seen += 1;
   END;
   

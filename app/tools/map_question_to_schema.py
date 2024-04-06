@@ -4,8 +4,8 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
 from langchain.pydantic_v1 import BaseModel, Field, validator
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.py_schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
 from typing import List, Dict
 from .validation_utils import validate_schema, MapQuestionToSchemaException
@@ -22,7 +22,7 @@ class MapQuestionToSchema(BaseTool):
     """
     name = "MapQuestionToSchema"
     description = "Always run first to map the query to the graph's schema. GenerateFunction before using MapQuestionToSchema"
-    conn: "TigerGraphConnection" = None
+    conn: "TigerGraphConnectionProxy" = None
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool = True
@@ -30,8 +30,8 @@ class MapQuestionToSchema(BaseTool):
     def __init__(self, conn, llm, prompt):
         """ Initialize MapQuestionToSchema.
             Args:
-                conn (TigerGraphConnection):
-                    pyTigerGraph TigerGraphConnection connection to the database.
+                conn (TigerGraphConnectionProxy):
+                    pyTigerGraph TigerGraphConnection connection to the database; this is a proxy which includes metrics gathering.
                 llm (LLM_Model):
                     LLM_Model class to interact with an external LLM API.
                 prompt (str):
@@ -54,14 +54,36 @@ class MapQuestionToSchema(BaseTool):
 
         RESTATE_QUESTION_PROMPT = PromptTemplate(
             template=self.prompt,
-            input_variables=["question", "vertices", "edges"],
+            input_variables=["question", "vertices", "verticesAttrs", "edges", "edgesInfo"],
             partial_variables = {"format_instructions": parser.get_format_instructions()}
         )
+
         restate_chain = LLMChain(llm=self.llm, prompt=RESTATE_QUESTION_PROMPT)
+
+        vertices = self.conn.getVertexTypes()
+        edges = self.conn.getEdgeTypes()
         
-        restate_q = restate_chain.apply([{"vertices": self.conn.getVertexTypes(),
-                                          "question": query,
-                                          "edges": self.conn.getEdgeTypes()}])[0]["text"]
+        vertices_info = []
+        for vertex in vertices: 
+            vertex_attrs = self.conn.getVertexAttrs(vertex)
+            vertex_info = {"vertex": vertex,
+                           "attributes": vertex_attrs}
+            vertices_info.append(vertex_info)
+        
+        edges_info = []
+        for edge in edges:
+            source_vertex = self.conn.getEdgeSourceVertexType(edge)
+            target_vertex = self.conn.getEdgeTargetVertexType(edge)
+            edge_info = {"edge": edge,
+                         "source": source_vertex,
+                         "target": target_vertex}
+            edges_info.append(edge_info)
+
+        restate_q = restate_chain.apply([{"vertices": vertices,
+                                          "verticesAttrs": vertices_info,
+                                          "edges": edges,
+                                          "edgesInfo": edges_info,
+                                          "question": query}])[0]["text"]
 
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
         

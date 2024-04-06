@@ -1,6 +1,10 @@
 Generate the complete question with the appropriate replacements. The goal is to restate the question using the list of vertex and edge types below.
 Vertex types: {vertices}.
+Choose a better mapping between vertex type or its attributes: {verticesAttrs}.
 Edge types: {edges}.
+Make sure the entities are either the source vertices or target vertices of the relationships: {edgesInfo}.
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
 If there are words that are synonyms with the vertex types or edge types above, make sure to output the cannonical form found in the choices above.
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
 {format_instructions}
 QUESTION: {question}

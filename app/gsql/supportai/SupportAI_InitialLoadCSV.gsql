@@ -1,0 +1,6 @@
+CREATE LOADING load_documents_content_csv_@uuid@ {
+    DEFINE FILENAME DocumentContent;
+    LOAD DocumentContent TO VERTEX Document VALUES($0, gsql_current_time_epoch(0), _, _) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+    LOAD DocumentContent TO VERTEX Content VALUES($0, $1, gsql_current_time_epoch(0)) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+    LOAD DocumentContent TO EDGE HAS_CONTENT VALUES($0 Document, $0 Content) USING SEPARATOR="|", HEADER="true", EOL="\n", QUOTE="double";
+}

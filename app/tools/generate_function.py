@@ -4,7 +4,7 @@ from langchain.tools.base import ToolException
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
 from typing import List, Dict, Type, Optional, Union
@@ -23,7 +23,7 @@ class GenerateFunction(BaseTool):
     """
     name = "GenerateFunction"
     description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."
-    conn: "TigerGraphConnection" = None
+    conn: TigerGraphConnectionProxy = None
     llm: LLM = None
     prompt: str = None
     handle_tool_error: bool =True
@@ -96,7 +96,6 @@ class GenerateFunction(BaseTool):
             lookup_question += "using edges: "+str(target_edge_types)
 
         logger.debug_pii(f"request_id={req_id_cv.get()} retrieving documents for question={lookup_question}")
-
         func_parser = PydanticOutputParser(pydantic_object=GenerateFunctionResponse)
         
         PROMPT = PromptTemplate(
@@ -107,14 +106,14 @@ class GenerateFunction(BaseTool):
         )
 
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
-
+        
         if len(docs) == 0:
             logger.warning(f"request_id={req_id_cv.get()} WARN no documents found")
             raise NoDocumentsFoundException
 
         inputs = [{"question": question, 
-                    "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
-                    "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
+                    "vertex_types": target_vertex_types,
+                    "edge_types": target_edge_types,
                     "vertex_attributes": target_vertex_attributes,
                     "vertex_ids": target_vertex_ids,
                     "edge_attributes": target_edge_attributes,
@@ -122,6 +121,7 @@ class GenerateFunction(BaseTool):
                     "doc2": docs[1].page_content if len(docs) > 1 else "",
                     "doc3": docs[2].page_content if len(docs) > 2 else ""
                   }]
+        
         doc_ids = [doc.metadata.get("function_header") for doc in docs]
         logger.debug(f"request_id={req_id_cv.get()} retrieved documents={doc_ids}")
 
@@ -129,6 +129,8 @@ class GenerateFunction(BaseTool):
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
         generated = func_parser.invoke(generated)
+        logger.info(f"generated_function: {generated}")
+
         try:
             parsed_func = validate_function_call(self.conn, generated.connection_func_call, docs)
         except InvalidFunctionCallException as e:

@@ -44,3 +44,15 @@ class EmbeddingStore(ABC):
                 A list of Tuples containing vector id and vector embedding
         """
         pass
+
+    @abstractmethod
+    def add_connection_parameters(self, query_params: dict) -> dict:
+        """ Add Connection Parameters.
+            Add connection parameters to the query parameters.
+            Args:
+                query_params (dict):
+                    Dictionary containing the parameters for the GSQL query.
+            Returns:
+                A dictionary containing the connection parameters.
+        """
+        pass
