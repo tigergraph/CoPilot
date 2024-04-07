@@ -2,6 +2,7 @@ from app.llm_services import LLM_Model
 import os
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class OpenAI(LLM_Model):
         self.llm = ChatOpenAI(temperature=config["model_kwargs"]["temperature"],
                               model_name=model_name)
         self.prompt_path = config["prompt_path"]
-        logger.info(f"request_id={req_id_cv.get()} instantiated OpenAI model_name={model_name}")
+        LogWriter.info(f"request_id={req_id_cv.get()} instantiated OpenAI model_name={model_name}")
 
     @property
     def map_question_schema_prompt(self):

@@ -8,7 +8,7 @@ LOG_CONFIG = os.getenv("LOG_CONFIG")
 
 if LOG_CONFIG is None or (LOG_CONFIG.endswith(".json") and not os.path.exists(LOG_CONFIG)):
     log_config =  {
-        "log_file_path": "logs",
+        "log_file_path": "/tmp/logs",
         "log_max_size": 104857600,
         "log_backup_count": 100
     }
@@ -62,7 +62,7 @@ class LogWriter:
     def initialize_logger():
         if not LogWriter.logger_initialized:
             # Set log directory, dependending on configuration
-            log_directory = os.path.dirname(log_config.get("log_file_path", "logs"))            
+            log_directory = log_config.get("log_file_path", "/tmp/logs")
             os.makedirs(log_directory, exist_ok=True)
 
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -99,6 +99,22 @@ class LogWriter:
         getattr(LogWriter.general_logger, level.lower())(message)
         if level.upper() == "ERROR":
             LogWriter.error_logger.error(message)
+
+    @staticmethod
+    def info(message, mask_pii=True, **kwargs):
+        LogWriter.log("info", message, mask_pii, **kwargs)
+
+    @staticmethod
+    def warn(message, mask_pii=True, **kwargs):
+        LogWriter.log("warning", message, mask_pii, **kwargs)
+
+    @staticmethod
+    def warning(message, mask_pii=True, **kwargs):
+        LogWriter.log("warning", message, mask_pii, **kwargs)
+
+    @staticmethod
+    def error(message, mask_pii=True, **kwargs):
+        LogWriter.log("error", message, mask_pii, **kwargs)
 
     @staticmethod
     def audit_log(message: dict, mask_pii=True):

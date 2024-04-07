@@ -28,6 +28,7 @@ from app.log import req_id_cv
 from app.supportai.retrievers import *
 from app.supportai.concept_management.create_concepts import *
 from app.sync.eventual_consistency_checker import EventualConsistencyChecker
+from app.tools.logwriter import LogWriter
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
@@ -120,9 +121,9 @@ def get_llm_service(llm_config):
 embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 if milvus_config.get("enabled") == "true":
-    logger.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
+    LogWriter.info(f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}")
 
-    logger.info(f"Setting up Milvus embedding store for InquiryAI")
+    LogWriter.info(f"Setting up Milvus embedding store for InquiryAI")
     embedding_store = MilvusEmbeddingStore(
         embedding_service,
         host=milvus_config["host"],
@@ -135,7 +136,7 @@ if milvus_config.get("enabled") == "true":
     )
 
     support_collection_name=milvus_config.get("collection_name", "tg_support_documents")
-    logger.info(f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}")
+    LogWriter.info(f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}")
     vertex_field = milvus_config.get("vertex_field", "vertex_id")
     support_ai_embedding_store = MilvusEmbeddingStore(
         embedding_service,
@@ -154,7 +155,7 @@ if milvus_config.get("enabled") == "true":
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
-    logger.info(f"{request.url.path} ENTRY request_id={req_id}")
+    LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
     req_id_cv.set(req_id)
     start_time = time.time()
     
@@ -162,7 +163,7 @@ async def log_requests(request: Request, call_next):
     
     process_time = (time.time() - start_time) * 1000
     formatted_process_time = '{0:.2f}'.format(process_time)
-    logger.info(f"{request.url.path} EXIT request_id={req_id} completed_in={formatted_process_time}ms status_code={response.status_code}")
+    LogWriter.info(f"{request.url.path} EXIT request_id={req_id} completed_in={formatted_process_time}ms status_code={response.status_code}")
     
     return response
 
@@ -284,7 +285,7 @@ async def audit_log(request: Request, call_next):
         "message": "Add logic to capture specific messages or errors"
     }
     
-    audit_logger.info(json.dumps(audit_log_entry))
+    audit_LogWriter.info(json.dumps(audit_log_entry))
     
     return response
 
@@ -423,7 +424,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
         agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     else:
-        logger.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
+        LogWriter.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
 
     resp = CoPilotResponse
@@ -431,7 +432,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
-        # logger.info(f"steps: {steps}")
+        # LogWriter.info(f"steps: {steps}")
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
@@ -449,19 +450,19 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
             resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
-            logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+            LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
             pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException as e:
         resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
+        LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     except Exception as e:
         resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
-        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     
     update_metrics(start_time, endpoint.format(graphname))

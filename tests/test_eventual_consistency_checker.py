@@ -15,7 +15,7 @@ class TestEventualConsistencyChecker(unittest.TestCase):
     @patch('app.embeddings.milvus_embedding_store.MilvusEmbeddingStore')
     @patch('app.embeddings.embedding_services.EmbeddingModel')
     @patch('app.main.get_db_connection', return_value=Mock())
-    def test_initialization(self, mock_get_db_connection, mock_embedding_model, mock_embedding_store):
+    def test_initialization(self, mock_get_db_connection, mock_embedding_model, mock_embedding_store, mock_embedding_service):
         """Test the initialization and ensure it doesn't reinitialize."""
         graphname = 'testGraph'
         conn = mock_get_db_connection.return_value

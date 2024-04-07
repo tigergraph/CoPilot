@@ -14,6 +14,7 @@ from .validation_utils import validate_schema, validate_function_call, MapQuesti
 import json
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class GenerateFunction(BaseTool):
                 target_edge_attributes (Dict[str, List[str]]):
                     The dictionary of edge attributes the question mentions, in the form {"edge_type": ["attr1", "attr2"]}
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY GenerateFunction._run()")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY GenerateFunction._run()")
 
         if target_vertex_types == [] and target_edge_types == []:
             return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
@@ -86,7 +87,7 @@ class GenerateFunction(BaseTool):
                             target_vertex_attributes, 
                             target_edge_attributes)
         except MapQuestionToSchemaException as e:
-            logger.warning(f"request_id={req_id_cv.get()} WARN input schema not valid")
+            LogWriter.warning(f"request_id={req_id_cv.get()} WARN input schema not valid")
             return e
 
         lookup_question = question + " "
@@ -108,7 +109,7 @@ class GenerateFunction(BaseTool):
         docs = self.embedding_store.retrieve_similar(self.embedding_model.embed_query(lookup_question), top_k=3)
         
         if len(docs) == 0:
-            logger.warning(f"request_id={req_id_cv.get()} WARN no documents found")
+            LogWriter.warning(f"request_id={req_id_cv.get()} WARN no documents found")
             raise NoDocumentsFoundException
 
         inputs = [{"question": question, 
@@ -129,24 +130,24 @@ class GenerateFunction(BaseTool):
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
         generated = func_parser.invoke(generated)
-        logger.info(f"generated_function: {generated}")
+        LogWriter.info(f"generated_function: {generated}")
 
         try:
             parsed_func = validate_function_call(self.conn, generated.connection_func_call, docs)
         except InvalidFunctionCallException as e:
-            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            LogWriter.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             return e
 
         try:
             loc = {}
             exec("res = conn."+parsed_func, {"conn": self.conn}, loc)
-            logger.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
+            LogWriter.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
             return {"function_call": parsed_func,
                     "result": json.dumps(loc["res"]),
                     "reasoning": generated.func_call_reasoning}
             #return "Function {} produced the result {}, due to reason {}".format(generated, json.dumps(loc["res"]), generated.func_call_reasoning)
         except Exception as e:
-            logger.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
+            LogWriter.warning(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}")
             raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
 
 
