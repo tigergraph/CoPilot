@@ -62,17 +62,17 @@ class LogWriter:
     def initialize_logger():
         if not LogWriter.logger_initialized:
             # Set log directory, dependending on configuration
-            log_directory = os.path.dirname(log_config["log_file_path"], "logs")            
+            log_directory = os.path.dirname(log_config.get("log_file_path", "logs"))            
             os.makedirs(log_directory, exist_ok=True)
 
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
             # Logging for info, error and audit
             LogWriter.general_logger = LogWriter.setup_logger(
-                "general", "logs/log.INFO", logging.DEBUG, formatter)
+                "general", "log.INFO", logging.DEBUG, formatter)
 
             LogWriter.error_logger = LogWriter.setup_logger(
-                "error", "logs/log.ERROR", logging.ERROR, formatter)
+                "error", "log.ERROR", logging.ERROR, formatter)
 
             LogWriter.audit_logger = LogWriter.setup_logger(
                 "audit", "log.AUDIT-COPILOT", logging.INFO, formatter)
