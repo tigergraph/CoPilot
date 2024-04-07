@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, Union, Annotated, List, Dict
 from fastapi import FastAPI, BackgroundTasks, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
@@ -244,7 +245,48 @@ async def get_eventual_consistency_checker(graphname: str):
 def update_metrics(start_time, label):
     duration = time.time() - start_time
     pmetrics.copilot_endpoint_duration_seconds.labels(label).observe(duration)
-    pmetrics.copilot_endpoint_total.labels(label).inc()    
+    pmetrics.copilot_endpoint_total.labels(label).inc()
+
+@app.middleware("http")
+async def audit_log(request: Request, call_next):
+    start_time = datetime.now()
+    
+    # Mock user and authentication details for illustration
+    user_name = "tigergraph"
+    auth_type = "SAML SSO"
+    client_host = request.client.host
+    user_agent = request.headers.get("user-agent", "Unknown")
+    
+    # You'll need to implement your own way to capture these details
+    client_os_username = "tigergraph"
+    action_name = "Unknown"  # Extract or define based on the endpoint
+    failed_attempts = 1  # Implement logic to count failed attempts
+    status = "SUCCESS"  # Default to success, update based on response status
+    
+    response = await call_next(request)
+    if response.status_code != 200:
+        status = "FAILURE"
+        
+    # End time for calculating request duration, if needed
+    end_time = datetime.now()
+
+    audit_log_entry = {
+        "timestamp": start_time.isoformat(),
+        "userName": user_name,
+        "authType": auth_type,
+        "clientHost": f"{client_host}:{request.url.port}",
+        "clientOSUsername": client_os_username,
+        "userAgent": user_agent,
+        "endpoint": request.url.path,
+        "actionName": action_name,
+        "failedAttempts": failed_attempts,
+        "status": status,
+        "message": "Add logic to capture specific messages or errors"
+    }
+    
+    audit_logger.info(json.dumps(audit_log_entry))
+    
+    return response
 
 @app.get("/")
 def read_root():
@@ -498,7 +540,7 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
 async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/create_ingest"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     if ingest_config.file_format.lower() == "json":
         abs_path = os.path.abspath(__file__)
         file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql")
@@ -594,7 +636,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
 async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/ingest"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
     if loader_info.load_job_id is None:
@@ -619,7 +661,7 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
 async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchDocumentIngest], background_tasks: BackgroundTasks, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/batch_ingest"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     req_id = req_id_cv.get()
     status_manager.create_status(conn.username, req_id, graphname)
     ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
@@ -672,7 +714,7 @@ def delete_vdb(graphname, index_name, conn: TigerGraphConnectionProxy = Depends(
 async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/queryvdb/{}"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     res = retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
 
@@ -683,7 +725,7 @@ async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: Tiger
 async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/search"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question,
@@ -710,9 +752,8 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
                                query.method_params["lookahead"],
                                query.method_params["withHyDE"])
     elif query.method.lower() == "entityrelationship":
-        retriever = EntityRelationshipRetriever(embedding_service, get_llm_service(llm_config), conn)
+        retriever = EntityRelationshipRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question, query.method_params["top_k"])
-
 
     update_metrics(start_time, endpoint.format(graphname))
     return res
@@ -721,7 +762,7 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
 async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/answerquestion"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -766,7 +807,7 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
 async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/buildconcepts"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
@@ -784,7 +825,10 @@ async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(ge
 async def force_update(graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     endpoint = "/{}/supportai/forceupdate"
     start_time = time.time()
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
 
     update_metrics(start_time, endpoint.format(graphname))
+
+
+    # LogWriter.log('error', "This is an error message", status_code=404)
     return {"status": "success"}
