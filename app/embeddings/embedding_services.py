@@ -5,6 +5,7 @@ import logging
 import time
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +36,9 @@ class EmbeddingModel(Embeddings):
         metrics.llm_inprogress_requests.labels(self.model_name).inc()
 
         try:
-            logger.info(f"request_id={req_id_cv.get()} ENTRY embed_documents()")
+            LogWriter.info(f"request_id={req_id_cv.get()} ENTRY embed_documents()")
             docs = self.embeddings.embed_documents(texts)
-            logger.info(f"request_id={req_id_cv.get()} EXIT embed_documents()")
+            LogWriter.info(f"request_id={req_id_cv.get()} EXIT embed_documents()")
             metrics.llm_success_response_total.labels(self.model_name).inc()
             return docs
         except Exception as e:
@@ -61,10 +62,10 @@ class EmbeddingModel(Embeddings):
         metrics.llm_inprogress_requests.labels(self.model_name).inc()
 
         try:
-            logger.info(f"request_id={req_id_cv.get()} ENTRY embed_query()")
+            LogWriter.info(f"request_id={req_id_cv.get()} ENTRY embed_query()")
             logger.debug_pii(f"request_id={req_id_cv.get()} embed_query() embedding question={question}")
             query_embedding = self.embeddings.embed_query(question)
-            logger.info(f"request_id={req_id_cv.get()} EXIT embed_query()")
+            LogWriter.info(f"request_id={req_id_cv.get()} EXIT embed_query()")
             metrics.llm_success_response_total.labels(self.model_name).inc()
             return query_embedding
         except Exception as e:

@@ -7,7 +7,7 @@ from app.supportai.chunkers import BaseChunker
 from app.supportai.extractors import BaseExtractor
 import time
 from typing import Dict, List
-from app.metrics.prometheus_metrics import metrics
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class EventualConsistencyChecker:
         self._check_query_install("Update_Vertices_Processing_Status")
         
     def _install_query(self, query_name):
-        logger.info(f"Installing query {query_name}")
+        LogWriter.info(f"Installing query {query_name}")
         with open(f"app/gsql/supportai/{query_name}.gsql", "r") as f:
             query = f.read()
         res = self.conn.gsql("USE GRAPH "+self.conn.graphname+"\n"+query+"\n INSTALL QUERY "+query_name)
@@ -39,7 +39,7 @@ class EventualConsistencyChecker:
 
 
     def _check_query_install(self, query_name):
-        logger.info(f"Checking if query {query_name} is installed")
+        LogWriter.info(f"Checking if query {query_name} is installed")
         endpoints = self.conn.getEndpoints(dynamic=True) # installed queries in database
         installed_queries = [q.split("/")[-1] for q in endpoints]
 
@@ -84,28 +84,28 @@ class EventualConsistencyChecker:
         v_types_to_scan = self.embedding_indices
         vertex_ids_content_map: dict = {}
         for v_type in v_types_to_scan:
-            logger.info(f"Fetching vertex ids and content for vertex type: {v_type}")
+            LogWriter.info(f"Fetching vertex ids and content for vertex type: {v_type}")
             vertex_ids_content_map = self.conn.runInstalledQuery("Scan_For_Updates", {"v_type": v_type})[0]["@@v_and_text"]
 
             vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
-            logger.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
+            LogWriter.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
             self.embedding_stores[self.graphname+"_"+v_type].remove_embeddings(expr=f"{self.vertex_field} in {str(vertex_ids)}")
 
-            logger.info(f"Embedding content from vertex type: {v_type}")
+            LogWriter.info(f"Embedding content from vertex type: {v_type}")
             for vertex_id, content in vertex_ids_content_map.items():
                 if content != "":
                     vec = self.embedding_service.embed_query(content)
                     self.embedding_stores[self.graphname+"_"+v_type].add_embeddings([(content, vec)], [{self.vertex_field: vertex_id}])
             
             if v_type == "Document":
-                logger.info(f"Chunking the content from vertex type: {v_type}")
+                LogWriter.info(f"Chunking the content from vertex type: {v_type}")
                 for vertex_id, content in vertex_ids_content_map.items():
                     chunks = await self._chunk_document(content)
                     for i, chunk in enumerate(chunks):
                         await self._upsert_chunk(vertex_id, f"{vertex_id}_chunk_{i}", chunk)
             
             if v_type == "Document" or v_type == "DocumentChunk":
-                logger.info(f"Extracting and upserting entities from the content from vertex type: {v_type}")
+                LogWriter.info(f"Extracting and upserting entities from the content from vertex type: {v_type}")
                 for vertex_id, content in vertex_ids_content_map.items():
                     extracted = await self._extract_entities(content)
                     if len(extracted["nodes"]) > 0:
@@ -113,12 +113,12 @@ class EventualConsistencyChecker:
                     if len(extracted["rels"]) > 0:
                         await self._upsert_rels(vertex_id, v_type, extracted["rels"])
 
-            logger.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
+            LogWriter.info(f"Updating the TigerGraph vertex ids to confirm that processing was completed")
             if vertex_ids:
                 vertex_ids = [(vertex_id, v_type) for vertex_id in vertex_ids]
                 self.conn.runInstalledQuery("Update_Vertices_Processing_Status", {"processed_vertices": vertex_ids})
             else:
-                logger.error(f"No changes detected for vertex type: {v_type}")
+                LogWriter.error(f"No changes detected for vertex type: {v_type}")
 
         return len(vertex_ids_content_map) != 0
 
@@ -131,6 +131,6 @@ class EventualConsistencyChecker:
 
     async def initialize(self):
         if not self.is_initialized:
-            logger.info(f"Eventual Consistency Check initializing for graphname {self.graphname} with interval_seconds {self.interval_seconds}")
+            LogWriter.info(f"Eventual Consistency Check initializing for graphname {self.graphname} with interval_seconds {self.interval_seconds}")
             asyncio.create_task(self.run_periodic_task())
             self.is_initialized = True

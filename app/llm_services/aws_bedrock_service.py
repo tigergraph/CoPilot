@@ -1,6 +1,7 @@
 from app.llm_services import LLM_Model
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class AWSBedrock(LLM_Model):
         )
 
         self.prompt_path = "./prompts/aws_bedrock/"
-        logger.info(f"request_id={req_id_cv.get()} instantiated AWSBedrock model_name={model_name}")
+        LogWriter.info(f"request_id={req_id_cv.get()} instantiated AWSBedrock model_name={model_name}")
 
     @property
     def map_question_schema_prompt(self):

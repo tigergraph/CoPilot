@@ -191,6 +191,17 @@ Note:  Milvus is not necessary for deployment or development currently. Copy the
     "enabled": "true"
 }
 ```
+
+## Create log configuration file (optional)
+Copy the below into `configs/log_config.json` and edit the appropriate values to suit your needs.  The log rotation is based on size and backups are kept.  These configurations are applied in the LogWriter to the standard python logging package.  Operational and audit logs are recorded.  Outputs include log.ERROR, log.INFO, and log.AUDIT-COPILOT
+```json
+{
+    "log_file_path": "logs",
+    "log_max_size": 10485760,
+    "log_backup_count": 10
+}
+```
+
 ## Run the Docker Image
 ```sh
 docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 tigergraphml/copilot:latest

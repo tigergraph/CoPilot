@@ -1,6 +1,7 @@
 from app.llm_services import LLM_Model
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 class GoogleVertexAI(LLM_Model):
@@ -15,7 +16,7 @@ class GoogleVertexAI(LLM_Model):
         )
 
         self.prompt_path = config["prompt_path"]
-        logger.info(f"request_id={req_id_cv.get()} instantiated GoogleVertexAI model_name={model_name}")
+        LogWriter.info(f"request_id={req_id_cv.get()} instantiated GoogleVertexAI model_name={model_name}")
 
     @property
     def map_question_schema_prompt(self):

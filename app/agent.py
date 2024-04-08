@@ -12,6 +12,7 @@ from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.llm_services.base_llm import LLM_Model
 
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -73,15 +74,15 @@ class TigerGraphAgent():
         metrics.llm_inprogress_requests.labels(self.model_name).inc()
 
         try:
-            logger.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
+            LogWriter.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
             logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
             resp = self.agent({"input": question})
-            logger.info(f"question for agent: {resp}")
-            logger.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
+            LogWriter.info(f"question for agent: {resp}")
+            LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return resp
         except Exception as e:
             metrics.llm_query_error_total.labels(self.model_name).inc()
-            logger.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
+            LogWriter.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
             raise e
         finally:
             metrics.llm_request_total.labels(self.model_name).inc()

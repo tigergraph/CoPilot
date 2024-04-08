@@ -1,6 +1,7 @@
 from app.embeddings.base_embedding_store import EmbeddingStore
 from app.embeddings.embedding_services import EmbeddingModel
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 import logging
 from typing import Iterable, Tuple, List
 
@@ -52,9 +53,9 @@ class FAISS_EmbeddingStore(EmbeddingStore):
                     List of dictionaries containing the metadata for each document.
                     The embeddings and metadatas list need to have identical indexing.
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY add_embeddings()")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY add_embeddings()")
         added = self.faiss.add_embeddings(embeddings, metadatas)
-        logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
         return added
 
     def remove_embeddings(self, ids):
@@ -64,9 +65,9 @@ class FAISS_EmbeddingStore(EmbeddingStore):
                 ids (str):
                     ID of the document to remove from the embedding store  
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY remove_embeddings()")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY remove_embeddings()")
         deleted = self.faiss.delete(ids)
-        logger.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
         return deleted
 
     def retrieve_similar(self, query_embedding, top_k=10):
@@ -78,11 +79,11 @@ class FAISS_EmbeddingStore(EmbeddingStore):
                 top_k (int, optional):
                     The number of documents to return. Defaults to 10.
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY retrieve_similar()")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY retrieve_similar()")
         similar = self.faiss.similarity_search_by_vector(query_embedding, top_k)
         sim_ids = [doc.metadata.get("function_header") for doc in similar]
         logger.debug(f"request_id={req_id_cv.get()} retrieve_similar() retrieved={sim_ids}")
-        logger.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT retrieve_similar()")
         return similar
     
     def add_connection_parameters(self, query_params: dict) -> dict:
