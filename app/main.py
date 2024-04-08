@@ -1,16 +1,7 @@
 from datetime import datetime
 from typing import Optional, Union, Annotated, List, Dict
 import traceback
-from fastapi import (
-    FastAPI,
-    BackgroundTasks,
-    Header,
-    Depends,
-    HTTPException,
-    status,
-    Request,
-    WebSocket,
-)
+from fastapi import FastAPI, BackgroundTasks, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from starlette.responses import Response
@@ -24,19 +15,8 @@ from pyTigerGraph import TigerGraphConnection
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.agent import TigerGraphAgent
-from app.llm_services import (
-    OpenAI,
-    AzureOpenAI,
-    AWS_SageMaker_Endpoint,
-    GoogleVertexAI,
-    AWSBedrock,
-)
-from app.embeddings.embedding_services import (
-    AWS_Bedrock_Embedding,
-    AzureOpenAI_Ada002,
-    OpenAI_Embedding,
-    VertexAI_PaLM_Embedding,
-)
+from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI, AWSBedrock
+from app.embeddings.embedding_services import AWS_Bedrock_Embedding, AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
 from app.embeddings.faiss_embedding_store import FAISS_EmbeddingStore
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.supportai.supportai_ingest import BatchIngestion
@@ -68,10 +48,7 @@ if LLM_SERVICE[-5:] != ".json":
     try:
         llm_config = json.loads(LLM_SERVICE)
     except Exception as e:
-        raise Exception(
-            "LLM_CONFIG environment variable must be a .json file or a JSON string, failed with error: "
-            + str(e)
-        )
+        raise Exception("LLM_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
 else:
     with open(LLM_SERVICE, "r") as f:
         llm_config = json.load(f)
@@ -80,18 +57,18 @@ if DB_CONFIG[-5:] != ".json":
     try:
         db_config = json.loads(str(DB_CONFIG))
     except Exception as e:
-        raise Exception(
-            "DB_CONFIG environment variable must be a .json file or a JSON string, failed with error: "
-            + str(e)
-        )
+        raise Exception("DB_CONFIG environment variable must be a .json file or a JSON string, failed with error: " + str(e))
 else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
 
-if MILVUS_CONFIG is None or (
-    MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)
-):
-    milvus_config = {"host": "localhost", "port": "19530", "enabled": "false"}
+
+if MILVUS_CONFIG is None or (MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)):
+    milvus_config = {
+        "host": "localhost",
+        "port": "19530",
+        "enabled": "false"
+    }
 elif MILVUS_CONFIG.endswith(".json"):
     with open(MILVUS_CONFIG, "r") as f:
         milvus_config = json.load(f)
@@ -99,10 +76,7 @@ else:
     try:
         milvus_config = json.loads(str(MILVUS_CONFIG))
     except json.JSONDecodeError as e:
-        raise Exception(
-            "MILVUS_CONFIG must be a .json file or a JSON string, failed with error: "
-            + str(e)
-        )
+        raise Exception("MILVUS_CONFIG must be a .json file or a JSON string, failed with error: " + str(e))
 
 
 app = FastAPI(root_path=PATH_PREFIX)
@@ -244,24 +218,17 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-def get_db_connection(
-    graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
-) -> TigerGraphConnectionProxy:
+def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
-        host=db_config["hostname"],
-        username=credentials.username,
-        password=credentials.password,
-        graphname=graphname,
+        host = db_config["hostname"],
+        username = credentials.username,
+        password = credentials.password,
+        graphname = graphname,
     )
 
     if db_config["getToken"]:
         try:
-            apiToken = conn._post(
-                conn.restppUrl + "/requesttoken",
-                authMode="pwd",
-                data=str({"graph": conn.graphname}),
-                resKey="results",
-            )["token"]
+            apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
         except:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -277,9 +244,7 @@ def get_db_connection(
             apiToken=apiToken,
         )
 
-    conn.customizeHeader(
-        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
-    )
+    conn.customizeHeader(timeout=db_config["default_timeout"] * 1000, responseSize=5000000)
     conn = TigerGraphConnectionProxy(conn)
 
     return conn
@@ -291,19 +256,14 @@ async def get_eventual_consistency_checker(graphname: str):
         return
 
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
-    credentials = HTTPBasicCredentials(
-        username=db_config["username"], password=db_config["password"]
-    )
-    conn = get_db_connection(graphname, credentials)
+    credentials = HTTPBasicCredentials(username=db_config["username"], password=db_config["password"])
+    conn=get_db_connection(graphname, credentials)
 
     if graphname not in consistency_checkers:
         vector_indices = {}
         if milvus_config.get("enabled") == "true":
             vertex_field = milvus_config.get("vertex_field", "vertex_id")
-            index_names = milvus_config.get(
-                "indexes",
-                ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"],
-            )
+            index_names = milvus_config.get("indexes", ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"])
             for index_name in index_names:
                 vector_indices[graphname + "_" + index_name] = MilvusEmbeddingStore(
                     embedding_service,
@@ -320,24 +280,16 @@ async def get_eventual_consistency_checker(graphname: str):
 
         # TODO: chunker and extractor needs to be configurable
         from app.supportai.chunkers.semantic_chunker import SemanticChunker
-
-        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
-
         from app.supportai.extractors import LLMEntityRelationshipExtractor
 
+        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
         extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
-
-        checker = EventualConsistencyChecker(
-            check_interval_seconds,
-            graphname,
-            vertex_field,
-            embedding_service,
-            index_names,
-            vector_indices,
-            conn,
-            chunker,
-            extractor,
-        )
+        checker = EventualConsistencyChecker(check_interval_seconds,
+                                             graphname, vertex_field,
+                                             embedding_service, 
+                                             index_names,
+                                             vector_indices, 
+                                             conn, chunker, extractor)
         await checker.initialize()
         consistency_checkers[graphname] = checker
     return consistency_checkers[graphname]
@@ -368,29 +320,17 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
         query_list = [query_list]
 
     for query_info in query_list:
-        logger.debug(
-            f"/{graphname}/register_docs request_id={req_id_cv.get()} registering {query_info.function_header}"
-        )
+        logger.debug(f"/{graphname}/register_docs request_id={req_id_cv.get()} registering {query_info.function_header}")
 
         vec = embedding_service.embed_query(query_info.docstring)
-        res = embedding_store.add_embeddings(
-            [(query_info.docstring, vec)],
-            [
-                {
-                    "function_header": query_info.function_header,
-                    "description": query_info.description,
-                    "param_types": query_info.param_types,
-                    "custom_query": True,
-                }
-            ],
-        )
+        res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                            "description": query_info.description,
+                                                                            "param_types": query_info.param_types,
+                                                                            "custom_query": True}])
         if res:
             results.append(res)
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to register document(s)",
-            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to register document(s)")
 
     return results
 
@@ -408,35 +348,19 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
             query_info = request_info.query_info
 
             if not id and not query_info:
-                raise HTTPException(
-                    status_code=400,
-                    detail="At least one of 'id' or 'query_info' is required",
-                )
+                raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
 
-            logger.debug(
-                f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)"
-            )
+            logger.debug(f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)")
 
             vec = embedding_service.embed_query(query_info.docstring)
-            res = embedding_store.upsert_embeddings(
-                id,
-                [(query_info.docstring, vec)],
-                [
-                    {
-                        "function_header": query_info.function_header,
-                        "description": query_info.description,
-                        "param_types": query_info.param_types,
-                        "custom_query": True,
-                    }
-                ],
-            )
+            res = embedding_store.upsert_embeddings(id, [(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
+                                                                                        "description": query_info.description,
+                                                                                        "param_types": query_info.param_types,
+                                                                                        "custom_query": True}])
             if res:
                 results.append(res)
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to upsert document(s)",
-                )
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document(s)")
         return results
 
     except Exception as e:
@@ -451,13 +375,9 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
         try:
             ids = [ids]
         except ValueError:
-            raise ValueError(
-                "Invalid ID format. IDs must be string or lists of strings."
-            )
+            raise ValueError("Invalid ID format. IDs must be string or lists of strings.")
 
-    logger.debug(
-        f"/{graphname}/delete_docs request_id={req_id_cv.get()} deleting document(s)"
-    )
+    logger.debug(f"/{graphname}/delete_docs request_id={req_id_cv.get()} deleting document(s)")
 
     # Call the remove_embeddings method based on provided IDs or expression
     try:
@@ -468,9 +388,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
             res = embedding_store.remove_embeddings(ids=ids)
             return res
         else:
-            raise HTTPException(
-                status_code=400, detail="Either IDs or an expression must be provided."
-            )
+            raise HTTPException(status_code=400, detail="Either IDs or an expression must be provided.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -487,55 +405,20 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
     logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
 
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"
-        )
-        agent = TigerGraphAgent(
-            OpenAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-        )
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created")
+        agent = TigerGraphAgent(OpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=azure agent created"
-        )
-        agent = TigerGraphAgent(
-            AzureOpenAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-        )
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=azure agent created")
+        agent = TigerGraphAgent(AzureOpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=sagemaker agent created"
-        )
-        agent = TigerGraphAgent(
-            AWS_SageMaker_Endpoint(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-        )
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=sagemaker agent created")
+        agent = TigerGraphAgent(AWS_SageMaker_Endpoint(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created"
-        )
-        agent = TigerGraphAgent(
-            GoogleVertexAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-        )
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
+        agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created"
-        )
-        agent = TigerGraphAgent(
-            AWSBedrock(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-        )
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created")
+        agent = TigerGraphAgent(AWSBedrock(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     else:
         LogWriter.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")

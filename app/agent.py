@@ -35,31 +35,16 @@ class TigerGraphAgent:
             a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
     """
 
-    def __init__(
-        self,
-        llm_provider: LLM_Model,
-        db_connection: "TigerGraphConnectionProxy",
-        embedding_model: EmbeddingModel,
-        embedding_store: EmbeddingStore,
-    ):
+    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store: EmbeddingStore):
         self.conn = db_connection
 
         self.llm = llm_provider
         self.model_name = embedding_model.model_name
 
-        self.mq2s = MapQuestionToSchema(
-            self.conn, self.llm.model, self.llm.map_question_schema_prompt
-        )
-        self.gen_func = GenerateFunction(
-            self.conn,
-            self.llm.model,
-            self.llm.generate_function_prompt,
-            embedding_model,
-            embedding_store,
-        )
+        self.mq2s = MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt)
+        self.gen_func = GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)
 
-        # tools = [self.mq2s, self.gen_func]
-        tools = [self.gen_func, self.mq2s]
+        tools = [self.mq2s, self.gen_func]
         logger.debug(f"request_id={req_id_cv.get()} agent tools created")
         self.agent = initialize_agent(
             tools,
@@ -112,6 +97,4 @@ class TigerGraphAgent:
             metrics.llm_request_total.labels(self.model_name).inc()
             metrics.llm_inprogress_requests.labels(self.model_name).dec()
             duration = time.time() - start_time
-            metrics.llm_request_duration_seconds.labels(self.model_name).observe(
-                duration
-            )
+            metrics.llm_request_duration_seconds.labels(self.model_name).observe(duration)
