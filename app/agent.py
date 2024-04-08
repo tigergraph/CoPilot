@@ -34,7 +34,6 @@ class TigerGraphAgent:
         embedding_store (EmbeddingStore):
             a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
     """
-
     def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store: EmbeddingStore):
         self.conn = db_connection
 
@@ -46,17 +45,14 @@ class TigerGraphAgent:
 
         tools = [self.mq2s, self.gen_func]
         logger.debug(f"request_id={req_id_cv.get()} agent tools created")
-        self.agent = initialize_agent(
-            tools,
-            self.llm.model,
-            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-            verbose=True,
-            return_intermediate_steps=True,
-            # max_iterations=7,
-            early_stopping_method="generate",
-            handle_parsing_errors=True,
-            agent_kwargs={"temperature": 0},
-        )
+        self.agent = initialize_agent(tools,
+                                      self.llm.model,
+                                      agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                                      verbose=False,
+                                      return_intermediate_steps=True,
+                                      #max_iterations=7,
+                                      early_stopping_method="generate",
+                                      handle_parsing_errors=True)
 
         '''
         agent_kwargs={

@@ -428,12 +428,12 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
-        # LogWriter.info(f"steps: {steps}")
+        # try again if there were no steps taken
+        if len(steps["intermediate_steps"]) == 0:
+            steps = agent.question_for_agent(query.query)
+
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-            # try again if there were no steps taken
-            if len(steps["intermediate_steps"]) == 0:
-                steps = agent.question_for_agent(query.query)
 
             generate_func_output = steps["intermediate_steps"][-1][-1]
             resp.natural_language_response = steps["output"]
@@ -443,31 +443,23 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
                 "reasoning": generate_func_output["reasoning"],
             }
             resp.answered_question = True
-            pmetrics.llm_success_response_total.labels(
-                embedding_service.model_name
-            ).inc()
+            pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         except Exception:
-            resp.natural_language_response = (
-                "An error occurred while processing the response. Please try again."
-            )
+            resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
             LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
             pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
             traceback.print_exc()
     except MapQuestionToSchemaException:
-        resp.natural_language_response = (
-            "A schema mapping error occurred. Please try rephrasing your question."
-        )
+        resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
         traceback.print_exc()
     except Exception:
-        resp.natural_language_response = (
-            "An error occurred while processing the response. Please try again."
-        )
+        resp.natural_language_response = "An error occurred while processing the response. Please try again."
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
@@ -500,19 +492,15 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
     await websocket.accept()
     while True:
         data = await websocket.receive_text()
-        res = retrieve_answer(
-            graphname, NaturalLanguageQuery(query=data), session.db_conn
-        )
+        res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
         await websocket.send_text(f"{res.natural_language_response}")
 
 
 @app.get("/health")
 def health():
-    return {
-        "status": "healthy",
-        "llm_completion_model": llm_config["completion_service"]["llm_model"],
-        "embedding_service": llm_config["embedding_service"]["embedding_model_service"],
-    }
+    return {"status": "healthy",
+            "llm_completion_model": llm_config["completion_service"]["llm_model"],
+            "embedding_service": llm_config["embedding_service"]["embedding_model_service"]}
 
 
 @app.get("/metrics")
@@ -522,54 +510,31 @@ async def metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-@app.get("/favicon.ico", include_in_schema=False)
+@app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
-    return FileResponse("app/static/favicon.ico")
+    return FileResponse('app/static/favicon.ico')
 
 
 @app.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     # need to open the file using the absolute path
     abs_path = os.path.abspath(__file__)
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql"
-    )
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql")
     with open(file_path, "r") as f:
         schema = f.read()
-    schema_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
-            graphname, schema
-        )
-    )
+    schema_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(graphname, schema))
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/SupportAI_IndexCreation.gsql"
-    )
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_IndexCreation.gsql")
     with open(file_path, "r") as f:
         index = f.read()
-    index_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(
-            graphname, index
-        )
-    )
+    index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format( graphname, index))
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql"
-    )
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql")
     with open(file_path, "r") as f:
         scan_for_updates = f.read()
-    res = conn.gsql(
-        "USE GRAPH "
-        + conn.graphname
-        + "\n"
-        + scan_for_updates
-        + "\n INSTALL QUERY Scan_For_Updates"
-    )
+    res = conn.gsql("USE GRAPH " + conn.graphname + "\n" + scan_for_updates + "\n INSTALL QUERY Scan_For_Updates")
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path),
-        "./gsql/supportai/Update_Vertices_Processing_Status.gsql",
-    )
+    file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Update_Vertices_Processing_Status.gsql")
     with open(file_path, "r") as f:
         update_vertices = f.read()
     res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+update_vertices+"\n INSTALL QUERY Update_Vertices_Processing_Status")
@@ -595,9 +560,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
 
     if ingest_config.file_format.lower() == "csv":
         abs_path = os.path.abspath(__file__)
-        file_path = os.path.join(
-            os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadCSV.gsql"
-        )
+        file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadCSV.gsql")
         with open(file_path, "r") as f:
             ingest_template = f.read()
         ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
@@ -611,17 +574,13 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
         ingest_template = ingest_template.replace('"double"', '"{}"'.format(quote))
 
     abs_path = os.path.abspath(__file__)
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "gsql/supportai/SupportAI_DataSourceCreation.gsql"
-    )
+    file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_DataSourceCreation.gsql")
     with open(file_path, "r") as f:
         data_stream_conn = f.read()
 
     # assign unique identifier to the data stream connection
 
-    data_stream_conn = data_stream_conn.replace(
-        "@source_name@", "SupportAI_" + graphname + "_" + str(uuid.uuid4().hex)
-    )
+    data_stream_conn = data_stream_conn.replace("@source_name@", "SupportAI_" + graphname + "_" + str(uuid.uuid4().hex))
 
     # check the data source and create the appropriate connection
     if ingest_config.data_source.lower() == "s3":
@@ -631,22 +590,16 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
             or data_conn.get("aws_secret_key") is None
         ):
             raise Exception("AWS credentials not provided")
-        connector = {
-            "type": "s3",
-            "access.key": data_conn["aws_access_key"],
-            "secret.key": data_conn["aws_secret_key"],
-        }
+        connector = {"type": "s3",
+                     "access.key": data_conn["aws_access_key"],
+                     "secret.key": data_conn["aws_secret_key"]}
 
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
 
     elif ingest_config.data_source.lower() == "azure":
         if ingest_config.data_source_config.get("account_key") is not None:
-            connector = {
-                "type": "abs",
-                "account.key": ingest_config.data_source_config["account_key"],
-            }
+            connector = {"type": "abs",
+                         "account.key": ingest_config.data_source_config["account_key"]}
         elif ingest_config.data_source_config.get("client_id") is not None:
             # verify that the client secret is also provided
             if ingest_config.data_source_config.get("client_secret") is None:
@@ -654,17 +607,13 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
             # verify that the tenant id is also provided
             if ingest_config.data_source_config.get("tenant_id") is None:
                 raise Exception("Tenant id not provided")
-            connector = {
-                "type": "abs",
-                "client.id": ingest_config.data_source_config["client_id"],
-                "client.secret": ingest_config.data_source_config["client_secret"],
-                "tenant.id": ingest_config.data_source_config["tenant_id"],
-            }
+            connector = {"type": "abs",
+                         "client.id": ingest_config.data_source_config["client_id"],
+                         "client.secret": ingest_config.data_source_config["client_secret"],
+                         "tenant.id": ingest_config.data_source_config["tenant_id"]}
         else:
             raise Exception("Azure credentials not provided")
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
     elif ingest_config.data_source.lower() == "gcs":
         # verify that the correct fields are provided
         if ingest_config.data_source_config.get("project_id") is None:
@@ -675,16 +624,12 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
             raise Exception("Private key not provided")
         if ingest_config.data_source_config.get("client_email") is None:
             raise Exception("Client email not provided")
-        connector = {
-            "type": "gcs",
-            "project_id": ingest_config.data_source_config["project_id"],
-            "private_key_id": ingest_config.data_source_config["private_key_id"],
-            "private_key": ingest_config.data_source_config["private_key"],
-            "client_email": ingest_config.data_source_config["client_email"],
-        }
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
+        connector = {"type": "gcs",
+                     "project_id": ingest_config.data_source_config["project_id"],
+                     "private_key_id": ingest_config.data_source_config["private_key_id"],
+                     "private_key": ingest_config.data_source_config["private_key"],
+                     "client_email": ingest_config.data_source_config["client_email"]}
+        data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
     else:
         raise Exception("Data source not implemented")
 
@@ -705,20 +650,10 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
     if loader_info.data_source_id is None:
         raise Exception("Data source id not provided")
 
-    try:
-        res = conn.gsql(
-            'USE GRAPH {}\nRUN LOADING JOB -noprint {} USING {}="{}"'.format(
-                graphname,
-                loader_info.load_job_id,
-                "DocumentContent",
-                "$" + loader_info.data_source_id + ":" + loader_info.file_path,
-            )
-        )
+    try:  
+        res = conn.gsql("USE GRAPH {}\nRUN LOADING JOB -noprint {} USING {}=\"{}\"".format(graphname, loader_info.load_job_id, "DocumentContent", "$"+loader_info.data_source_id+":"+loader_info.file_path))
     except Exception as e:
-        if (
-            "Running the following loading job in background with '-noprint' option:"
-            in str(e)
-        ):
+        if "Running the following loading job in background with '-noprint' option:" in str(e):
             res = str(e)
         else:
             raise e
@@ -731,12 +666,7 @@ async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchD
     get_eventual_consistency_checker(graphname)
     req_id = req_id_cv.get()
     status_manager.create_status(conn.username, req_id, graphname)
-    ingestion = BatchIngestion(
-        embedding_service,
-        get_llm_service(llm_config),
-        conn,
-        status_manager.get_status(req_id),
-    )
+    ingestion = BatchIngestion(embedding_service, get_llm_service(llm_config), conn, status_manager.get_status(req_id))
     if doc_source.service.lower() == "s3":
         background_tasks.add_task(ingestion.ingest_blobs, doc_source)
     else:
@@ -760,16 +690,10 @@ def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConne
     if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(config.index_name)) == 0:
         res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
 
-    res = conn.runInstalledQuery(
-        "HNSW_BuildIndex",
-        {
-            "index_name": config.index_name,
-            "v_types": config.vertex_types,
-            "M": config.M,
-            "ef_construction": config.ef_construction,
-        },
-    )
-
+    res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": config.index_name,
+                                                    "v_types": config.vertex_types,
+                                                    "M": config.M,
+                                                    "ef_construction": config.ef_construction})
     return res
 
 
@@ -788,42 +712,30 @@ async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: Tiger
 async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     get_eventual_consistency_checker(graphname)
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.search(
-            query.question,
-            query.method_params["indicies"],
-            query.method_params["top_k"],
-            query.method_params["num_hops"],
-            query.method_params["num_seen_min"],
-        )
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.search(query.question,
+                               query.method_params["indicies"],
+                               query.method_params["top_k"],
+                               query.method_params["num_hops"],
+                               query.method_params["num_seen_min"])
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.search(
-            query.question,
-            query.method_params["index"],
-            query.method_params["top_k"],
-            query.method_params["withHyDE"],
-        )
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.search(query.question,
+                               query.method_params["index"],
+                               query.method_params["top_k"],
+                               query.method_params["withHyDE"])
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.search(
-            query.question,
-            query.method_params["index"],
-            query.method_params["top_k"],
-            query.method_params["lookback"],
-            query.method_params["lookahead"],
-            query.method_params["withHyDE"],
-        )
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.search(query.question,
+                               query.method_params["index"],
+                               query.method_params["top_k"],
+                               query.method_params["lookback"],
+                               query.method_params["lookahead"],
+                               query.method_params["withHyDE"])
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.search(query.question, query.method_params["top_k"])
@@ -837,42 +749,30 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
-        retriever = HNSWOverlapRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.retrieve_answer(
-            query.question,
-            query.method_params["indices"],
-            query.method_params["top_k"],
-            query.method_params["num_hops"],
-            query.method_params["num_seen_min"],
-        )
+        retriever = HNSWOverlapRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.retrieve_answer(query.question,
+                                        query.method_params["indices"],
+                                        query.method_params["top_k"],
+                                        query.method_params["num_hops"],
+                                        query.method_params["num_seen_min"])
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.retrieve_answer(
-            query.question,
-            query.method_params["index"],
-            query.method_params["top_k"],
-            query.method_params["withHyDE"],
-        )
+        retriever = HNSWRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.retrieve_answer(query.question,
+                                        query.method_params["index"],
+                                        query.method_params["top_k"],
+                                        query.method_params["withHyDE"])
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
-        retriever = HNSWSiblingRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
-        )
-        res = retriever.retrieve_answer(
-            query.question,
-            query.method_params["index"],
-            query.method_params["top_k"],
-            query.method_params["lookback"],
-            query.method_params["lookahead"],
-            query.method_params["withHyDE"],
-        )
+        retriever = HNSWSiblingRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
+        res = retriever.retrieve_answer(query.question,
+                               query.method_params["index"],
+                               query.method_params["top_k"],
+                               query.method_params["lookback"],
+                               query.method_params["lookahead"],
+                               query.method_params["withHyDE"])
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(embedding_service, embedding_store, get_llm_service(llm_config), conn)
         res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
