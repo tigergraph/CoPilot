@@ -11,7 +11,7 @@ import time
 import uuid
 import logging
 from pyTigerGraph import TigerGraphConnection
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.agent import TigerGraphAgent
 from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
@@ -88,7 +88,7 @@ app.add_middleware(
 )
 
 
-security = HTTPBasic()
+security = HTTPBearer()
 session_handler = SessionHandler()
 status_manager = StatusManager()
 
@@ -210,31 +210,13 @@ async def log_requests(request: Request, call_next):
     
     return response
 
-def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
+def get_db_connection(graphname, credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
-        username = credentials.username,
-        password = credentials.password,
         graphname = graphname,
+        apiToken = credentials.credentials,
+        tgCloud = True,
     )
-
-    if db_config["getToken"]:
-        try:
-            apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
-        except:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Basic"},
-            )
-
-        conn = TigerGraphConnection(
-            host=db_config["hostname"],
-            username = credentials.username,
-            password = credentials.password,
-            graphname = graphname,
-            apiToken = apiToken
-        )
 
     conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
     conn = TigerGraphConnectionProxy(conn)
@@ -247,8 +229,12 @@ async def get_eventual_consistency_checker(graphname: str):
         return
 
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
-    credentials = HTTPBasicCredentials(username=db_config["username"], password=db_config["password"])
-    conn=get_db_connection(graphname, credentials)
+    conn = TigerGraphConnection(
+        host=db_config["hostname"],
+        username = db_config["username"],
+        password = db_config["password"],
+        graphname = graphname,
+    )
 
     if graphname not in consistency_checkers:
         vector_indices = {}
@@ -296,13 +282,12 @@ def read_root():
     return {"config": llm_config["model_name"]}
 
 @app.post("/{graphname}/getqueryembedding")
-def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def get_query_embedding(graphname, query: NaturalLanguageQuery):
     logger.debug(f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}")
-
     return embedding_service.embed_query(query.query)
 
 @app.post("/{graphname}/register_docs")
-def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -325,7 +310,7 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
     return results
 
 @app.post("/{graphname}/upsert_docs")
-def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]]):
     try:
         results = []
 
@@ -356,7 +341,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
         raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     
 @app.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def delete_docs(graphname, request_data: QueryDeleteRequest):
     ids = request_data.ids
     expr = request_data.expr
     
@@ -382,7 +367,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/{graphname}/retrieve_docs")
-def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
+def retrieve_docs(graphname, query: NaturalLanguageQuery, top_k:int = 3):
     logger.debug_pii(f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     return embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
 
@@ -412,7 +397,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
     try:
         steps = agent.question_for_agent(query.query)
-        # LogWriter.info(f"steps: {steps}")
+        logger.info(f"steps: {steps}")
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
@@ -427,6 +412,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
             resp.answered_question = True
             pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         except Exception as e:
+            logger.error(e, exc_info=True)
             resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
