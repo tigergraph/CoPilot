@@ -11,3 +11,7 @@ udfs/milvus/venv/*
 pyrightconfig.json
 .DS_Store
 tests/.DS_Store
+log.INFO
+log.ERROR
+log.AUDIT-COPILOT
+logs/*

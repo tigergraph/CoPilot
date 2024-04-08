@@ -12,6 +12,7 @@ from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class MapQuestionToSchema(BaseTool):
                 query (str):
                     The user's question.
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY MapQuestionToSchema._run()")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY MapQuestionToSchema._run()")
         parser = PydanticOutputParser(pydantic_object=MapQuestionToSchemaResponse)
 
         RESTATE_QUESTION_PROMPT = PromptTemplate(
@@ -125,9 +126,9 @@ class MapQuestionToSchema(BaseTool):
                             parsed_q.target_vertex_attributes, 
                             parsed_q.target_edge_attributes)
         except MapQuestionToSchemaException as e:
-            logger.warning(f"request_id={req_id_cv.get()} WARN MapQuestionToSchema to validate schema")
+            LogWriter.warning(f"request_id={req_id_cv.get()} WARN MapQuestionToSchema to validate schema")
             raise e
-        logger.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
         return parsed_q
     
     async def _arun(self) -> str:

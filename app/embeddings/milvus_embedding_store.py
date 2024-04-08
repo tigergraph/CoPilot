@@ -11,6 +11,7 @@ from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 from app.metrics.prometheus_metrics import metrics
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         connections.connect(**self.milvus_connection)
         metrics.milvus_active_connections.labels(self.collection_name).inc
-        logger.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
+        LogWriter.info(f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}")
         self.milvus = Milvus(
             embedding_function=embedding_service, 
             collection_name=collection_name, 
@@ -79,7 +80,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
                 return metadata
 
-            logger.info("Milvus add initial load documents init()")
+            LogWriter.info("Milvus add initial load documents init()")
             loader = DirectoryLoader("./app/pytg_documents/", 
                                     glob="*.json",
                                     loader_cls=JSONLoader,
@@ -96,11 +97,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             duration = time() - start_time
             metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
-            logger.info("Milvus finish initial load documents init()")
+            LogWriter.info("Milvus finish initial load documents init()")
 
-            logger.info("Milvus initialized successfully")
+            LogWriter.info("Milvus initialized successfully")
         else:
-            logger.info("Milvus already initialized, skipping initial document load")
+            LogWriter.info("Milvus already initialized, skipping initial document load")
 
     def add_embeddings(self, embeddings: Iterable[Tuple[str, List[float]]], metadatas: List[dict]=None):
         """ Add Embeddings.
@@ -128,7 +129,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     if "source" not in metadata:
                         metadata["source"] = ""
 
-            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus ENTRY add_embeddings()")
             texts = [text for text, _ in embeddings]
 
             operation_type = "add_texts"
@@ -140,33 +141,33 @@ class MilvusEmbeddingStore(EmbeddingStore):
             duration = time() - start_time
             metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
-            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus EXIT add_embeddings()")
 
             # Check if registration was successful
             if added:
                 success_message = f"Document registered with id: {added[0]}"
-                logger.info(success_message)
+                LogWriter.info(success_message)
                 return success_message
             else:
                 error_message = f"Failed to register document {added}"
-                logger.error(error_message)
+                LogWriter.error(error_message)
                 raise Exception(error_message)
                     
         except Exception as e:
             error_message = f"An error occurred while registerin document: {str(e)}"
-            logger.error(error_message)
+            LogWriter.error(error_message)
             raise e
         
     def upsert_embeddings(self, id: str, embeddings: Iterable[Tuple[str, List[float]]], metadatas: Optional[List[dict]] = None):
         try:
-            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY upsert_document()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus ENTRY upsert_document()")
 
             if metadatas is None:
                     metadatas = []
                     
             # add fields required by Milvus if they do not exist
             if self.support_ai_instance:
-                logger.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
+                LogWriter.info(f"This is a SupportAI instance and needs vertex ids stored at {self.vertex_field}")
                 for metadata in metadatas:
                     if self.vertex_field not in metadata:
                         metadata[self.vertex_field] = ""
@@ -198,8 +199,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
             # Perform upsert operation
             operation_type = "upsert"
             if id is not None and id.strip():
-                logger.info(f"id: {id}")
-                logger.info(f"documents: {documents}")
+                LogWriter.info(f"id: {id}")
+                LogWriter.info(f"documents: {documents}")
 
 
                 metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
@@ -213,36 +214,36 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 metrics.milvus_query_total.labels(self.collection_name, operation_type).inc()
                 start_time = time()
 
-                logger.info(f"documents: {documents}")
+                LogWriter.info(f"documents: {documents}")
                 upserted = self.milvus.upsert(documents=documents)
 
                 duration = time() - start_time
                 metrics.milvus_query_duration_seconds.labels(self.collection_name, operation_type).observe(duration)
 
-            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT upsert_document()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus EXIT upsert_document()")
             
             # Check if upsertion was successful
             if upserted:
                 success_message = f"Document upserted with id: {upserted[0]}"
-                logger.info(success_message)
+                LogWriter.info(success_message)
                 return success_message
             else:
                 error_message = f"Failed to upsert document {upserted}"
-                logger.error(error_message)
+                LogWriter.error(error_message)
                 raise Exception(error_message)
         
         except Exception as e:
             error_message = f"An error occurred while upserting document: {str(e)}"
-            logger.error(error_message)
+            LogWriter.error(error_message)
             raise e
     
     def remove_embeddings(self, ids: Optional[List[str]] = None, expr: Optional[str] = None):
         try:
-            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus ENTRY delete()")
 
             if not self.check_collection_exists():
-                logger.info(f"request_id={req_id_cv.get()} Milvus collection {self.collection_name} does not exist")
-                logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
+                LogWriter.info(f"request_id={req_id_cv.get()} Milvus collection {self.collection_name} does not exist")
+                LogWriter.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
                 return f"Milvus collection {self.collection_name} does not exist"
             
             # Check if ids or expr are provided
@@ -268,21 +269,21 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 metrics.milvus_query_duration_seconds.labels(self.collection_name, "delete").observe(end_time - start_time)
                 deleted_message = f"deleted by id(s): {ids} {deleted}"
 
-            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus EXIT delete()")
 
             # Check if deletion was successful
             if deleted:
                 success_message = f"Document(s) {deleted_message}."
-                logger.info(success_message)
+                LogWriter.info(success_message)
                 return success_message
             else:
                 error_message = f"Failed to delete document(s). {deleted_message}"
-                logger.error(error_message)
+                LogWriter.error(error_message)
                 raise Exception(error_message)
         
         except Exception as e:
             error_message = f"An error occurred while deleting document(s): {str(e)}"
-            logger.error(error_message)
+            LogWriter.error(error_message)
             raise e
 
     def retrieve_similar(self, query_embedding, top_k=10):
@@ -298,7 +299,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 Document results for search.
         """
         try:
-            logger.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()")
 
             start_time = time()
             metrics.milvus_query_total.labels(self.collection_name, "similarity_search_by_vector").inc()
@@ -311,11 +312,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
             # Convert pk from int to str for each document
             for doc in similar:
                 doc.metadata['pk'] = str(doc.metadata['pk'])
-            logger.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
+            LogWriter.info(f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()")
             return similar
         except Exception as e:
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
-            logger.error(error_message)
+            LogWriter.error(error_message)
             raise e
         
     def add_connection_parameters(self, query_params: dict) -> dict:
