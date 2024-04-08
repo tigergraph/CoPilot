@@ -527,7 +527,7 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/SupportAI_IndexCreation.gsql")
     with open(file_path, "r") as f:
         index = f.read()
-    index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format( graphname, index))
+    index_res = conn.gsql("""USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(graphname, index))
 
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql")
     with open(file_path, "r") as f:
@@ -547,9 +547,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
     get_eventual_consistency_checker(graphname)
     if ingest_config.file_format.lower() == "json":
         abs_path = os.path.abspath(__file__)
-        file_path = os.path.join(
-            os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql"
-        )
+        file_path = os.path.join(os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql")
         with open(file_path, "r") as f:
             ingest_template = f.read()
         ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
@@ -585,10 +583,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
     # check the data source and create the appropriate connection
     if ingest_config.data_source.lower() == "s3":
         data_conn = ingest_config.data_source_config
-        if (
-            data_conn.get("aws_access_key") is None
-            or data_conn.get("aws_secret_key") is None
-        ):
+        if data_conn.get("aws_access_key") is None or data_conn.get("aws_secret_key") is None:
             raise Exception("AWS credentials not provided")
         connector = {"type": "s3",
                      "access.key": data_conn["aws_access_key"],
