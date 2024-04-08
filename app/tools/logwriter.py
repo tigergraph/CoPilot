@@ -5,13 +5,13 @@ import json
 from logging.handlers import RotatingFileHandler
 import re
 
-LOG_CONFIG = os.getenv("LOG_CONFIG")
+LOG_CONFIG = os.getenv("LOG_CONFIG", "configs/log_config.json")
 
 if LOG_CONFIG is None or (LOG_CONFIG.endswith(".json") and not os.path.exists(LOG_CONFIG)):
     log_config =  {
         "log_file_path": "/tmp/logs",
         "log_max_size": 104857600,
-        "log_backup_count": 100
+        "log_backup_count": 0
     }
 elif LOG_CONFIG.endswith(".json"):
     with open(LOG_CONFIG, "r") as f:

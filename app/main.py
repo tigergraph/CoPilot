@@ -33,9 +33,9 @@ from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
 # Configs
-LLM_SERVICE = os.getenv("LLM_CONFIG")
-DB_CONFIG = os.getenv("DB_CONFIG")
-MILVUS_CONFIG = os.getenv("MILVUS_CONFIG")
+LLM_SERVICE = os.getenv("LLM_CONFIG", "configs/llm_config.json")
+DB_CONFIG = os.getenv("DB_CONFIG", "configs/db_config.json")
+MILVUS_CONFIG = os.getenv("MILVUS_CONFIG", "configs/milvus_config.json")
 PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 
 if LLM_SERVICE is None:
