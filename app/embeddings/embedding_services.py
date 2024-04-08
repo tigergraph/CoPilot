@@ -103,10 +103,22 @@ class VertexAI_PaLM_Embedding(EmbeddingModel):
         self.embeddings = VertexAIEmbeddings()
 
 class AWS_Bedrock_Embedding(EmbeddingModel):
-    """ AWS Bedrock Embedding Model
-    """
+    """AWS Bedrock Embedding Model"""
+
     def __init__(self, config):
-        super().__init__(config, model_name=config.get("model_name", "AWS Bedrock"))
-        from langchain.embeddings import BedrockEmbeddings
-        self.embeddings = BedrockEmbeddings(credentials_profile_name = config["credentials_profile_name"],
-                                            region_name = config["region_name"])
+        from langchain_community.embeddings import BedrockEmbeddings
+        import boto3
+
+        super().__init__(config=config, model_name=config["embedding_model"])
+
+        client = boto3.client(
+            "bedrock-runtime",
+            region_name="us-east-1",
+            aws_access_key_id=config["authentication_configuration"][
+                "AWS_ACCESS_KEY_ID"
+            ],
+            aws_secret_access_key=config["authentication_configuration"][
+                "AWS_SECRET_ACCESS_KEY"
+            ],
+        )
+        self.embeddings = BedrockEmbeddings(client=client)

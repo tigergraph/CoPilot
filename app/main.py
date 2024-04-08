@@ -31,6 +31,7 @@ from app.llm_services import (
     AWSBedrock,
 )
 from app.embeddings.embedding_services import (
+    AWS_Bedrock_Embedding,
     AzureOpenAI_Ada002,
     OpenAI_Embedding,
     VertexAI_PaLM_Embedding,
@@ -127,6 +128,8 @@ elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azur
     embedding_service = AzureOpenAI_Ada002(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "vertexai":
     embedding_service = VertexAI_PaLM_Embedding(llm_config["embedding_service"])
+elif llm_config["embedding_service"]["embedding_model_service"].lower() == "bedrock":
+    embedding_service = AWS_Bedrock_Embedding(llm_config["embedding_service"])
 else:
     raise Exception("Embedding service not implemented")
 
@@ -571,21 +574,14 @@ def retrieve_answer(
 
     try:
         steps = agent.question_for_agent(query.query)
-        print("******agent steps:")
-        import json
 
-        print(json.dumps(str(steps), indent=2))
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-            # TODO: try again if there were no steps taken?
-            # if len(steps["intermediate_steps"]) == 0:
-            # pass
+            # try again if there were no steps taken
+            if len(steps["intermediate_steps"]) == 0:
+                steps = agent.question_for_agent(query.query)
+
             generate_func_output = steps["intermediate_steps"][-1][-1]
-            print()
-            print(json.dumps(str(steps["intermediate_steps"]), indent=2))
-            print()
-            print(generate_func_output)
-            print()
             resp.natural_language_response = steps["output"]
             resp.query_sources = {
                 "function_call": generate_func_output["function_call"],
