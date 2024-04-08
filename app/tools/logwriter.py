@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import os
 import json
@@ -20,6 +21,40 @@ else:
         log_config = json.loads(str(LOG_CONFIG))
     except json.JSONDecodeError as e:
         raise Exception("LOG_CONFIG must be a .json file or a JSON string, failed with error: " + str(e))
+
+class CorrectingLogger(logging.Logger):
+    def findCaller(self, stack_info=False, stacklevel=1):
+        """
+        Override findCaller to look further back in the stack.
+        This adjusts stacklevel to find the correct caller outside of LogWriter.
+        """
+        f = logging.currentframe()
+        if f is not None:
+            f = f.f_back
+        orig_f = f
+        while f and stacklevel > 0:
+            f = f.f_back
+            stacklevel -= 1
+        if not f:
+            f = orig_f
+        rv = "(unknown file)", 0, "(unknown function)", None
+        while hasattr(f, "f_code"):
+            co = f.f_code
+            filename = os.path.normcase(co.co_filename)
+            if filename == logging._srcfile or filename == os.path.normcase(__file__):
+                f = f.f_back
+                continue
+            sinfo = None
+            if stack_info:
+                sinfo = self.find_stack_info(f)
+            rv = (co.co_filename, f.f_lineno, co.co_name, sinfo)
+            break
+        return rv
+
+class UTCFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        utc_datetime = datetime.utcfromtimestamp(record.created)
+        return utc_datetime.strftime("%m%d %H:%M:%S%f,")
 
 class LogWriter:
     logger_initialized = False
@@ -51,6 +86,7 @@ class LogWriter:
         max_size = log_config.get("log_max_size", 100*1024*1024)
         backup_count = log_config.get("log_max_size", 100)
 
+        logger = logging.setLoggerClass(CorrectingLogger)
         logger = logging.getLogger(name)
         logger.setLevel(level)
         handler = RotatingFileHandler(file_name, maxBytes=max_size, backupCount=backup_count)
@@ -65,7 +101,7 @@ class LogWriter:
             log_directory = log_config.get("log_file_path", "/tmp/logs")
             os.makedirs(log_directory, exist_ok=True)
 
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = UTCFormatter('%(levelname).1s%(asctime)s %(process)d %(filename)s:%(lineno)d] %(message)s')
 
             # Logging for info, error and audit
             LogWriter.general_logger = LogWriter.setup_logger(
@@ -77,7 +113,6 @@ class LogWriter:
             LogWriter.audit_logger = LogWriter.setup_logger(
                 "audit", "log.AUDIT-COPILOT", logging.INFO, formatter)
 
-            # logging for log.out
             stdout_handler = logging.StreamHandler()
             stdout_handler.setLevel(logging.DEBUG)
             stdout_handler.setFormatter(formatter)
