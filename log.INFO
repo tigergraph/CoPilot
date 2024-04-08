@@ -30,3 +30,19 @@
 2024-04-07 19:43:41,774 - general - INFO - Milvus already initialized, skipping initial document load
 2024-04-07 19:43:41,775 - general - INFO - Setting up Milvus embedding store for SupportAI with collection_name: tg_support_documents
 2024-04-07 19:43:42,127 - general - INFO - Initializing Milvus with host=https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com, port=19541, username=ahmed, collection=tg_support_documents
+2024-04-07 23:51:57,713 - general - INFO - request_id=None ENTRY embed_documents()
+2024-04-07 23:51:58,425 - general - INFO - request_id=None EXIT embed_documents()
+2024-04-07 23:51:58,488 - general - INFO - Milvus enabled for host https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com at port 19541
+2024-04-07 23:51:58,488 - general - INFO - Setting up Milvus embedding store for InquiryAI
+2024-04-07 23:51:58,835 - general - INFO - Initializing Milvus with host=https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com, port=19541, username=ahmed, collection=tg_inquiry_documents
+2024-04-07 23:51:59,755 - general - INFO - Milvus already initialized, skipping initial document load
+2024-04-07 23:51:59,756 - general - INFO - Setting up Milvus embedding store for SupportAI with collection_name: tg_support_documents
+2024-04-07 23:52:00,072 - general - INFO - Initializing Milvus with host=https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com, port=19541, username=ahmed, collection=tg_support_documents
+2024-04-07 23:57:42,003 - general - INFO - request_id=None ENTRY embed_documents()
+2024-04-07 23:57:43,035 - general - INFO - request_id=None EXIT embed_documents()
+2024-04-07 23:57:43,092 - general - INFO - Milvus enabled for host https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com at port 19541
+2024-04-07 23:57:43,092 - general - INFO - Setting up Milvus embedding store for InquiryAI
+2024-04-07 23:57:43,468 - general - INFO - Initializing Milvus with host=https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com, port=19541, username=ahmed, collection=tg_inquiry_documents
+2024-04-07 23:57:44,382 - general - INFO - Milvus already initialized, skipping initial document load
+2024-04-07 23:57:44,384 - general - INFO - Setting up Milvus embedding store for SupportAI with collection_name: tg_support_documents
+2024-04-07 23:57:44,692 - general - INFO - Initializing Milvus with host=https://in01-9b1837c5225162d.aws-us-west-2.vectordb.zillizcloud.com, port=19541, username=ahmed, collection=tg_support_documents

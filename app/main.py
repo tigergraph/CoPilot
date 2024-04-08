@@ -203,8 +203,7 @@ async def log_requests(request: Request, call_next):
             "endpoint": request.url.path,
             "actionName": action_name,
             "status": status,
-            "requestId": req_id,
-            "message": "Add logic to capture specific messages or errors"
+            "requestId": req_id
         }    
         LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
         update_metrics(start_time=start_time, label=request.url.path)
