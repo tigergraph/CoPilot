@@ -1,1 +1,3 @@
-from app.supportai.extractors.LLMEntityRelationshipExtractor import LLMEntityRelationshipExtractor
+from app.supportai.extractors.LLMEntityRelationshipExtractor import (
+    LLMEntityRelationshipExtractor,
+)

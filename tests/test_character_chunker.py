@@ -1,8 +1,8 @@
 import unittest
 from app.supportai.chunkers.character_chunker import CharacterChunker
 
-class TestCharacterChunker(unittest.TestCase):
 
+class TestCharacterChunker(unittest.TestCase):
     def test_chunk_without_overlap(self):
         """Test chunking without overlap."""
         chunker = CharacterChunker(chunk_size=4)
@@ -42,7 +42,7 @@ class TestCharacterChunker(unittest.TestCase):
         """Test when the last chunk is shorter than the chunk size."""
         chunker = CharacterChunker(chunk_size=4, overlap_size=1)
         input_string = "abcdefghijklm"
-        expected_chunks = ['abcd', 'defg', 'ghij', 'jklm']
+        expected_chunks = ["abcd", "defg", "ghij", "jklm"]
         self.assertEqual(chunker.chunk(input_string), expected_chunks)
 
     def test_chunk_size_equals_overlap_size(self):
@@ -65,5 +65,6 @@ class TestCharacterChunker(unittest.TestCase):
         with self.assertRaises(ValueError):
             CharacterChunker(chunk_size=-1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
