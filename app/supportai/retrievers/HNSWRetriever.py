@@ -1,8 +1,15 @@
 from app.supportai.retrievers import BaseRetriever
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 
+
 class HNSWRetriever(BaseRetriever):
-    def __init__(self, embedding_service, embedding_store, llm_service, connection: TigerGraphConnectionProxy):
+    def __init__(
+        self,
+        embedding_service,
+        embedding_store,
+        llm_service,
+        connection: TigerGraphConnectionProxy,
+    ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
         self._check_query_install("HNSW_Search_Sub")
         self._check_query_install("HNSW_Search_Content")
@@ -13,10 +20,13 @@ class HNSWRetriever(BaseRetriever):
         else:
             query_embedding = self._generate_embedding(question)
         params = self.embedding_store.add_connection_parameters(
-                                          {"v_type": index,
-                                           "query_vector_as_string": query_embedding,
-                                           "collection_name": self.conn.graphname+"_"+index, 
-                                           "top_k": top_k})
+            {
+                "v_type": index,
+                "query_vector_as_string": query_embedding,
+                "collection_name": self.conn.graphname + "_" + index,
+                "top_k": top_k,
+            }
+        )
         res = self.conn.runInstalledQuery("HNSW_Search_Content", params)
         return res
 

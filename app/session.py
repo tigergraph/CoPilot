@@ -1,6 +1,7 @@
 import uuid
 
-class Session():
+
+class Session:
     def __init__(self, session_id, user_id, db_conn):
         self.session_id = session_id
         self.user_id = user_id
@@ -8,7 +9,7 @@ class Session():
         self.graphname = db_conn.graphname
 
 
-class SessionHandler():
+class SessionHandler:
     def __init__(self):
         self.sessions = {}
 

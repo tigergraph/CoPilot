@@ -29,7 +29,9 @@ class AWSBedrock(LLM_Model):
         )
 
         self.prompt_path = config["prompt_path"]
-        LogWriter.info(f"request_id={req_id_cv.get()} instantiated AWSBedrock model_name={model_name}")
+        LogWriter.info(
+            f"request_id={req_id_cv.get()} instantiated AWSBedrock model_name={model_name}"
+        )
 
     @property
     def map_question_schema_prompt(self):

@@ -34,25 +34,42 @@ class TigerGraphAgent:
         embedding_store (EmbeddingStore):
             a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
     """
-    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store: EmbeddingStore):
+
+    def __init__(
+        self,
+        llm_provider: LLM_Model,
+        db_connection: "TigerGraphConnectionProxy",
+        embedding_model: EmbeddingModel,
+        embedding_store: EmbeddingStore,
+    ):
         self.conn = db_connection
 
         self.llm = llm_provider
         self.model_name = embedding_model.model_name
 
-        self.mq2s = MapQuestionToSchema(self.conn, self.llm.model, self.llm.map_question_schema_prompt)
-        self.gen_func = GenerateFunction(self.conn, self.llm.model, self.llm.generate_function_prompt, embedding_model, embedding_store)
+        self.mq2s = MapQuestionToSchema(
+            self.conn, self.llm.model, self.llm.map_question_schema_prompt
+        )
+        self.gen_func = GenerateFunction(
+            self.conn,
+            self.llm.model,
+            self.llm.generate_function_prompt,
+            embedding_model,
+            embedding_store,
+        )
 
         tools = [self.mq2s, self.gen_func]
         logger.debug(f"request_id={req_id_cv.get()} agent tools created")
-        self.agent = initialize_agent(tools,
-                                      self.llm.model,
-                                      agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                                      verbose=False,
-                                      return_intermediate_steps=True,
-                                      #max_iterations=7,
-                                      early_stopping_method="generate",
-                                      handle_parsing_errors=True)
+        self.agent = initialize_agent(
+            tools,
+            self.llm.model,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=False,
+            return_intermediate_steps=True,
+            # max_iterations=7,
+            early_stopping_method="generate",
+            handle_parsing_errors=True,
+        )
 
         '''
         agent_kwargs={
@@ -78,7 +95,9 @@ class TigerGraphAgent:
 
         try:
             LogWriter.info(f"request_id={req_id_cv.get()} ENTRY question_for_agent")
-            logger.debug_pii(f"request_id={req_id_cv.get()} question_for_agent question={question}")
+            logger.debug_pii(
+                f"request_id={req_id_cv.get()} question_for_agent question={question}"
+            )
             resp = self.agent({"input": question})
             LogWriter.info(f"question for agent: {resp}")
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
@@ -87,10 +106,13 @@ class TigerGraphAgent:
             metrics.llm_query_error_total.labels(self.model_name).inc()
             LogWriter.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
             import traceback
+
             traceback.print_exc()
             raise e
         finally:
             metrics.llm_request_total.labels(self.model_name).inc()
             metrics.llm_inprogress_requests.labels(self.model_name).dec()
             duration = time.time() - start_time
-            metrics.llm_request_duration_seconds.labels(self.model_name).observe(duration)
+            metrics.llm_request_duration_seconds.labels(self.model_name).observe(
+                duration
+            )
