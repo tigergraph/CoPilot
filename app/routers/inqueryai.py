@@ -24,7 +24,7 @@ from app.tools.validation_utils import MapQuestionToSchemaException
 from app.util import get_db_connection
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(tags=["InqueryAI"])
 
 
 @router.post("/{graphname}/query")

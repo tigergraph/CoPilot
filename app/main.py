@@ -15,7 +15,7 @@ from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
 
-app = FastAPI(root_path=PATH_PREFIX)
+app = FastAPI(title="Copilot")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,8 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(routers.inqueryai_router)
-app.include_router(routers.supportai_router)
+app.include_router(routers.root_router, prefix=PATH_PREFIX)
+app.include_router(routers.inqueryai_router, prefix=PATH_PREFIX)
+app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
 
 
 excluded_metrics_paths = ("/docs", "/openapi.json", "/metrics")
@@ -98,29 +99,3 @@ def update_metrics(start_time, label):
     duration = time.time() - start_time
     pmetrics.copilot_endpoint_duration_seconds.labels(label).observe(duration)
     pmetrics.copilot_endpoint_total.labels(label).inc()
-
-
-@app.get("/")
-def read_root():
-    return {"config": llm_config["model_name"]}
-
-
-@app.get("/health")
-def health():
-    return {
-        "status": "healthy",
-        "llm_completion_model": llm_config["completion_service"]["llm_model"],
-        "embedding_service": llm_config["embedding_service"]["embedding_model_service"],
-    }
-
-
-@app.get("/metrics")
-async def metrics():
-    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return FileResponse("app/static/favicon.ico")

@@ -24,7 +24,7 @@ from app.supportai.supportai_ingest import BatchIngestion
 from app.util import get_db_connection, get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(tags=["SupportAI"])
 
 
 @router.post("/{graphname}/supportai/initialize")
