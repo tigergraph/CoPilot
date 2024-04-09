@@ -65,9 +65,9 @@ else:
 
 if MILVUS_CONFIG is None or (MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)):
     milvus_config = {
-        "host": "localhost",
-        "port": "19530",
-        "enabled": "false"
+            "host": "localhost",
+            "port": "19530",
+            "enabled": "false"
     }
 elif MILVUS_CONFIG.endswith(".json"):
     with open(MILVUS_CONFIG, "r") as f:
@@ -140,7 +140,7 @@ if milvus_config.get("enabled") == "true":
         support_ai_instance=False,
         username=milvus_config.get("username", ""),
         password=milvus_config.get("password", ""),
-        alias=milvus_config.get("alias", "default"),
+        alias=milvus_config.get("alias", "default")
     )
 
     support_collection_name=milvus_config.get("collection_name", "tg_support_documents")
@@ -157,7 +157,7 @@ if milvus_config.get("enabled") == "true":
         vector_field=milvus_config.get("vector_field", "document_vector"),
         text_field=milvus_config.get("text_field", "document_content"),
         vertex_field=vertex_field,
-        alias=milvus_config.get("alias", "default"),
+        alias=milvus_config.get("alias", "default")
     )
 
 async def get_basic_auth_credentials(request: Request):
@@ -182,7 +182,7 @@ async def get_basic_auth_credentials(request: Request):
 
     return username
 
-@app.middleware("http")
+# @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
     LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
@@ -311,7 +311,8 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
 
     return embedding_service.embed_query(query.query)
 
-@app.post("/{graphname}/register_docs")
+# @app.post("/{graphname}/register_docs")
+@app.post("/{graphname}/registercustomquery")
 def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
@@ -423,9 +424,8 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         LogWriter.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
 
-    resp = CoPilotResponse
-    resp.response_type = "inquiryai"
-
+    resp = CoPilotResponse(natural_language_response="", answered_question=False, response_type="inquiryai")
+    steps = ""
     try:
         steps = agent.question_for_agent(query.query)
         # try again if there were no steps taken
@@ -434,7 +434,6 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
 
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
-
             generate_func_output = steps["intermediate_steps"][-1][-1]
             resp.natural_language_response = steps["output"]
             resp.query_sources = {
@@ -444,7 +443,7 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
             }
             resp.answered_question = True
             pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
-        except Exception:
+        except Exception as e:
             resp.natural_language_response = "An error occurred while processing the response. Please try again."
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
@@ -458,9 +457,9 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
         traceback.print_exc()
-    except Exception:
+    except Exception as e:
         resp.natural_language_response = "An error occurred while processing the response. Please try again."
-        resp.query_sources = {}
+        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
         traceback.print_exc()
