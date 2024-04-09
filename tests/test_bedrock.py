@@ -6,7 +6,7 @@ import parse_test_config
 import sys
 
 
-class TestWithOpenAI(CommonTests, unittest.TestCase):
+class TestWithClaude3Bedrock(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         from app.main import app
