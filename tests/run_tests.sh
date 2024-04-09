@@ -3,12 +3,9 @@ export DB_CONFIG=../configs/db_config.json
 export LOGLEVEL=INFO
 
 # Set default values
-# llm_service="all"
-# schema="all"
-# use_wandb="true"
-llm_service="aws_bedrock"
-schema="DigitalInfra"
-use_wandb="false"
+llm_service="all"
+schema="all"
+use_wandb="true"
 
 # Check if llm_service argument is provided
 if [ "$#" -ge 1 ]; then
@@ -38,7 +35,6 @@ openai_gpt4_config="../configs/openai_gpt4_config.json"
 gcp_textbison_script="test_gcp_text-bison.py"
 gcp_textbison_config="../configs/gcp_text-bison_config.json"
 
-# TODO: add bedrock
 aws_bedrock_script="test_bedrock.py"
 aws_bedrock_config="../configs/bedrock_config.json"
 

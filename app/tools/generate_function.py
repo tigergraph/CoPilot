@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class GenerateFunction(BaseTool):
     """ GenerateFunction Tool.
-        Tool to generate and execute the appropriate function call for the question.
+        Tool to generate and execute the appropriate function call for the question. Should be executed before GenerateFunction.
     """
     name = "GenerateFunction"
     description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."
@@ -129,7 +129,6 @@ class GenerateFunction(BaseTool):
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
-        print('generated...',generated)
         generated = func_parser.invoke(generated)
         LogWriter.info(f"generated_function: {generated}")
 

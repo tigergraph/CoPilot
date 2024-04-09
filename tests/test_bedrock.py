@@ -18,7 +18,7 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "GPT-4")
+        self.assertEqual(resp.json()["config"], "Claude-3-haiku")
 
 
 if __name__ == "__main__":

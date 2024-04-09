@@ -182,6 +182,7 @@ async def get_basic_auth_credentials(request: Request):
 
     return username
 
+# FIXME: this middle ware causes the API to hang if it raises an error
 # @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
