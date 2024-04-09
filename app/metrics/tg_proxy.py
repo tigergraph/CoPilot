@@ -5,6 +5,8 @@ from app.metrics.prometheus_metrics import metrics
 
 class TigerGraphConnectionProxy:
     def __init__(self, tg_connection: TigerGraphConnection):
+        self.original_req = tg_connection._req
+        tg_connection._req = self._req
         self._tg_connection = tg_connection
         metrics.tg_active_connections.inc()
 
@@ -29,7 +31,7 @@ class TigerGraphConnectionProxy:
         # always use proxy endpoint in GUI for restpp and gsql
         url = re.sub(r'/gsqlserver/', '/api/gsql-server/', url)
         url = re.sub(r'/restpp/', '/api/restpp/', url)
-        return self._tg_connection._req(method, url, "token", *args, **kwargs)
+        return self.original_req(method, url, "token", *args, **kwargs)
 
     def _runInstalledQuery(self, query_name, params):
         start_time = time.time()

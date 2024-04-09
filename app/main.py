@@ -216,6 +216,7 @@ def get_db_connection(graphname, credentials: Annotated[HTTPAuthorizationCredent
         graphname = graphname,
         apiToken = credentials.credentials,
         tgCloud = True,
+        sslPort=14240
     )
 
     conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
