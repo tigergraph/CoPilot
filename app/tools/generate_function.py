@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class GenerateFunction(BaseTool):
     """ GenerateFunction Tool.
-        Tool to generate and execute the appropriate function call for the question. Should be executed before GenerateFunction.
+        Tool to generate and execute the appropriate function call for the question.
     """
     name = "GenerateFunction"
     description = "Generates and executes a function call on the database. Always use MapQuestionToSchema before this tool."

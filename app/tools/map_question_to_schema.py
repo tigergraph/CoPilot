@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class MapQuestionToSchema(BaseTool):
     """ MapQuestionToSchema Tool.
-        Tool to map questions to their datatypes in the database. Should be executed before GenerateFunction 
+        Tool to map questions to their datatypes in the database. Should be executed before GenerateFunction.
     """
     name = "MapQuestionToSchema"
     description = "Always run first to map the query to the graph's schema. GenerateFunction before using MapQuestionToSchema"
