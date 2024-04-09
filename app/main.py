@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional, Union, Annotated, List, Dict
+import traceback
 from fastapi import FastAPI, BackgroundTasks, Header, Depends, HTTPException, status, Request, WebSocket
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
@@ -14,8 +15,8 @@ from pyTigerGraph import TigerGraphConnection
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.agent import TigerGraphAgent
-from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
-from app.embeddings.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
+from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI, AWSBedrock
+from app.embeddings.embedding_services import AWS_Bedrock_Embedding, AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
 from app.embeddings.faiss_embedding_store import FAISS_EmbeddingStore
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.supportai.supportai_ingest import BatchIngestion
@@ -51,7 +52,7 @@ if LLM_SERVICE[-5:] != ".json":
 else:
     with open(LLM_SERVICE, "r") as f:
         llm_config = json.load(f)
-    
+
 if DB_CONFIG[-5:] != ".json":
     try:
         db_config = json.loads(str(DB_CONFIG))
@@ -60,13 +61,14 @@ if DB_CONFIG[-5:] != ".json":
 else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
-    
+
+
 if MILVUS_CONFIG is None or (MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)):
     milvus_config = {
             "host": "localhost",
             "port": "19530",
             "enabled": "false"
-        }
+    }
 elif MILVUS_CONFIG.endswith(".json"):
     with open(MILVUS_CONFIG, "r") as f:
         milvus_config = json.load(f)
@@ -103,8 +105,11 @@ elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azur
     embedding_service = AzureOpenAI_Ada002(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "vertexai":
     embedding_service = VertexAI_PaLM_Embedding(llm_config["embedding_service"])
+elif llm_config["embedding_service"]["embedding_model_service"].lower() == "bedrock":
+    embedding_service = AWS_Bedrock_Embedding(llm_config["embedding_service"])
 else:
     raise Exception("Embedding service not implemented")
+
 
 def get_llm_service(llm_config):
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
@@ -115,6 +120,8 @@ def get_llm_service(llm_config):
         return AWS_SageMaker_Endpoint(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         return GoogleVertexAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
+        return AWSBedrock(llm_config["completion_service"])
     else:
         raise Exception("LLM Completion Service Not Supported")
 
@@ -129,7 +136,7 @@ if milvus_config.get("enabled") == "true":
         embedding_service,
         host=milvus_config["host"],
         port=milvus_config["port"],
-        collection_name="tg_inquiry_documents", 
+        collection_name="tg_inquiry_documents",
         support_ai_instance=False,
         username=milvus_config.get("username", ""),
         password=milvus_config.get("password", ""),
@@ -144,7 +151,7 @@ if milvus_config.get("enabled") == "true":
         host=milvus_config["host"],
         port=milvus_config["port"],
         support_ai_instance=True,
-        collection_name=support_collection_name, 
+        collection_name=support_collection_name,
         username=milvus_config.get("username", ""),
         password=milvus_config.get("password", ""),
         vector_field=milvus_config.get("vector_field", "document_vector"),
@@ -175,7 +182,8 @@ async def get_basic_auth_credentials(request: Request):
 
     return username
 
-@app.middleware("http")
+# FIXME: this middle ware causes the API to hang if it raises an error
+# @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
     LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
@@ -210,9 +218,10 @@ async def log_requests(request: Request, call_next):
     
     return response
 
+
 def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
-        host=db_config["hostname"],
+        host = db_config["hostname"],
         username = credentials.username,
         password = credentials.password,
         graphname = graphname,
@@ -230,16 +239,17 @@ def get_db_connection(graphname, credentials: Annotated[HTTPBasicCredentials, De
 
         conn = TigerGraphConnection(
             host=db_config["hostname"],
-            username = credentials.username,
-            password = credentials.password,
-            graphname = graphname,
-            apiToken = apiToken
+            username=credentials.username,
+            password=credentials.password,
+            graphname=graphname,
+            apiToken=apiToken,
         )
 
-    conn.customizeHeader(timeout=db_config["default_timeout"]*1000, responseSize=5000000)
+    conn.customizeHeader(timeout=db_config["default_timeout"] * 1000, responseSize=5000000)
     conn = TigerGraphConnectionProxy(conn)
-    
+
     return conn
+
 
 async def get_eventual_consistency_checker(graphname: str):
     if not db_config.get("enable_consistency_checker", True):
@@ -256,26 +266,25 @@ async def get_eventual_consistency_checker(graphname: str):
             vertex_field = milvus_config.get("vertex_field", "vertex_id")
             index_names = milvus_config.get("indexes", ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"])
             for index_name in index_names:
-                vector_indices[graphname+"_"+index_name] = MilvusEmbeddingStore(
+                vector_indices[graphname + "_" + index_name] = MilvusEmbeddingStore(
                     embedding_service,
                     host=milvus_config["host"],
                     port=milvus_config["port"],
                     support_ai_instance=True,
-                    collection_name=graphname+"_"+index_name, 
+                    collection_name=graphname + "_" + index_name,
                     username=milvus_config.get("username", ""),
                     password=milvus_config.get("password", ""),
                     vector_field=milvus_config.get("vector_field", "document_vector"),
                     text_field=milvus_config.get("text_field", "document_content"),
-                    vertex_field=vertex_field
+                    vertex_field=vertex_field,
                 )
 
         # TODO: chunker and extractor needs to be configurable
         from app.supportai.chunkers.semantic_chunker import SemanticChunker
-        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
-        
         from app.supportai.extractors import LLMEntityRelationshipExtractor
-        extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
 
+        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
+        extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
         checker = EventualConsistencyChecker(check_interval_seconds,
                                              graphname, vertex_field,
                                              embedding_service, 
@@ -286,6 +295,7 @@ async def get_eventual_consistency_checker(graphname: str):
         consistency_checkers[graphname] = checker
     return consistency_checkers[graphname]
 
+
 def update_metrics(start_time, label):
     duration = time.time() - start_time
     pmetrics.copilot_endpoint_duration_seconds.labels(label).observe(duration)
@@ -294,6 +304,7 @@ def update_metrics(start_time, label):
 @app.get("/")
 def read_root():
     return {"config": llm_config["model_name"]}
+
 
 @app.post("/{graphname}/getqueryembedding")
 def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
@@ -324,6 +335,7 @@ def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo
 
     return results
 
+
 @app.post("/{graphname}/upsert_docs")
 def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUperstRequest]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     try:
@@ -338,7 +350,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
 
             if not id and not query_info:
                 raise HTTPException(status_code=400, detail="At least one of 'id' or 'query_info' is required")
-            
+
             logger.debug(f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)")
 
             vec = embedding_service.embed_query(query_info.docstring)
@@ -351,7 +363,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
             else:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upsert document(s)")
         return results
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while upserting query {str(e)}")
     
@@ -359,7 +371,7 @@ def upsert_docs(graphname, request_data: Union[QueryUperstRequest, List[QueryUpe
 def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     ids = request_data.ids
     expr = request_data.expr
-    
+
     if ids and not isinstance(ids, list):
         try:
             ids = [ids]
@@ -367,7 +379,7 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
             raise ValueError("Invalid ID format. IDs must be string or lists of strings.")
 
     logger.debug(f"/{graphname}/delete_docs request_id={req_id_cv.get()} deleting document(s)")
-    
+
     # Call the remove_embeddings method based on provided IDs or expression
     try:
         if expr:
@@ -381,10 +393,12 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, credentials: Annota
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/{graphname}/retrieve_docs")
 def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
     logger.debug_pii(f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
     return embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k)
+
 
 @app.post("/{graphname}/query")
 def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConnectionProxy = Depends(get_db_connection)) -> CoPilotResponse:
@@ -403,27 +417,30 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
         agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
+    elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
+        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created")
+        agent = TigerGraphAgent(AWSBedrock(llm_config["completion_service"]), conn, embedding_service, embedding_store)
     else:
         LogWriter.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
         raise Exception("LLM Completion Service Not Supported")
 
-    resp = CoPilotResponse
-    resp.response_type = "inquiryai"
-
+    resp = CoPilotResponse(natural_language_response="", answered_question=False, response_type="inquiryai")
+    steps = ""
     try:
         steps = agent.question_for_agent(query.query)
-        # LogWriter.info(f"steps: {steps}")
+        # try again if there were no steps taken
+        if len(steps["intermediate_steps"]) == 0:
+            steps = agent.question_for_agent(query.query)
+
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
         try:
             generate_func_output = steps["intermediate_steps"][-1][-1]
-            if "action_input" in steps["output"]:
-                resp.natural_language_response = generate_func_output["action_input"]
-            else:
-                resp.natural_language_response = steps["output"]
             resp.natural_language_response = steps["output"]
-            resp.query_sources = {"function_call": generate_func_output["function_call"],
-                                "result": json.loads(generate_func_output["result"]),
-                                "reasoning": generate_func_output["reasoning"]}
+            resp.query_sources = {
+                "function_call": generate_func_output["function_call"],
+                "result": json.loads(generate_func_output["result"]),
+                "reasoning": generate_func_output["reasoning"],
+            }
             resp.answered_question = True
             pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         except Exception as e:
@@ -432,34 +449,41 @@ def retrieve_answer(graphname, query: NaturalLanguageQuery, conn: TigerGraphConn
             resp.answered_question = False
             LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
             pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
-    except MapQuestionToSchemaException as e:
+            traceback.print_exc()
+    except MapQuestionToSchemaException:
         resp.natural_language_response = "A schema mapping error occurred. Please try rephrasing your question."
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+        traceback.print_exc()
     except Exception as e:
         resp.natural_language_response = "An error occurred while processing the response. Please try again."
-        resp.query_sources = {}
+        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
         LogWriter.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
+        traceback.print_exc()
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
     
     return resp
+
 
 @app.post("/{graphname}/login")
 def login(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     session_id = session_handler.create_session(conn.username, conn)
     return {"session_id": session_id}
 
+
 @app.post("/{graphname}/logout")
 def logout(graphname, session_id: str):
     session_handler.delete_session(session_id)
     return {"status": "success"}
 
+
 @app.get("/{graphname}/chat")
 def chat(request: Request):
     return HTMLResponse(open("app/static/chat.html").read())
+
 
 @app.websocket("/{graphname}/ws")
 async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
@@ -470,21 +494,25 @@ async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: s
         res = retrieve_answer(graphname, NaturalLanguageQuery(query=data), session.db_conn)
         await websocket.send_text(f"{res.natural_language_response}")
 
+
 @app.get("/health")
 def health():
     return {"status": "healthy",
             "llm_completion_model": llm_config["completion_service"]["llm_model"],
             "embedding_service": llm_config["embedding_service"]["embedding_model_service"]}
 
+
 @app.get("/metrics")
 async def metrics():
     from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return FileResponse('app/static/favicon.ico')
+
 
 @app.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
@@ -503,7 +531,7 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql")
     with open(file_path, "r") as f:
         scan_for_updates = f.read()
-    res = conn.gsql("USE GRAPH "+conn.graphname+"\n"+scan_for_updates+"\n INSTALL QUERY Scan_For_Updates")
+    res = conn.gsql("USE GRAPH " + conn.graphname + "\n" + scan_for_updates + "\n INSTALL QUERY Scan_For_Updates")
 
     file_path = os.path.join(os.path.dirname(abs_path), "./gsql/supportai/Update_Vertices_Processing_Status.gsql")
     with open(file_path, "r") as f:
@@ -536,7 +564,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
         separator = ingest_config.get("separator", "|")
         header = ingest_config.get("header", "true")
         eol = ingest_config.get("eol", "\n")
-        quote= ingest_config.get("quote", "double")
+        quote = ingest_config.get("quote", "double")
         ingest_template = ingest_template.replace('"|"', '"{}"'.format(separator))
         ingest_template = ingest_template.replace('"true"', '"{}"'.format(header))
         ingest_template = ingest_template.replace('"\\n"', '"{}"'.format(eol))
@@ -548,8 +576,8 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
         data_stream_conn = f.read()
 
     # assign unique identifier to the data stream connection
-   
-    data_stream_conn = data_stream_conn.replace("@source_name@", "SupportAI_" + graphname +"_" + str(uuid.uuid4().hex))
+
+    data_stream_conn = data_stream_conn.replace("@source_name@", "SupportAI_" + graphname + "_" + str(uuid.uuid4().hex))
 
     # check the data source and create the appropriate connection
     if ingest_config.data_source.lower() == "s3":
@@ -559,7 +587,7 @@ async def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Tige
         connector = {"type": "s3",
                      "access.key": data_conn["aws_access_key"],
                      "secret.key": data_conn["aws_secret_key"]}
-        
+
         data_stream_conn = data_stream_conn.replace("@source_config@", json.dumps(connector))
 
     elif ingest_config.data_source.lower() == "azure":
@@ -615,8 +643,8 @@ async def ingest(graphname, loader_info: LoadingInfo, conn: TigerGraphConnection
         raise Exception("Load job id not provided")
     if loader_info.data_source_id is None:
         raise Exception("Data source id not provided")
-    
-    try:    
+
+    try:  
         res = conn.gsql("USE GRAPH {}\nRUN LOADING JOB -noprint {} USING {}=\"{}\"".format(graphname, loader_info.load_job_id, "DocumentContent", "$"+loader_info.data_source_id+":"+loader_info.file_path))
     except Exception as e:
         if "Running the following loading job in background with '-noprint' option:" in str(e):
@@ -640,6 +668,7 @@ async def batch_ingest(graphname, doc_source:Union[S3BatchDocumentIngest, BatchD
     
     return {"status": "request accepted", "request_id": req_id}
 
+
 @app.get("/{graphname}/supportai/ingestion_status")
 def ingestion_status(graphname, status_id: str):
     status = status_manager.get_status(status_id)
@@ -648,19 +677,19 @@ def ingestion_status(graphname, status_id: str):
         return {"status": status.to_dict()}
     else:
         return {"status": "not found"}
-    
+
+
 @app.post("/{graphname}/supportai/createvdb")
 def create_vdb(graphname, config: CreateVectorIndexConfig, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     if conn.getVertexCount("HNSWEntrypoint", where='id=="{}"'.format(config.index_name)) == 0:
         res = conn.runInstalledQuery("HNSW_CreateEntrypoint", {"index_name": config.index_name})
 
-
     res = conn.runInstalledQuery("HNSW_BuildIndex", {"index_name": config.index_name,
                                                     "v_types": config.vertex_types,
                                                     "M": config.M,
                                                     "ef_construction": config.ef_construction})
-
     return res
+
 
 @app.get("/{graphname}/supportai/deletevdb/{index_name}")
 def delete_vdb(graphname, index_name, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
@@ -671,6 +700,7 @@ async def query_vdb(graphname, index_name, query: SupportAIQuestion, conn: Tiger
     get_eventual_consistency_checker(graphname)
     retriever = HNSWRetriever(embedding_service, get_llm_service(llm_config), conn)
     return retriever.search(query.question, index_name, query.method_params["top_k"], query.method_params["withHyDE"])
+
 
 @app.post("/{graphname}/supportai/search")
 async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
@@ -705,6 +735,7 @@ async def search(graphname, query: SupportAIQuestion, conn: TigerGraphConnection
         res = retriever.search(query.question, query.method_params["top_k"])
 
     return res
+
 
 @app.post("/{graphname}/supportai/answerquestion")
 async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
@@ -741,11 +772,12 @@ async def answer_question(graphname, query: SupportAIQuestion, conn: TigerGraphC
         res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
     else:
         raise Exception("Method not implemented")
-    
+
     resp.natural_language_response = res["response"]
     resp.query_sources = res["retrieved"]
 
     return res
+
 
 @app.get("/{graphname}/supportai/buildconcepts")
 async def build_concepts(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):

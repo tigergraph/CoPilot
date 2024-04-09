@@ -3,6 +3,8 @@ from langchain.agents import AgentType, initialize_agent
 from typing import List, Union
 import logging
 
+from pyTigerGraph import TigerGraphConnection
+
 from app.tools import GenerateFunction, MapQuestionToSchema
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
@@ -16,9 +18,10 @@ from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
-class TigerGraphAgent():
+
+class TigerGraphAgent:
     """TigerGraph Agent Class
-    
+
     The TigerGraph Agent Class combines the various dependencies needed for a AI Agent to reason with data in a TigerGraph database.
 
     Args:
@@ -31,7 +34,7 @@ class TigerGraphAgent():
         embedding_store (EmbeddingStore):
             a EmbeddingStore class that connects to an embedding store to retrieve pyTigerGraph and custom query documentation from.
     """
-    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store:EmbeddingStore):
+    def __init__(self, llm_provider: LLM_Model, db_connection: "TigerGraphConnectionProxy", embedding_model: EmbeddingModel, embedding_store: EmbeddingStore):
         self.conn = db_connection
 
         self.llm = llm_provider
@@ -67,7 +70,7 @@ class TigerGraphAgent():
         Ask the agent a question to be answered by the database. Returns the agent resoposne or raises an exception.
 
         Args:
-            question (str): 
+            question (str):
                 The question to ask the agent
         """
         start_time = time.time()
@@ -83,6 +86,8 @@ class TigerGraphAgent():
         except Exception as e:
             metrics.llm_query_error_total.labels(self.model_name).inc()
             LogWriter.error(f"request_id={req_id_cv.get()} FAILURE question_for_agent")
+            import traceback
+            traceback.print_exc()
             raise e
         finally:
             metrics.llm_request_total.labels(self.model_name).inc()

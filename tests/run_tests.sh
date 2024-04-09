@@ -35,6 +35,9 @@ openai_gpt4_config="../configs/openai_gpt4_config.json"
 gcp_textbison_script="test_gcp_text-bison.py"
 gcp_textbison_config="../configs/gcp_text-bison_config.json"
 
+aws_bedrock_script="test_bedrock.py"
+aws_bedrock_config="../configs/bedrock_config.json"
+
 # Function to execute a service
 execute_service() {
     local service="$1"
@@ -67,9 +70,12 @@ case "$llm_service" in
     "gcp_textbison")
         execute_service "$gcp_textbison_script" "$gcp_textbison_config"
         ;;
+    "aws_bedrock")
+        execute_service "$aws_bedrock_script" "$aws_bedrock_config"
+        ;;
     "all")
         echo "Executing all services..."
-        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config"; do
+        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config" "$aws_bedrock_script $aws_bedrock_config"; do
             execute_service $service_script_pair
         done
         ;;

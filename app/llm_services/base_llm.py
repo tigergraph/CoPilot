@@ -1,4 +1,4 @@
-class LLM_Model():
+class LLM_Model:
     """ Base LLM_Model Class
 
         Used to connect to external LLM API services, and retrieve customized prompts for the tools.
