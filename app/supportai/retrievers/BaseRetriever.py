@@ -1,12 +1,19 @@
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.llm_services.base_llm import LLM_Model
-#from app.supportai.entity_relationship_extraction import BaseExtractor
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-class BaseRetriever():
-    def __init__(self, embedding_service: EmbeddingModel, embedding_store: EmbeddingStore, llm_service: LLM_Model, connection=None):
+
+class BaseRetriever:
+    def __init__(
+        self,
+        embedding_service: EmbeddingModel,
+        embedding_store: EmbeddingStore,
+        llm_service: LLM_Model,
+        connection: TigerGraphConnectionProxy = None,
+    ):
         self.emb_service = embedding_service
         self.llm_service = llm_service
         self.conn = connection
@@ -15,12 +22,20 @@ class BaseRetriever():
     def _install_query(self, query_name):
         with open(f"app/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
             query = f.read()
-        res = self.conn.gsql("USE GRAPH "+self.conn.graphname+"\n"+query+"\n INSTALL QUERY "+query_name)
+        res = self.conn.gsql(
+            "USE GRAPH "
+            + self.conn.graphname
+            + "\n"
+            + query
+            + "\n INSTALL QUERY "
+            + query_name
+        )
         return res
 
-
     def _check_query_install(self, query_name):
-        endpoints = self.conn.getEndpoints(dynamic=True) # installed queries in database
+        endpoints = self.conn.getEndpoints(
+            dynamic=True
+        )  # installed queries in database
         installed_queries = [q.split("/")[-1] for q in endpoints]
 
         if query_name not in installed_queries:
@@ -42,7 +57,12 @@ class BaseRetriever():
         return {"response": generated, "retrieved": retrieved}
 
     def _generate_embedding(self, text) -> str:
-        return str(self.emb_service.embed_query(text)).strip("[").strip("]").replace(" ", "")
+        return (
+            str(self.emb_service.embed_query(text))
+            .strip("[")
+            .strip("]")
+            .replace(" ", "")
+        )
 
     def _hyde_embedding(self, text) -> str:
         model = self.llm_service.llm
@@ -56,15 +76,14 @@ class BaseRetriever():
         generated = chain.invoke({"question": text})
 
         return self._generate_embedding(generated)
-    
 
-    '''    
+    """    
     def _get_entities_relationships(self, text: str, extractor: BaseExtractor):
         return extractor.extract(text)
-    '''
+    """
+
     def search(self, question):
         pass
-    
+
     def retrieve_answer(self, question):
         pass
-

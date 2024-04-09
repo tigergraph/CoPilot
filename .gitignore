@@ -8,5 +8,11 @@ configs/SERVICE_ACCOUNT_CREDS.json
 npm-debug.log
 .vscode/*
 udfs/milvus/venv/*
+pyrightconfig.json
 .DS_Store
 tests/.DS_Store
+log.INFO
+log.ERROR
+log.AUDIT-COPILOT
+logs/*
+tmp

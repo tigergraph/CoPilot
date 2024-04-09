@@ -1,4 +1,3 @@
-import os
 import unittest
 from fastapi.testclient import TestClient
 from test_service import CommonTests
@@ -7,24 +6,23 @@ import parse_test_config
 import sys
 
 
-class TestWithOpenAI(CommonTests, unittest.TestCase):
+class TestWithClaude3Bedrock(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         from app.main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = "openai_gpt-4-0613"
+        cls.llm_service = ""
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "GPT-4")
+        self.assertEqual(resp.json()["config"], "Claude-3-haiku")
 
 
 if __name__ == "__main__":
     parser = parse_test_config.create_parser()
-
     args = parser.parse_known_args()[0]
 
     USE_WANDB = args.wandb
@@ -47,7 +45,7 @@ if __name__ == "__main__":
             "Answered Question",
             "Response Time (seconds)",
         ]
-    CommonTests.setUpClass(schema)
+    CommonTests.setUpClass(schema=schema, use_wandb=USE_WANDB)
 
     # clean up args before unittesting
     del sys.argv[1:]

@@ -5,8 +5,10 @@ from typing import Dict
 import boto3
 import logging
 from app.log import req_id_cv
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
+
 
 class ContentHandler(LLMContentHandler):
     content_type = "application/json"
@@ -14,12 +16,12 @@ class ContentHandler(LLMContentHandler):
 
     def transform_input(self, prompt: str, model_kwargs: Dict = None) -> bytes:
         # Ensure that 'prompt' is a string
-        #if not isinstance(prompt, str):
+        # if not isinstance(prompt, str):
         #    raise ValueError("'prompt' must be a string.")
         input_dict = {"inputs": prompt, "parameters": model_kwargs}
-        #input_dict.update(model_kwargs)
+        # input_dict.update(model_kwargs)
         input_str = json.dumps(input_dict)
-        return input_str.encode('utf-8')
+        return input_str.encode("utf-8")
 
     def transform_output(self, output: bytes):
         response_json = json.loads(output.read().decode("utf-8"))
@@ -27,6 +29,7 @@ class ContentHandler(LLMContentHandler):
         if "generation" not in response_json[0]:
             raise ValueError("'generation' not found in the response.")
         return response_json[0]["generation"]
+
 
 class AWS_SageMaker_Endpoint(LLM_Model):
     def __init__(self, config):
@@ -43,20 +46,22 @@ class AWS_SageMaker_Endpoint(LLM_Model):
             endpoint_name=config["endpoint_name"],
             client=client,
             model_kwargs=config["model_kwargs"],
-            endpoint_kwargs={"CustomAttributes": 'accept_eula=true'},
-            content_handler=ContentHandler()
+            endpoint_kwargs={"CustomAttributes": "accept_eula=true"},
+            content_handler=ContentHandler(),
         )
 
         self.prompt_path = config["prompt_path"]
-        logger.info(f"request_id={req_id_cv.get()} instantiated AWS_SageMaker_Endpoint model_name={model_name}")
+        LogWriter.info(
+            f"request_id={req_id_cv.get()} instantiated AWS_SageMaker_Endpoint model_name={model_name}"
+        )
 
     @property
     def map_question_schema_prompt(self):
-        return self._read_prompt_file(self.prompt_path+"map_question_to_schema.txt")
+        return self._read_prompt_file(self.prompt_path + "map_question_to_schema.txt")
 
     @property
     def generate_function_prompt(self):
-        return self._read_prompt_file(self.prompt_path+"generate_function.txt")
+        return self._read_prompt_file(self.prompt_path + "generate_function.txt")
 
     @property
     def model(self):

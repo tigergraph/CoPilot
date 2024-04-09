@@ -163,6 +163,31 @@ In addition to the `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `azure_d
 }
 ```
 
+### AWS Bedrock
+```json{
+    "model_name": "Claude-3-haiku",
+    "embedding_service": {
+        "embedding_model_service": "bedrock",
+        "embedding_model":"amazon.titan-embed-text-v1",
+        "authentication_configuration": {
+            "AWS_ACCESS_KEY_ID": "ACCESS_KEY",
+            "AWS_SECRET_ACCESS_KEY": "SECRET"
+        }
+    },
+    "completion_service": {
+        "llm_service": "bedrock",
+        "llm_model": "anthropic.claude-3-haiku-20240307-v1:0",
+        "authentication_configuration": {
+            "AWS_ACCESS_KEY_ID": "ACCESS_KEY",
+            "AWS_SECRET_ACCESS_KEY": "SECRET"
+        },
+        "model_kwargs": {
+            "temperature": 0,
+        },
+        "prompt_path": "./app/prompts/aws_bedrock_claude3haiku/"
+    }
+}
+```
 ## Create DB configuration file
 Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
 
@@ -191,6 +216,17 @@ Note:  Milvus is not necessary for deployment or development currently. Copy the
     "enabled": "true"
 }
 ```
+
+## Create log configuration file (optional)
+Copy the below into `configs/log_config.json` and edit the appropriate values to suit your needs.  The log rotation is based on size and backups are kept.  These configurations are applied in the LogWriter to the standard python logging package.  Operational and audit logs are recorded.  Outputs include log.ERROR, log.INFO, and log.AUDIT-COPILOT
+```json
+{
+    "log_file_path": "logs",
+    "log_max_size": 10485760,
+    "log_backup_count": 10
+}
+```
+
 ## Run the Docker Image
 ```sh
 docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json --name copilot -p 80:80 tigergraphml/copilot:latest
