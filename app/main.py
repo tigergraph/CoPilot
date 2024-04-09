@@ -312,8 +312,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery, credentials: Ann
 
     return embedding_service.embed_query(query.query)
 
-# @app.post("/{graphname}/register_docs")
-@app.post("/{graphname}/registercustomquery")
+@app.post("/{graphname}/register_docs")
 def register_docs(graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
