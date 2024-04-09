@@ -17,8 +17,6 @@ class TigerGraphConnectionProxy:
             def hooked(*args, **kwargs):
                 if name == "runInstalledQuery":
                     return self._runInstalledQuery(*args, **kwargs)
-                if name == "_req":
-                    return self._req(*args, **kwargs)
                 else:
                     return original_attr(*args, **kwargs)
 
