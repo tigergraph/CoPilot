@@ -1038,7 +1038,7 @@ async def search(
         )
         res = retriever.search(
             query.question,
-            query.method_params["indicies"],
+            query.method_params["indices"],
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
@@ -1159,5 +1159,5 @@ async def build_concepts(
 async def force_update(
     graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
 ):
-    get_eventual_consistency_checker(graphname)
+    await get_eventual_consistency_checker(graphname)
     return {"status": "success"}
