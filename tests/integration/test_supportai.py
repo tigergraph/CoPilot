@@ -8,6 +8,7 @@ import os
 import pyTigerGraph as tg
 
 class TestSupportAI(unittest.TestCase):
+
     
     def setUp(self):
         self.client = TestClient(app)

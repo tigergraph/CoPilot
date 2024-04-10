@@ -8,6 +8,7 @@ import pyTigerGraph as tg
 import json
 
 class TestAppFunctions(unittest.TestCase):
+
     
     def setUp(self):
         self.client = TestClient(app)

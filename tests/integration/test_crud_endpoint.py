@@ -8,6 +8,7 @@ import os
 import pyTigerGraph as tg
 
 class TestCRUDInquiryAI(unittest.TestCase):
+
     
     def setUp(self):
         self.client = TestClient(app)
@@ -121,6 +122,7 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print (response.text)
         self.assertEqual(response.status_code, 500)
 
+    
     def test_upsert_custom_query_ids(self):
         upsert_query = {
             "ids": "448543540718863740",

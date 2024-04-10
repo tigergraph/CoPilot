@@ -3,8 +3,10 @@ import unittest
 
 import pytest
 from fastapi.testclient import TestClient
-from test_service import CommonTests
+
 import wandb
+
+from tests.build.test_service import CommonTests
 
 USE_WANDB = True
 
