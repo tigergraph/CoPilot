@@ -23,9 +23,15 @@ status_manager = StatusManager()
 LLM_SERVICE = os.getenv("LLM_CONFIG", "configs/llm_config.json")
 DB_CONFIG = os.getenv("DB_CONFIG", "configs/db_config.json")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG", "configs/milvus_config.json")
+DOC_PROCESSING_CONFIG = os.getenv(
+    "DOC_PROCESSING_CONFIG", "configs/doc_processing_config.json"
+)
 PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 if not PATH_PREFIX.startswith("/"):
-    PATH_PREFIX = f"/{PATH_PREFIX}"
+    if PATH_PREFIX == "":
+        PATH_PREFIX = ""
+    else:
+        PATH_PREFIX = f"/{PATH_PREFIX}"
 
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
@@ -140,3 +146,19 @@ if milvus_config.get("enabled") == "true":
         vertex_field=vertex_field,
         alias=milvus_config.get("alias", "default"),
     )
+
+
+if DOC_PROCESSING_CONFIG is None or (
+    DOC_PROCESSING_CONFIG.endswith(".json") and not os.path.exists(DOC_PROCESSING_CONFIG)
+):
+    doc_processing_config = {
+        "chunker": "semantic",
+        "chunker_config": {"method": "percentile", "threshold": 0.95},
+        "extractor": "llm",
+        "extractor_config": {},
+    }
+elif DOC_PROCESSING_CONFIG.endswith(".json"):
+    with open(DOC_PROCESSING_CONFIG, "r") as f:
+        doc_processing_config = json.load(f)
+else:
+    doc_processing_config = json.loads(DOC_PROCESSING_CONFIG)
