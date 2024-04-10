@@ -27,6 +27,9 @@ PATH_PREFIX = os.getenv("PATH_PREFIX", "")
 if not PATH_PREFIX.startswith("/"):
     PATH_PREFIX = f"/{PATH_PREFIX}"
 
+if PATH_PREFIX.endswith("/"):
+    PATH_PREFIX = PATH_PREFIX[:-1]
+
 if LLM_SERVICE is None:
     raise Exception("LLM_CONFIG environment variable not set")
 if DB_CONFIG is None:
