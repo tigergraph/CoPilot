@@ -368,7 +368,7 @@ async def search(
         )
         res = retriever.search(
             query.question,
-            query.method_params["indicies"],
+            query.method_params["indices"],
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
