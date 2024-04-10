@@ -1,5 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
+
+import pytest
+
 from app.supportai.supportai_ingest import BatchIngestion
 from app.status import IngestionProgress
 

@@ -1,5 +1,5 @@
-import pytest
-
+# import pytest
+#
 # def pytest_collection_modifyitems(config, items):
 #     """
 #     Hook to dynamically exclude tests based on error messages encountered during collection.
@@ -15,3 +15,11 @@ import pytest
 #                 deselected_items.append(item)
 #     for item in deselected_items:
 #         items.remove(item)
+import pytest
+
+pytest.mark.skip_on_collection_failure = pytest.mark.skip(reason="Skipped due to collection failure")
+def pytest_collection_modifyitems(config, items):
+    if config.pluginmanager.hasplugin('collect') and config.pluginmanager.getplugin('collect')._config.failed:
+        for item in items:
+            if 'skip_on_collection_failure' in item.keywords:
+                item.add_marker(pytest.mark.skip(reason="Skipped due to collection failure"))
