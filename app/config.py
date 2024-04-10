@@ -24,7 +24,7 @@ LLM_SERVICE = os.getenv("LLM_CONFIG", "configs/llm_config.json")
 DB_CONFIG = os.getenv("DB_CONFIG", "configs/db_config.json")
 MILVUS_CONFIG = os.getenv("MILVUS_CONFIG", "configs/milvus_config.json")
 PATH_PREFIX = os.getenv("PATH_PREFIX", "")
-if not PATH_PREFIX.startswith("/"):
+if not PATH_PREFIX.startswith("/") and len(PATH_PREFIX) != 0:
     PATH_PREFIX = f"/{PATH_PREFIX}"
 
 if LLM_SERVICE is None:

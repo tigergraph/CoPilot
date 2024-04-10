@@ -5,12 +5,11 @@ import uuid
 from base64 import b64decode
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 
 from app import routers
-from app.config import PATH_PREFIX, llm_config
+from app.config import PATH_PREFIX
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
@@ -26,7 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(routers.root_router, prefix=PATH_PREFIX)
-app.include_router(routers.inqueryai_router, prefix=PATH_PREFIX)
+app.include_router(routers.inquiryai_router, prefix=PATH_PREFIX)
 app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
 
 
