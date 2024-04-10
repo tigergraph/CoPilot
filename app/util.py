@@ -6,7 +6,7 @@ from fastapi.security import HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 
 from app.config import (db_config, embedding_service, get_llm_service,
-                        llm_config, milvus_config, security)
+                        llm_config, milvus_config, security, doc_processing_config)
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.sync.eventual_consistency_checker import EventualConsistencyChecker
@@ -89,12 +89,38 @@ async def get_eventual_consistency_checker(graphname: str):
                     vertex_field=vertex_field,
                 )
 
-        # TODO: chunker and extractor needs to be configurable
-        from app.supportai.chunkers.semantic_chunker import SemanticChunker
-        from app.supportai.extractors import LLMEntityRelationshipExtractor
+        if doc_processing_config.get("chunker") == "semantic":
+            from app.supportai.chunkers.semantic_chunker import SemanticChunker
 
-        chunker = SemanticChunker(embedding_service, "percentile", 0.95)
-        extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
+            chunker = SemanticChunker(
+                embedding_service,
+                doc_processing_config["chunker_config"].get("method", "percentile"),
+                doc_processing_config["chunker_config"].get("threshold", 0.95),
+            )
+        elif doc_processing_config.get("chunker") == "regex":
+            from app.supportai.chunkers.regex_chunker import RegexChunker
+
+            chunker = RegexChunker(
+                pattern=doc_processing_config["chunker_config"].get("pattern", "\\r?\\n")
+            )
+        elif doc_processing_config.get("chunker") == "character":
+            from app.supportai.chunkers.character_chunker import CharacterChunker
+
+            chunker = CharacterChunker(
+                chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
+                overlap_size=doc_processing_config["chunker_config"].get("overlap_size", 0)
+            )
+        else:
+            raise ValueError("Invalid chunker type")
+        
+
+        if doc_processing_config.get("extractor") == "llm":
+            from app.supportai.extractors import LLMEntityRelationshipExtractor
+            extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
+        else:
+            raise ValueError("Invalid extractor type")
+        
+
         checker = EventualConsistencyChecker(
             check_interval_seconds,
             graphname,

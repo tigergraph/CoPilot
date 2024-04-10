@@ -489,5 +489,5 @@ async def build_concepts(
 async def force_update(
     graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
 ):
-    get_eventual_consistency_checker(graphname)
+    await get_eventual_consistency_checker(graphname)
     return {"status": "success"}
