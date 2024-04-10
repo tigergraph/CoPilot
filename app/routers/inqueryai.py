@@ -121,7 +121,8 @@ def retrieve_answer(
             ).inc()
         except Exception:
             resp.natural_language_response = (
-                "An error occurred while processing the response. Please try again."
+                # "An error occurred while processing the response. Please try again."
+                str(steps["output"])
             )
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
@@ -149,7 +150,8 @@ def retrieve_answer(
         )
     except Exception as e:
         resp.natural_language_response = (
-            "An error occurred while processing the response. Please try again."
+            # "An error occurred while processing the response. Please try again."
+            str(steps["output"])
         )
         resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
