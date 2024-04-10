@@ -4,15 +4,14 @@ from app.supportai.chunkers.semantic_chunker import SemanticChunker
 
 
 class TestSemanticChunker(unittest.TestCase):
-
-    @patch('app.embeddings.embedding_services.EmbeddingModel')
-    @patch('langchain_experimental.text_splitter.SemanticChunker.create_documents')
+    @patch("app.embeddings.embedding_services.EmbeddingModel")
+    @patch("langchain_experimental.text_splitter.SemanticChunker.create_documents")
     def test_chunk_single_string(self, create_documents, MockEmbeddingModel):
         mock_emb_service = MockEmbeddingModel()
 
         create_documents.return_value = [
             Mock(page_content="Chunk 1"),
-            Mock(page_content="Chunk 2")
+            Mock(page_content="Chunk 2"),
         ]
 
         semantic_chunker = SemanticChunker(embedding_serivce=mock_emb_service)
@@ -24,5 +23,5 @@ class TestSemanticChunker(unittest.TestCase):
         self.assertEqual(actual_chunks, expected_chunks)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
