@@ -9,12 +9,16 @@ from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 
 from app import routers
-from app.config import PATH_PREFIX
+from app.config import PATH_PREFIX, PRODUCTION
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
 
-app = FastAPI(title="Copilot")
+
+if PRODUCTION:
+    app = FastAPI(title="TigerGraph CoPilot", docs_url=None, redoc_url=None, openapi_url=None)
+else:
+    app = FastAPI(title="TigerGraph CoPilot")
 
 app.add_middleware(
     CORSMiddleware,

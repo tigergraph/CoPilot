@@ -34,6 +34,8 @@ DOC_PROCESSING_CONFIG = os.getenv(
     "DOC_PROCESSING_CONFIG", "configs/doc_processing_config.json"
 )
 PATH_PREFIX = os.getenv("PATH_PREFIX", "")
+PRODUCTION = os.getenv("PRODUCTION", "false").lower() == "true"
+
 if not PATH_PREFIX.startswith("/") and len(PATH_PREFIX) != 0:
     PATH_PREFIX = f"/{PATH_PREFIX}"
 if PATH_PREFIX.endswith("/"):
