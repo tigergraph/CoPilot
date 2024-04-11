@@ -288,7 +288,7 @@ async def ingestion_status(graphname, status_id: str):
 
 
 @router.post("/{graphname}/supportai/createvdb")
-async def create_vdb(
+def create_vdb(
     graphname,
     config: CreateVectorIndexConfig,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
@@ -316,14 +316,14 @@ async def create_vdb(
 
 
 @router.get("/{graphname}/supportai/deletevdb/{index_name}")
-async def delete_vdb(
+def delete_vdb(
     graphname, index_name, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
 ):
     return conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
 
 
 @router.post("/{graphname}/supportai/queryvdb/{index_name}")
-async def query_vdb(
+def query_vdb(
     graphname,
     index_name,
     query: SupportAIQuestion,
