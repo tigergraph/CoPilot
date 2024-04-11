@@ -28,7 +28,7 @@ router = APIRouter(tags=["SupportAI"])
 
 
 @router.post("/{graphname}/supportai/initialize")
-def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+async def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     # need to open the file using the absolute path
     abs_path = os.path.abspath(__file__)
     file_path = os.path.join(
@@ -292,7 +292,7 @@ async def batch_ingest(
 
 
 @router.get("/{graphname}/supportai/ingestion_status")
-def ingestion_status(graphname, status_id: str):
+async def ingestion_status(graphname, status_id: str):
     status = status_manager.get_status(status_id)
 
     if status:
@@ -302,7 +302,7 @@ def ingestion_status(graphname, status_id: str):
 
 
 @router.post("/{graphname}/supportai/createvdb")
-def create_vdb(
+async def create_vdb(
     graphname,
     config: CreateVectorIndexConfig,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
@@ -330,7 +330,7 @@ def create_vdb(
 
 
 @router.get("/{graphname}/supportai/deletevdb/{index_name}")
-def delete_vdb(
+async def delete_vdb(
     graphname, index_name, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
 ):
     return conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})

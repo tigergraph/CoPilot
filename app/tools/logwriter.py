@@ -68,6 +68,7 @@ class LogWriter:
     logger_initialized = False
     general_logger: logging.Logger = None
     error_logger: logging.Logger = None
+    warning_logger: logging.Logger = None
     audit_logger: logging.Logger = None
 
     pii_patterns = [
@@ -118,7 +119,11 @@ class LogWriter:
             os.makedirs(log_directory, exist_ok=True)
 
             formatter = UTCFormatter(
-                "%(levelname).1s%(asctime)s %(process)d %(filename)s:%(lineno)d] %(message)s"
+                "[%(levelname).1s%(asctime)s %(process)d %(filename)s:%(lineno)d] %(message)s"
+            )
+
+            audit_formatter = UTCFormatter(
+                "%(message)s"
             )
 
             # Logging for info, error and audit
@@ -126,12 +131,16 @@ class LogWriter:
                 "general", "log.INFO", logging.DEBUG, formatter
             )
 
+            LogWriter.warning_logger = LogWriter.setup_logger(
+                "general", "log.WARNING", logging.WARNING, formatter
+            )
+
             LogWriter.error_logger = LogWriter.setup_logger(
                 "error", "log.ERROR", logging.ERROR, formatter
             )
 
             LogWriter.audit_logger = LogWriter.setup_logger(
-                "audit", "log.AUDIT-COPILOT", logging.INFO, formatter
+                "audit", "log.AUDIT-COPILOT", logging.INFO, audit_formatter
             )
 
             stdout_handler = logging.StreamHandler()
