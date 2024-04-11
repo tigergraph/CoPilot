@@ -28,8 +28,9 @@ router = APIRouter(tags=["SupportAI"])
 
 @router.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+    # need to open the file using the absolute path
     file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
-    with open(file_path) as f:
+    with open(file_path, "r") as f:
         schema = f.read()
     schema_res = conn.gsql(
         """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
@@ -206,7 +207,7 @@ def create_ingest(
 
 
 @router.post("/{graphname}/supportai/ingest")
-async def ingest(
+def ingest(
     graphname,
     loader_info: LoadingInfo,
     background_tasks: BackgroundTasks,
@@ -277,7 +278,7 @@ async def batch_ingest(
 
 
 @router.get("/{graphname}/supportai/ingestion_status")
-def ingestion_status(graphname, status_id: str):
+async def ingestion_status(graphname, status_id: str):
     status = status_manager.get_status(status_id)
 
     if status:
@@ -322,7 +323,7 @@ def delete_vdb(
 
 
 @router.post("/{graphname}/supportai/queryvdb/{index_name}")
-async def query_vdb(
+def query_vdb(
     graphname,
     index_name,
     query: SupportAIQuestion,

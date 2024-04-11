@@ -60,9 +60,7 @@ async def get_basic_auth_credentials(request: Request):
 
     return username
 
-
-# FIXME: this middle ware causes the API to hang if it raises an error
-# @app.middleware("http")
+@app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
     LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
@@ -76,7 +74,6 @@ async def log_requests(request: Request, call_next):
     action_name = request.url.path
     status = "SUCCESS"
 
-    response = await call_next(request)
     if response.status_code != 200:
         status = "FAILURE"
 
@@ -90,7 +87,7 @@ async def log_requests(request: Request, call_next):
             "endpoint": request.url.path,
             "actionName": action_name,
             "status": status,
-            "requestId": req_id,
+            "requestId": req_id
         }
         LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
         update_metrics(start_time=start_time, label=request.url.path)
