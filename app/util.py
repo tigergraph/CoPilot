@@ -98,7 +98,7 @@ async def get_eventual_consistency_checker(graphname: str):
         checker = EventualConsistencyChecker(
             check_interval_seconds,
             graphname,
-            vertex_field,
+            vertex_field, #FIXME: if milvus is not enabled, this is not defined and will crash here (vertex_field used before assignment)
             embedding_service,
             index_names,
             vector_indices,
