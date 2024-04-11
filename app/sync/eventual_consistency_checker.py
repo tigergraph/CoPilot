@@ -1,13 +1,14 @@
 import asyncio
 import logging
+import time
+from typing import Dict, List
+
+from app.config import doc_processing_config
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.supportai.chunkers import BaseChunker
 from app.supportai.extractors import BaseExtractor
-from app.config import doc_processing_config
-import time
-from typing import Dict, List
 from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
