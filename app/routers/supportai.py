@@ -27,7 +27,6 @@ router = APIRouter(tags=["SupportAI"])
 
 
 @router.post("/{graphname}/supportai/initialize")
-<<<<<<< HEAD
 async def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     # need to open the file using the absolute path
     abs_path = os.path.abspath(__file__)
@@ -35,11 +34,6 @@ async def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db
         os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql"
     )
     with open(file_path, "r") as f:
-=======
-def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
-    file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
-    with open(file_path) as f:
->>>>>>> a238f1bad85cfbe17a0513ae40e8c8e20b226926
         schema = f.read()
     schema_res = conn.gsql(
         """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
