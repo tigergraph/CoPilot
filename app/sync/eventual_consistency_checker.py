@@ -3,6 +3,7 @@ import logging
 import time
 from typing import Dict, List
 
+from app.config import doc_processing_config
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
@@ -181,10 +182,11 @@ class EventualConsistencyChecker:
     async def fetch_and_process_vertex(self):
         v_types_to_scan = self.embedding_indices
         vertex_ids_content_map: dict = {}
+        batch_size = doc_processing_config.get("batch_size", 10)
         for v_type in v_types_to_scan:
             LogWriter.info(f"Fetching vertex ids and content for vertex type: {v_type}")
             vertex_ids_content_map = self.conn.runInstalledQuery(
-                "Scan_For_Updates", {"v_type": v_type}
+                "Scan_For_Updates", {"v_type": v_type, "num_samples": batch_size}
             )[0]["@@v_and_text"]
 
             vertex_ids = [vertex_id for vertex_id in vertex_ids_content_map.keys()]
