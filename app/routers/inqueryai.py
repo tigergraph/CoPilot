@@ -180,12 +180,10 @@ def get_query_embedding(
     return embedding_service.embed_query(query.query)
 
 
-# @router.post("/{graphname}/register_docs")
-@router.post("/{graphname}/registercustomquery")
+@router.post("/{graphname}/register_docs")
 def register_docs(
     graphname,
     query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
@@ -225,7 +223,6 @@ def register_docs(
 def upsert_docs(
     graphname,
     request_data: Union[QueryUperstRequest, List[QueryUperstRequest]],
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
     try:
         results = []
@@ -278,8 +275,7 @@ def upsert_docs(
 @router.post("/{graphname}/delete_docs")
 def delete_docs(
     graphname,
-    request_data: QueryDeleteRequest,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+    request_data: QueryDeleteRequest
 ):
     ids = request_data.ids
     expr = request_data.expr
@@ -316,7 +312,6 @@ def delete_docs(
 def retrieve_docs(
     graphname,
     query: NaturalLanguageQuery,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
     top_k: int = 3,
 ):
     logger.debug_pii(
