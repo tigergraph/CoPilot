@@ -321,6 +321,13 @@ print(result)
 ## Using the REST API
 The REST API can be used to interact with the service. The endpoints can be found on the Swagger documentation page.
 
+## Deployment
+If you wish to deploy TigerGraph CoPilot and disable the Swagger documentation page, you can do so by setting the `PRODUCTION` environment variable to `true` in the Docker run command. 
+
+```sh
+docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json -e PRODUCTION=true --name copilot -p 80:80 tigergraphml/copilot:latest
+```
+
 # Customization and Extensibility
 TigerGraph CoPilot is designed to be easily extensible. The service can be configured to use different LLM providers, different graph schemas, and different LangChain tools. The service can also be extended to use different embedding services, different LLM generation services, and different LangChain tools. For more information on how to extend the service, see the [Developer Guide](./docs/DeveloperGuide.md).
 
