@@ -99,7 +99,6 @@ class TigerGraphAgent:
                 f"request_id={req_id_cv.get()} question_for_agent question={question}"
             )
             resp = self.agent({"input": question})
-            LogWriter.info(f"question for agent: {resp}")
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return resp
         except Exception as e:

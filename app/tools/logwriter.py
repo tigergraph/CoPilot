@@ -128,19 +128,19 @@ class LogWriter:
 
             # Logging for info, error and audit
             LogWriter.general_logger = LogWriter.setup_logger(
-                "general", "log.INFO", logging.DEBUG, formatter
+                "info", log_directory+"/log.INFO", logging.INFO, formatter
             )
 
             LogWriter.warning_logger = LogWriter.setup_logger(
-                "general", "log.WARNING", logging.WARNING, formatter
+                "warning", log_directory+"/log.WARNING", logging.WARNING, formatter
             )
 
             LogWriter.error_logger = LogWriter.setup_logger(
-                "error", "log.ERROR", logging.ERROR, formatter
+                "error", log_directory+"/log.ERROR", logging.ERROR, formatter
             )
 
             LogWriter.audit_logger = LogWriter.setup_logger(
-                "audit", "log.AUDIT-COPILOT", logging.INFO, audit_formatter
+                "audit", log_directory+"/log.AUDIT-COPILOT", logging.INFO, audit_formatter
             )
 
             stdout_handler = logging.StreamHandler()
@@ -163,9 +163,13 @@ class LogWriter:
             )
             message += extra_info
 
-        getattr(LogWriter.general_logger, level.lower())(message)
+        #getattr(LogWriter.general_logger, level.lower())(message)
         if level.upper() == "ERROR":
             LogWriter.error_logger.error(message)
+        elif level.upper() == "WARNING":
+            LogWriter.warning_logger.warning(message)
+        elif level.upper() == "INFO":
+            LogWriter.general_logger.info(message)
 
     @staticmethod
     def info(message, mask_pii=True, **kwargs):
