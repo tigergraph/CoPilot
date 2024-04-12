@@ -7,7 +7,7 @@ import {
   qAnsweredCounter,
 } from "./customMetrics.js";
 
-const copilot = "http://localhost:8000";
+const copilot = `${cfg.copilotURL}`;
 const cfg = JSON.parse(open("config.json"));
 export const options = {
   vus: cfg.VuCount,
