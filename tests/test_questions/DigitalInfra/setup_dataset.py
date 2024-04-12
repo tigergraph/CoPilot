@@ -2,19 +2,21 @@ from pyTigerGraph import TigerGraphConnection
 import json
 import os
 
-def create_graph(conn, path = "./gsql/create_graph.gsql"):
+
+def create_graph(conn, path="./gsql/create_graph.gsql"):
     with open(path) as f:
         g = f.read()
     conn.gsql(g)
     conn.graphname = "DigitalInfra"
 
 
-def create_schema(conn, path = "./gsql/create_schema.gsql"):
+def create_schema(conn, path="./gsql/create_schema.gsql"):
     with open(path) as f:
         schema = f.read()
     conn.gsql(schema)
 
-def create_data_source(conn, path = "./gsql/create_data_source.gsql"):
+
+def create_data_source(conn, path="./gsql/create_data_source.gsql"):
     with open(path) as f:
         data_src = f.read()
 
@@ -23,24 +25,38 @@ def create_data_source(conn, path = "./gsql/create_data_source.gsql"):
 
     conn.gsql(data_src)
 
-def create_load_job(conn, path = "./gsql/create_load_job.gsql"):
+
+def create_load_job(conn, path="./gsql/create_load_job.gsql"):
     with open(path) as f:
         load_job = f.read()
 
     conn.gsql(load_job)
 
-def run_loading_jobs(conn, path = "./run_load_jobs.json"):
+
+def run_loading_jobs(conn, path="./run_load_jobs.json"):
     with open(path) as f:
         loading_jobs = json.load(f)
 
     for job in loading_jobs:
         try:
-            print(conn.gsql("USE GRAPH DigitalInfra RUN LOADING JOB "+job["jobName"]+ " USING "+job["fileTag"]+"="+'"'+job["filePath"]+'"'))
+            print(
+                conn.gsql(
+                    "USE GRAPH DigitalInfra RUN LOADING JOB "
+                    + job["jobName"]
+                    + " USING "
+                    + job["fileTag"]
+                    + "="
+                    + '"'
+                    + job["filePath"]
+                    + '"'
+                )
+            )
         except:
             pass
 
+
 if __name__ == "__main__":
-    with open("../"+os.environ.get("DB_CONFIG")) as cfg:
+    with open("../" + os.environ.get("DB_CONFIG")) as cfg:
         config = json.load(cfg)
 
     conn = TigerGraphConnection(

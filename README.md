@@ -163,6 +163,31 @@ In addition to the `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `azure_d
 }
 ```
 
+### AWS Bedrock
+```json{
+    "model_name": "Claude-3-haiku",
+    "embedding_service": {
+        "embedding_model_service": "bedrock",
+        "embedding_model":"amazon.titan-embed-text-v1",
+        "authentication_configuration": {
+            "AWS_ACCESS_KEY_ID": "ACCESS_KEY",
+            "AWS_SECRET_ACCESS_KEY": "SECRET"
+        }
+    },
+    "completion_service": {
+        "llm_service": "bedrock",
+        "llm_model": "anthropic.claude-3-haiku-20240307-v1:0",
+        "authentication_configuration": {
+            "AWS_ACCESS_KEY_ID": "ACCESS_KEY",
+            "AWS_SECRET_ACCESS_KEY": "SECRET"
+        },
+        "model_kwargs": {
+            "temperature": 0,
+        },
+        "prompt_path": "./app/prompts/aws_bedrock_claude3haiku/"
+    }
+}
+```
 ## Create DB configuration file
 Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
 
@@ -295,6 +320,13 @@ print(result)
 
 ## Using the REST API
 The REST API can be used to interact with the service. The endpoints can be found on the Swagger documentation page.
+
+## Deployment
+If you wish to deploy TigerGraph CoPilot and disable the Swagger documentation page, you can do so by setting the `PRODUCTION` environment variable to `true` in the Docker run command. 
+
+```sh
+docker run -d -v $(pwd)/configs/llm_config.json:/llm_config.json -v $(pwd)/configs/db_config.json:/db_config.json -e PRODUCTION=true --name copilot -p 80:80 tigergraphml/copilot:latest
+```
 
 # Customization and Extensibility
 TigerGraph CoPilot is designed to be easily extensible. The service can be configured to use different LLM providers, different graph schemas, and different LangChain tools. The service can also be extended to use different embedding services, different LLM generation services, and different LangChain tools. For more information on how to extend the service, see the [Developer Guide](./docs/DeveloperGuide.md).
