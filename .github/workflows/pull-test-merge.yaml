@@ -1,0 +1,25 @@
+name: Run Pytest before merging to main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: [ self-hosted, dind ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt  # Adjust as needed
+
+      - name: Run pytest
+        run: pytest -m tests

@@ -1,25 +1,19 @@
-# import pytest
-#
-# def pytest_collection_modifyitems(config, items):
-#     """
-#     Hook to dynamically exclude tests based on error messages encountered during collection.
-#     """
-#     deselected_items = []
-#     for item in items:
-#         try:
-#             # Attempt to collect the test
-#             config.hook.pytest_runtest_protocol(item=item, nextitem=None)
-#         except Exception as e:
-#             # Check if the error message indicates skipping
-#             if "skip_this_test" in str(e):
-#                 deselected_items.append(item)
-#     for item in deselected_items:
-#         items.remove(item)
 import pytest
 
-pytest.mark.skip_on_collection_failure = pytest.mark.skip(reason="Skipped due to collection failure")
 def pytest_collection_modifyitems(config, items):
-    if config.pluginmanager.hasplugin('collect') and config.pluginmanager.getplugin('collect')._config.failed:
-        for item in items:
-            if 'skip_on_collection_failure' in item.keywords:
-                item.add_marker(pytest.mark.skip(reason="Skipped due to collection failure"))
+    """
+    Hook to modify collected test items.
+    """
+    deselected_modules = set()
+    for item in items:
+        try:
+            # Attempt to collect the test
+            config.hook.pytest_runtest_protocol(item=item, nextitem=None)
+        except Exception as e:
+            # Check if the error message contains the specified substring
+            error_message = str(e)
+            if "pymilvus.exceptions.MilvusException" in error_message:
+                # Mark the test module as skipped if the error message contains the specified substring
+                deselected_modules.add(item.module.__name__)
+    # Remove the deselected modules from the test items list
+    items[:] = [item for item in items if item.module.__name__ not in deselected_modules]
