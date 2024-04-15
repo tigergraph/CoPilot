@@ -14,9 +14,10 @@ from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
 
-
 if PRODUCTION:
-    app = FastAPI(title="TigerGraph CoPilot", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(
+        title="TigerGraph CoPilot", docs_url=None, redoc_url=None, openapi_url=None
+    )
 else:
     app = FastAPI(title="TigerGraph CoPilot")
 
@@ -60,6 +61,7 @@ async def get_basic_auth_credentials(request: Request):
 
     return username
 
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
@@ -87,7 +89,7 @@ async def log_requests(request: Request, call_next):
             "endpoint": request.url.path,
             "actionName": action_name,
             "status": status,
-            "requestId": req_id
+            "requestId": req_id,
         }
         LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
         update_metrics(start_time=start_time, label=request.url.path)

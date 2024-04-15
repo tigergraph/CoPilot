@@ -27,6 +27,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
 
 
+@router.post("/log_Test")
+def log_test():
+    print("****")
+    LogWriter.info("lw info")
+    LogWriter.warn("lw warn")
+
+    from datetime import datetime
+
+    audit_log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "userName": "user name",
+        "clientHost": "clientHost",
+        "userAgent": "userAgent",
+        "endpoint": "endpoint",
+        "actionName": "actionName",
+        "status": "status",
+        "requestId": "requestId",
+    }
+    LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
+    logger.debug_pii("debug_pii")
+    logger.debug("debug log")
+    logger.info("info log")
+    logger.warning("warn log")
+
+    print("****")
+    return "OK"
+
 @router.post("/{graphname}/query")
 def retrieve_answer(
     graphname,
@@ -273,10 +300,7 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(
-    graphname,
-    request_data: QueryDeleteRequest
-):
+def delete_docs(graphname, request_data: QueryDeleteRequest):
     ids = request_data.ids
     expr = request_data.expr
 
