@@ -54,7 +54,7 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 
 
 ### Optional: Configure Logging Level in Dockerfile
-To configure the logging level of the service, edit the copilot service's `LOGLEVEL` env variable in the docker-compse file. By default, the logging level is set to `"INFO"`.
+To configure the logging level of the service, edit the CoPilot service's `LOGLEVEL` env variable in the docker-compose file. By default, the logging level is set to `"INFO"`.
 
 This line can be changed to support different logging levels. The levels are described below:
 
