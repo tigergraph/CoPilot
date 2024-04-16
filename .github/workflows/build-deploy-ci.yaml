@@ -2,7 +2,7 @@ name: CoPilot Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" , "gh-build"]
   workflow_dispatch:
 
 env:
