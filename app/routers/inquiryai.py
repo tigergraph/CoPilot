@@ -24,7 +24,7 @@ from app.tools.validation_utils import MapQuestionToSchemaException
 from app.util import get_db_connection
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["InqueryAI"])
+router = APIRouter(tags=["InquiryAI"])
 
 
 @router.post("/{graphname}/query")
@@ -121,7 +121,8 @@ def retrieve_answer(
             ).inc()
         except Exception:
             resp.natural_language_response = (
-                "An error occurred while processing the response. Please try again."
+                # "An error occurred while processing the response. Please try again."
+                str(steps["output"])
             )
             resp.query_sources = {"agent_history": str(steps)}
             resp.answered_question = False
@@ -149,7 +150,8 @@ def retrieve_answer(
         )
     except Exception as e:
         resp.natural_language_response = (
-            "An error occurred while processing the response. Please try again."
+            # "An error occurred while processing the response. Please try again."
+            str(steps["output"])
         )
         resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
@@ -178,12 +180,10 @@ def get_query_embedding(
     return embedding_service.embed_query(query.query)
 
 
-# @router.post("/{graphname}/register_docs")
-@router.post("/{graphname}/registercustomquery")
+@router.post("/{graphname}/register_docs")
 def register_docs(
     graphname,
     query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
@@ -223,7 +223,6 @@ def register_docs(
 def upsert_docs(
     graphname,
     request_data: Union[QueryUperstRequest, List[QueryUperstRequest]],
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
     try:
         results = []
@@ -274,11 +273,7 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(
-    graphname,
-    request_data: QueryDeleteRequest,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
-):
+def delete_docs(graphname, request_data: QueryDeleteRequest):
     ids = request_data.ids
     expr = request_data.expr
 
@@ -314,7 +309,6 @@ def delete_docs(
 def retrieve_docs(
     graphname,
     query: NaturalLanguageQuery,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
     top_k: int = 3,
 ):
     logger.debug_pii(

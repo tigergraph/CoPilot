@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import uuid
 from typing import Union
 
@@ -30,10 +29,7 @@ router = APIRouter(tags=["SupportAI"])
 @router.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
     # need to open the file using the absolute path
-    abs_path = os.path.abspath(__file__)
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/SupportAI_Schema.gsql"
-    )
+    file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
         schema = f.read()
     schema_res = conn.gsql(
@@ -42,10 +38,8 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
         )
     )
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/SupportAI_IndexCreation.gsql"
-    )
-    with open(file_path, "r") as f:
+    file_path = "app/gsql/supportai/SupportAI_IndexCreation.gsql"
+    with open(file_path) as f:
         index = f.read()
     index_res = conn.gsql(
         """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(
@@ -53,10 +47,8 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
         )
     )
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "./gsql/supportai/Scan_For_Updates.gsql"
-    )
-    with open(file_path, "r") as f:
+    file_path = "app/gsql/supportai/Scan_For_Updates.gsql"
+    with open(file_path) as f:
         scan_for_updates = f.read()
     res = conn.gsql(
         "USE GRAPH "
@@ -66,11 +58,8 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
         + "\n INSTALL QUERY Scan_For_Updates"
     )
 
-    file_path = os.path.join(
-        os.path.dirname(abs_path),
-        "./gsql/supportai/Update_Vertices_Processing_Status.gsql",
-    )
-    with open(file_path, "r") as f:
+    file_path = "app/gsql/supportai/Update_Vertices_Processing_Status.gsql"
+    with open(file_path) as f:
         update_vertices = f.read()
     res = conn.gsql(
         "USE GRAPH "
@@ -81,24 +70,24 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
     )
 
     return {
+        "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
         "index_creation_status": json.dumps(index_res),
     }
 
 
 @router.post("/{graphname}/supportai/create_ingest")
-async def create_ingest(
+def create_ingest(
     graphname,
     ingest_config: CreateIngestConfig,
+    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    get_eventual_consistency_checker(graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if ingest_config.file_format.lower() == "json":
-        abs_path = os.path.abspath(__file__)
-        file_path = os.path.join(
-            os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadJSON.gsql"
-        )
-        with open(file_path, "r") as f:
+        file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
+
+        with open(file_path) as f:
             ingest_template = f.read()
         ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
         doc_id = ingest_config.loader_config.get("doc_id_field", "doc_id")
@@ -107,11 +96,9 @@ async def create_ingest(
         ingest_template = ingest_template.replace('"content"', '"{}"'.format(doc_text))
 
     if ingest_config.file_format.lower() == "csv":
-        abs_path = os.path.abspath(__file__)
-        file_path = os.path.join(
-            os.path.dirname(abs_path), "gsql/supportai/SupportAI_InitialLoadCSV.gsql"
-        )
-        with open(file_path, "r") as f:
+        file_path = "app/gsql/supportai/SupportAI_InitialLoadCSV.gsql"
+
+        with open(file_path) as f:
             ingest_template = f.read()
         ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
         separator = ingest_config.get("separator", "|")
@@ -123,11 +110,9 @@ async def create_ingest(
         ingest_template = ingest_template.replace('"\\n"', '"{}"'.format(eol))
         ingest_template = ingest_template.replace('"double"', '"{}"'.format(quote))
 
-    abs_path = os.path.abspath(__file__)
-    file_path = os.path.join(
-        os.path.dirname(abs_path), "gsql/supportai/SupportAI_DataSourceCreation.gsql"
-    )
-    with open(file_path, "r") as f:
+    file_path = "app/gsql/supportai/SupportAI_DataSourceCreation.gsql"
+
+    with open(file_path) as f:
         data_stream_conn = f.read()
 
     # assign unique identifier to the data stream connection
@@ -222,12 +207,13 @@ async def create_ingest(
 
 
 @router.post("/{graphname}/supportai/ingest")
-async def ingest(
+def ingest(
     graphname,
     loader_info: LoadingInfo,
+    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    get_eventual_consistency_checker(graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
     if loader_info.load_job_id is None:
@@ -266,102 +252,14 @@ async def ingest(
         .split("\n")[0],
     }
 
-
-@router.post("/{graphname}/supportai/batch_ingest")
-async def batch_ingest(
-    graphname,
-    doc_source: Union[S3BatchDocumentIngest, BatchDocumentIngest],
-    background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
-):
-    get_eventual_consistency_checker(graphname)
-    req_id = req_id_cv.get()
-    status_manager.create_status(conn.username, req_id, graphname)
-    ingestion = BatchIngestion(
-        embedding_service,
-        get_llm_service(llm_config),
-        conn,
-        status_manager.get_status(req_id),
-    )
-    if doc_source.service.lower() == "s3":
-        background_tasks.add_task(ingestion.ingest_blobs, doc_source)
-    else:
-        raise Exception("Document storage service not implemented")
-
-    return {"status": "request accepted", "request_id": req_id}
-
-
-@router.get("/{graphname}/supportai/ingestion_status")
-def ingestion_status(graphname, status_id: str):
-    status = status_manager.get_status(status_id)
-
-    if status:
-        return {"status": status.to_dict()}
-    else:
-        return {"status": "not found"}
-
-
-@router.post("/{graphname}/supportai/createvdb")
-def create_vdb(
-    graphname,
-    config: CreateVectorIndexConfig,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
-):
-    if (
-        conn.getVertexCount(
-            "HNSWEntrypoint", where='id=="{}"'.format(config.index_name)
-        )
-        == 0
-    ):
-        res = conn.runInstalledQuery(
-            "HNSW_CreateEntrypoint", {"index_name": config.index_name}
-        )
-
-    res = conn.runInstalledQuery(
-        "HNSW_BuildIndex",
-        {
-            "index_name": config.index_name,
-            "v_types": config.vertex_types,
-            "M": config.M,
-            "ef_construction": config.ef_construction,
-        },
-    )
-    return res
-
-
-@router.get("/{graphname}/supportai/deletevdb/{index_name}")
-def delete_vdb(
-    graphname, index_name, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
-):
-    return conn.runInstalledQuery("HNSW_DeleteIndex", {"index_name": index_name})
-
-
-@router.post("/{graphname}/supportai/queryvdb/{index_name}")
-async def query_vdb(
-    graphname,
-    index_name,
-    query: SupportAIQuestion,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
-):
-    get_eventual_consistency_checker(graphname)
-    retriever = HNSWRetriever(
-        embedding_service, embedding_store, get_llm_service(llm_config), conn
-    )
-    return retriever.search(
-        query.question,
-        index_name,
-        query.method_params["top_k"],
-        query.method_params["withHyDE"],
-    )
-
-
 @router.post("/{graphname}/supportai/search")
 async def search(
     graphname,
     query: SupportAIQuestion,
+    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    get_eventual_consistency_checker(graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -412,9 +310,10 @@ async def search(
 async def answer_question(
     graphname,
     query: SupportAIQuestion,
+    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    get_eventual_consistency_checker(graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -470,9 +369,11 @@ async def answer_question(
 
 @router.get("/{graphname}/supportai/buildconcepts")
 async def build_concepts(
-    graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
+    graphname,
+    background_tasks: BackgroundTasks,
+    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    get_eventual_consistency_checker(graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)

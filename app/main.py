@@ -5,17 +5,21 @@ import uuid
 from base64 import b64decode
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 
 from app import routers
-from app.config import PATH_PREFIX, llm_config
+from app.config import PATH_PREFIX, PRODUCTION
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
 
-app = FastAPI(title="Copilot")
+if PRODUCTION:
+    app = FastAPI(
+        title="TigerGraph CoPilot", docs_url=None, redoc_url=None, openapi_url=None
+    )
+else:
+    app = FastAPI(title="TigerGraph CoPilot")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(routers.root_router, prefix=PATH_PREFIX)
-app.include_router(routers.inqueryai_router, prefix=PATH_PREFIX)
+app.include_router(routers.inquiryai_router, prefix=PATH_PREFIX)
 app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
 
 
@@ -58,8 +62,7 @@ async def get_basic_auth_credentials(request: Request):
     return username
 
 
-# FIXME: this middle ware causes the API to hang if it raises an error
-# @app.middleware("http")
+@app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
     LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
@@ -73,7 +76,6 @@ async def log_requests(request: Request, call_next):
     action_name = request.url.path
     status = "SUCCESS"
 
-    response = await call_next(request)
     if response.status_code != 200:
         status = "FAILURE"
 
