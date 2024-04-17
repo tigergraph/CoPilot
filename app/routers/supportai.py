@@ -3,7 +3,7 @@ import logging
 import uuid
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from app.config import (embedding_service, embedding_store, get_llm_service,
                         llm_config, status_manager)
@@ -20,14 +20,15 @@ from app.supportai.retrievers import (EntityRelationshipRetriever,
                                       HNSWOverlapRetriever, HNSWRetriever,
                                       HNSWSiblingRetriever)
 from app.supportai.supportai_ingest import BatchIngestion
-from app.util import get_db_connection, get_eventual_consistency_checker
+from app.util import get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
 
 @router.post("/{graphname}/supportai/initialize")
-def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+def initialize(graphname, conn: Request):
+    conn = conn.state.conn
     # need to open the file using the absolute path
     file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
@@ -81,8 +82,9 @@ def create_ingest(
     graphname,
     ingest_config: CreateIngestConfig,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ):
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if ingest_config.file_format.lower() == "json":
         file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
@@ -211,8 +213,9 @@ def ingest(
     graphname,
     loader_info: LoadingInfo,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ):
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
@@ -257,8 +260,9 @@ async def search(
     graphname,
     query: SupportAIQuestion,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ):
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
@@ -311,8 +315,9 @@ async def answer_question(
     graphname,
     query: SupportAIQuestion,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ):
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
@@ -371,8 +376,9 @@ async def answer_question(
 async def build_concepts(
     graphname,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ):
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
@@ -388,7 +394,8 @@ async def build_concepts(
 
 @router.get("/{graphname}/supportai/forceupdate")
 async def force_update(
-    graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
+    graphname: str, conn: Request
 ):
+    conn = conn.state.conn
     await get_eventual_consistency_checker(graphname)
     return {"status": "success"}
