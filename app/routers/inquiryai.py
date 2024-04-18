@@ -273,10 +273,7 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(
-    graphname,
-    request_data: QueryDeleteRequest
-):
+def delete_docs(graphname, request_data: QueryDeleteRequest):
     ids = request_data.ids
     expr = request_data.expr
 

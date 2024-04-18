@@ -6,15 +6,15 @@
 #include <curl/curl.h>
 #include <json/json.h>
 
-class MilvusUtil {
+class tg_MilvusUtil {
 public:
-    MilvusUtil(const std::string& host, int port) {
+    tg_MilvusUtil(const std::string& host, int port) {
         this->host = host;
         this->port = port;
         curl_global_init(CURL_GLOBAL_ALL);
     }
 
-    ~MilvusUtil() {
+    ~tg_MilvusUtil() {
         curl_global_cleanup();
     }
 

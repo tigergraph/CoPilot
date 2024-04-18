@@ -1,31 +1,12 @@
-from datetime import datetime
+import json
 import logging
 import os
-import json
-from logging.handlers import RotatingFileHandler
 import re
+from logging.handlers import RotatingFileHandler
 
-LOG_CONFIG = os.getenv("LOG_CONFIG", "configs/log_config.json")
+from app.log import audit_formatter, formatter, get_log_config, log_file_paths
 
-if LOG_CONFIG is None or (
-    LOG_CONFIG.endswith(".json") and not os.path.exists(LOG_CONFIG)
-):
-    log_config = {
-        "log_file_path": "/tmp/logs",
-        "log_max_size": 104857600,
-        "log_backup_count": 0,
-    }
-elif LOG_CONFIG.endswith(".json"):
-    with open(LOG_CONFIG, "r") as f:
-        log_config = json.load(f)
-else:
-    try:
-        log_config = json.loads(str(LOG_CONFIG))
-    except json.JSONDecodeError as e:
-        raise Exception(
-            "LOG_CONFIG must be a .json file or a JSON string, failed with error: "
-            + str(e)
-        )
+log_config = get_log_config()
 
 
 class CorrectingLogger(logging.Logger):
@@ -56,12 +37,6 @@ class CorrectingLogger(logging.Logger):
             rv = (co.co_filename, f.f_lineno, co.co_name, sinfo)
             break
         return rv
-
-
-class UTCFormatter(logging.Formatter):
-    def formatTime(self, record, datefmt=None):
-        utc_datetime = datetime.utcfromtimestamp(record.created)
-        return utc_datetime.strftime("%m%d %H:%M:%S%f,")
 
 
 class LogWriter:
@@ -118,29 +93,24 @@ class LogWriter:
             log_directory = log_config.get("log_file_path", "/tmp/logs")
             os.makedirs(log_directory, exist_ok=True)
 
-            formatter = UTCFormatter(
-                "[%(levelname).1s%(asctime)s %(process)d %(filename)s:%(lineno)d] %(message)s"
-            )
-
-            audit_formatter = UTCFormatter(
-                "%(message)s"
-            )
-
             # Logging for info, error and audit
             LogWriter.general_logger = LogWriter.setup_logger(
-                "info", log_directory+"/log.INFO", logging.INFO, formatter
+                "info", log_file_paths["info"][0], logging.INFO, formatter
             )
 
             LogWriter.warning_logger = LogWriter.setup_logger(
-                "warning", log_directory+"/log.WARNING", logging.WARNING, formatter
+                "warning", log_file_paths["warning"][0], logging.WARNING, formatter
             )
 
             LogWriter.error_logger = LogWriter.setup_logger(
-                "error", log_directory+"/log.ERROR", logging.ERROR, formatter
+                "error", log_file_paths["error"][0], logging.ERROR, formatter
             )
 
             LogWriter.audit_logger = LogWriter.setup_logger(
-                "audit", log_directory+"/log.AUDIT-COPILOT", logging.INFO, audit_formatter
+                "audit",
+                log_file_paths["audit"][0],
+                logging.INFO,
+                audit_formatter,
             )
 
             stdout_handler = logging.StreamHandler()
@@ -163,7 +133,7 @@ class LogWriter:
             )
             message += extra_info
 
-        #getattr(LogWriter.general_logger, level.lower())(message)
+        # getattr(LogWriter.general_logger, level.lower())(message)
         if level.upper() == "ERROR":
             LogWriter.error_logger.error(message)
         elif level.upper() == "WARNING":

@@ -2,7 +2,7 @@ USE GRAPH MyGraph
 
 SET query_timeout=60000
 
-CREATE OR REPLACE DISTRIBUTED QUERY searchInMilvusForCollection(STRING milvus_host, UINT milvus_port, STRING collection_name, STRING vector_field_name, STRING vertex_id_field_name, STRING metric_type, INT top_k, STRING query_vector_as_string) FOR GRAPH MyGraph {   ListAccum<STRING> @@vertexIds = searchInMilvus(milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, query_vector_as_string, metric_type, top_k);  PRINT @@vertexIds;}
+CREATE OR REPLACE DISTRIBUTED QUERY searchInMilvusForCollection(STRING milvus_host, UINT milvus_port, STRING collection_name, STRING vector_field_name, STRING vertex_id_field_name, STRING metric_type, INT top_k, STRING query_vector_as_string) FOR GRAPH MyGraph {   ListAccum<STRING> @@vertexIds = tg_searchInMilvus(milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, query_vector_as_string, metric_type, top_k);  PRINT @@vertexIds;}
 
 INSTALL QUERY searchInMilvusForCollection
 

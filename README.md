@@ -39,32 +39,23 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 
 # Getting Started
 
-## Docker Pull the CoPilot Image and Setup Environment
-```sh
-docker pull tigergraphml/copilot
+## Clone the repository, setup the environment files, run the docker-compose file
+1. Copy the docker-compose file or clone the repo
+    - compose file: [docker-compose.yml](https://github.com/tigergraph/copilot/blob/main/docker-compose.yml)
+    - clone: `git clone https://github.com/tigergraph/Copilot`
+2. Setup env files
+    - `touch configs/db_config.json configs/llm_config.json configs/milvus_config.json`
+    - [LLM config](#create-llm-provider-configuration-file)
+    - [Tigergraph config](#create-db-configuration-file)
+    - [Milvus config](#create-milvus-configuration-file-optional) (optional)
+    - [Logging config](#create-log-configuration-file-optional) (optional)
+3. `docker compose up`
+4. [Use Copilot](#using-tigergraph-copilot)!
 
-cd ~ && mkdir -p CoPilot/configs
-
-touch CoPilot/configs/db_config.json CoPilot/configs/llm_config.json CoPilot/configs/milvus_config.json
-```
-
-## Alternative: Clone the Repository, Setup Environment, and Build the Dockerfile
-```sh
-git clone https://github.com/tigergraph/CoPilot.git
-
-cd CoPilot && mkdir configs
-
-touch configs/db_config.json configs/llm_config.json configs/milvus_config.json
-
-docker build -t copilot:0.1 .
-```
 
 ### Optional: Configure Logging Level in Dockerfile
-To configure the logging level of the service, edit the `Dockerfile`. By default, the logging level is set to `"INFO"`.
+To configure the logging level of the service, edit the CoPilot service's `LOGLEVEL` env variable in the docker-compose file. By default, the logging level is set to `"INFO"`.
 
-```dockerfile
-ENV LOGLEVEL="INFO"
-```
 This line can be changed to support different logging levels. The levels are described below:
 
 * **CRITICAL**: A serious error
@@ -74,6 +65,7 @@ This line can be changed to support different logging levels. The levels are des
 * **DEBUG**: Detailed information, e.g. the functions retrieved during the GenerateFunction step, etc.
 * **DEBUG_PII**: Finer-grained information that could potentially include PII, such as a user's question, the complete function call (with parameters), and the LLM's natural language response.
 * **NOTSET**: All messages are processed
+
 
 ## Create LLM provider configuration file
 In the `configs/llm_config.json` file, copy your provider's JSON config template below, and fill out the appropriate fields.
