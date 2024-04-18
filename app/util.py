@@ -2,7 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasicCredentials
+from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
 from pyTigerGraph import TigerGraphConnection
 
 from app.config import (db_config, embedding_service, get_llm_service,
@@ -14,10 +14,21 @@ from app.sync.eventual_consistency_checker import EventualConsistencyChecker
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
 
+def get_db_connection_id_token(graphname: str, credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
+    conn = TigerGraphConnection(
+        host=db_config["hostname"],
+        graphname=graphname,
+        apiToken = credentials,
+        tgCloud = True,
+        sslPort=14240
+    )
+    conn.customizeHeader(
+        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
+    )
+    conn = TigerGraphConnectionProxy(conn, auth_mode="id_token")
+    return conn
 
-def get_db_connection(
-    graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
-) -> TigerGraphConnectionProxy:
+def get_db_connection_pwd(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
         username=credentials.username,
@@ -65,7 +76,7 @@ def get_eventual_consistency_checker(graphname: str):
     credentials = HTTPBasicCredentials(
         username=db_config["username"], password=db_config["password"]
     )
-    conn = get_db_connection(graphname, credentials)
+    conn = get_db_connection_pwd(graphname, credentials)
 
     if graphname not in consistency_checkers:
         vector_indices = {}

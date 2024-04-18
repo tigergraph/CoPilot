@@ -6,6 +6,7 @@ from base64 import b64decode
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 
 from app import routers
@@ -13,6 +14,7 @@ from app.config import PATH_PREFIX, PRODUCTION
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.tools.logwriter import LogWriter
+from app.util import get_db_connection_pwd, get_db_connection_id_token
 
 if PRODUCTION:
     app = FastAPI(
@@ -94,6 +96,23 @@ async def log_requests(request: Request, call_next):
         LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
         update_metrics(start_time=start_time, label=request.url.path)
 
+    return response
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    graphname = request.url.components.path.split("/")[-2]
+    authorization = request.headers.get("Authorization")
+    if authorization:
+        scheme, credentials = authorization.split()
+        if scheme.lower() == "basic":
+            username, password = b64decode(credentials).decode().split(':', 1)
+            credentials = HTTPBasicCredentials(username=username, password=password)
+            conn = get_db_connection_pwd(graphname, credentials)
+        else:
+            conn = get_db_connection_id_token(graphname, credentials)
+        request.state.conn = conn
+    response = await call_next(request)
     return response
 
 

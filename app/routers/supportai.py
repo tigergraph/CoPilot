@@ -2,11 +2,11 @@ import json
 import logging
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from app.config import (embedding_service, embedding_store, get_llm_service,
                         llm_config)
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
+
 from app.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
                                     LoadingInfo, SupportAIQuestion)
 from app.supportai.concept_management.create_concepts import (
@@ -15,14 +15,16 @@ from app.supportai.concept_management.create_concepts import (
 from app.supportai.retrievers import (EntityRelationshipRetriever,
                                       HNSWOverlapRetriever, HNSWRetriever,
                                       HNSWSiblingRetriever)
-from app.util import get_db_connection, get_eventual_consistency_checker
+
+from app.util import get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
 
 @router.post("/{graphname}/supportai/initialize")
-def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+def initialize(graphname, conn: Request):
+    conn = conn.state.conn
     # need to open the file using the absolute path
     file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
@@ -67,7 +69,7 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
-        "index_creation_status": json.dumps(index_res),
+        "index_creation_status": json.dumps(index_res)
     }
 
 
@@ -75,8 +77,10 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
 def create_ingest(
     graphname,
     ingest_config: CreateIngestConfig,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request
 ):
+    conn = conn.state.conn
+
     if ingest_config.file_format.lower() == "json":
         file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
 
@@ -204,9 +208,9 @@ def ingest(
     graphname,
     loader_info: LoadingInfo,
     background_tasks: BackgroundTasks,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request
 ):
-    # creates a file with the creds
+    conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
@@ -251,8 +255,9 @@ def ingest(
 def search(
     graphname,
     query: SupportAIQuestion,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request
 ):
+    conn = conn.state.conn
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -303,8 +308,9 @@ def search(
 def answer_question(
     graphname,
     query: SupportAIQuestion,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request
 ):
+    conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -361,8 +367,11 @@ def answer_question(
 @router.get("/{graphname}/supportai/buildconcepts")
 def build_concepts(
     graphname,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    background_tasks: BackgroundTasks,
+    conn: Request,
 ):
+    conn = conn.state.conn
+    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
@@ -376,6 +385,9 @@ def build_concepts(
 
 
 @router.get("/{graphname}/supportai/forceupdate")
-def force_update(graphname: str):
+async def force_update(
+    graphname: str, conn: Request
+):
+    conn = conn.state.conn
     get_eventual_consistency_checker(graphname)
     return {"status": "success"}

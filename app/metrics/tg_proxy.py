@@ -1,4 +1,5 @@
 import time
+import re
 from pyTigerGraph import TigerGraphConnection
 from app.metrics.prometheus_metrics import metrics
 from app.tools.logwriter import LogWriter
@@ -9,8 +10,11 @@ from app.log import req_id_cv
 logger = logging.getLogger(__name__)
 
 class TigerGraphConnectionProxy:
-    def __init__(self, tg_connection: TigerGraphConnection):
+    def __init__(self, tg_connection: TigerGraphConnection, auth_mode: str = "pwd"):
+        self.original_req = tg_connection._req
+        tg_connection._req = self._req
         self._tg_connection = tg_connection
+        self.auth_mode = auth_mode
         metrics.tg_active_connections.inc()
 
     def __getattr__(self, name):
@@ -27,6 +31,16 @@ class TigerGraphConnectionProxy:
             return hooked
         else:
             return original_attr
+
+    def _req(self, method: str, url: str, authMode: str, *args, **kwargs):
+        # we always use token auth 
+        # always use proxy endpoint in GUI for restpp and gsql
+        if self.auth_mode == "pwd":
+            return self.original_req(method, url, authMode, *args, **kwargs)
+        else:
+            url = re.sub(r'/gsqlserver/', '/api/gsql-server/', url)
+            url = re.sub(r'/restpp/', '/api/restpp/', url)
+            return self.original_req(method, url, "token", *args, **kwargs)
 
     def _runInstalledQuery(self, query_name, params):
         start_time = time.time()

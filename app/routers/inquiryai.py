@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import Annotated, List, Union
+from typing import Annotated, List, Union, Optional
 
 from fastapi import (APIRouter, Depends, HTTPException, Request, WebSocket,
                      status)
@@ -21,7 +21,6 @@ from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
                                     QueryUperstRequest)
 from app.tools.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
-from app.util import get_db_connection
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
@@ -31,8 +30,9 @@ router = APIRouter(tags=["InquiryAI"])
 def retrieve_answer(
     graphname,
     query: NaturalLanguageQuery,
-    conn: TigerGraphConnectionProxy = Depends(get_db_connection),
+    conn: Request,
 ) -> CoPilotResponse:
+    conn = conn.state.conn
     logger.debug_pii(
         f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}"
     )
@@ -320,7 +320,8 @@ def retrieve_docs(
 
 
 @router.post("/{graphname}/login")
-def login(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_connection)):
+def login(graphname, conn: Request):
+    conn = conn.state.conn
     session_id = session_handler.create_session(conn.username, conn)
     return {"session_id": session_id}
 
