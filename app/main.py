@@ -102,19 +102,16 @@ async def log_requests(request: Request, call_next):
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     graphname = request.url.components.path.split("/")[-2]
-    if request.headers.get("Origin") in ["https://portal.tgcloud-dev.com", "https://portal.tgcloud.io",
-                                         "https://tools.tgcloud-dev.com", "https://tools.tgcloud.io"]:
-        credentials = request.headers.get("Authorization")
-        conn = get_db_connection_id_token(graphname, credentials)
-    else:
-        authorization = request.headers.get("Authorization")
-        if authorization:
-            scheme, credentials = authorization.split()
-            if scheme.lower() == "basic":
-                username, password = b64decode(credentials).decode().split(':', 1)
-                credentials = HTTPBasicCredentials(username=username, password=password)
+    authorization = request.headers.get("Authorization")
+    if authorization:
+        scheme, credentials = authorization.split()
+        if scheme.lower() == "basic":
+            username, password = b64decode(credentials).decode().split(':', 1)
+            credentials = HTTPBasicCredentials(username=username, password=password)
             conn = get_db_connection_pwd(graphname, credentials)
-            request.state.conn = conn
+        else:
+            conn = get_db_connection_id_token(graphname, credentials)
+        request.state.conn = conn
     response = await call_next(request)
     return response
 
