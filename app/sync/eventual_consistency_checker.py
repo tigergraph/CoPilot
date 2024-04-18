@@ -237,12 +237,11 @@ class EventualConsistencyChecker:
         return len(vertex_ids_content_map) != 0
 
     def initialize(self):
-        if not self.is_initialized:
-            LogWriter.info(
-                f"Eventual Consistency Check running for graphname {self.graphname} "
-            )
-            self.is_initialized = True
-            ok = self.fetch_and_process_vertex()
-            LogWriter.info(
-                f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
-            )
+        LogWriter.info(
+            f"Eventual Consistency Check running for graphname {self.graphname} "
+        )
+        self.is_initialized = True
+        ok = self.fetch_and_process_vertex()
+        LogWriter.info(
+            f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
+        )
