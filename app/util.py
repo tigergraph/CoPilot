@@ -56,7 +56,7 @@ def get_db_connection(
     return conn
 
 
-async def get_eventual_consistency_checker(graphname: str):
+def get_eventual_consistency_checker(graphname: str):
     if not db_config.get("enable_consistency_checker", True):
         logger.debug("Eventual consistency checker disabled")
         return
@@ -132,6 +132,6 @@ async def get_eventual_consistency_checker(graphname: str):
             chunker,
             extractor,
         )
-        await checker.initialize()
+        checker.initialize()
         consistency_checkers[graphname] = checker
     return consistency_checkers[graphname]

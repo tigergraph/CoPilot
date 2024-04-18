@@ -1,25 +1,20 @@
 import json
 import logging
 import uuid
-from typing import Union
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 
 from app.config import (embedding_service, embedding_store, get_llm_service,
-                        llm_config, status_manager)
-from app.log import req_id_cv
+                        llm_config)
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas.schemas import (BatchDocumentIngest, CoPilotResponse,
-                                    CreateIngestConfig,
-                                    CreateVectorIndexConfig, LoadingInfo,
-                                    S3BatchDocumentIngest, SupportAIQuestion)
+from app.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
+                                    LoadingInfo, SupportAIQuestion)
 from app.supportai.concept_management.create_concepts import (
     CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
     RelationshipConceptCreator)
 from app.supportai.retrievers import (EntityRelationshipRetriever,
                                       HNSWOverlapRetriever, HNSWRetriever,
                                       HNSWSiblingRetriever)
-from app.supportai.supportai_ingest import BatchIngestion
 from app.util import get_db_connection, get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
@@ -80,10 +75,8 @@ def initialize(graphname, conn: TigerGraphConnectionProxy = Depends(get_db_conne
 def create_ingest(
     graphname,
     ingest_config: CreateIngestConfig,
-    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if ingest_config.file_format.lower() == "json":
         file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
 
@@ -213,6 +206,7 @@ def ingest(
     background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
+    # creates a file with the creds
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
@@ -252,14 +246,13 @@ def ingest(
         .split("\n")[0],
     }
 
+
 @router.post("/{graphname}/supportai/search")
-async def search(
+def search(
     graphname,
     query: SupportAIQuestion,
-    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -307,13 +300,11 @@ async def search(
 
 
 @router.post("/{graphname}/supportai/answerquestion")
-async def answer_question(
+def answer_question(
     graphname,
     query: SupportAIQuestion,
-    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -368,12 +359,10 @@ async def answer_question(
 
 
 @router.get("/{graphname}/supportai/buildconcepts")
-async def build_concepts(
+def build_concepts(
     graphname,
-    background_tasks: BackgroundTasks,
     conn: TigerGraphConnectionProxy = Depends(get_db_connection),
 ):
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
     rels_concepts.create_concepts()
     ents_concepts = EntityConceptCreator(conn, llm_config, embedding_service)
@@ -387,8 +376,6 @@ async def build_concepts(
 
 
 @router.get("/{graphname}/supportai/forceupdate")
-async def force_update(
-    graphname: str, conn: TigerGraphConnectionProxy = Depends(get_db_connection)
-):
-    await get_eventual_consistency_checker(graphname)
+def force_update(graphname: str):
+    get_eventual_consistency_checker(graphname)
     return {"status": "success"}
