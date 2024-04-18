@@ -1,25 +1,21 @@
 import json
 import logging
 import uuid
-from typing import Union
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from app.config import (embedding_service, embedding_store, get_llm_service,
-                        llm_config, status_manager)
-from app.log import req_id_cv
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas.schemas import (BatchDocumentIngest, CoPilotResponse,
-                                    CreateIngestConfig,
-                                    CreateVectorIndexConfig, LoadingInfo,
-                                    S3BatchDocumentIngest, SupportAIQuestion)
+                        llm_config)
+
+from app.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
+                                    LoadingInfo, SupportAIQuestion)
 from app.supportai.concept_management.create_concepts import (
     CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
     RelationshipConceptCreator)
 from app.supportai.retrievers import (EntityRelationshipRetriever,
                                       HNSWOverlapRetriever, HNSWRetriever,
                                       HNSWSiblingRetriever)
-from app.supportai.supportai_ingest import BatchIngestion
+
 from app.util import get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
@@ -73,7 +69,7 @@ def initialize(graphname, conn: Request):
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
-        "index_creation_status": json.dumps(index_res),
+        "index_creation_status": json.dumps(index_res)
     }
 
 
@@ -81,11 +77,10 @@ def initialize(graphname, conn: Request):
 def create_ingest(
     graphname,
     ingest_config: CreateIngestConfig,
-    background_tasks: BackgroundTasks,
-    conn: Request,
+    conn: Request
 ):
     conn = conn.state.conn
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
+
     if ingest_config.file_format.lower() == "json":
         file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
 
@@ -213,7 +208,7 @@ def ingest(
     graphname,
     loader_info: LoadingInfo,
     background_tasks: BackgroundTasks,
-    conn: Request,
+    conn: Request
 ):
     conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
@@ -255,15 +250,14 @@ def ingest(
         .split("\n")[0],
     }
 
+
 @router.post("/{graphname}/supportai/search")
-async def search(
+def search(
     graphname,
     query: SupportAIQuestion,
-    background_tasks: BackgroundTasks,
-    conn: Request,
+    conn: Request
 ):
     conn = conn.state.conn
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -311,14 +305,12 @@ async def search(
 
 
 @router.post("/{graphname}/supportai/answerquestion")
-async def answer_question(
+def answer_question(
     graphname,
     query: SupportAIQuestion,
-    background_tasks: BackgroundTasks,
-    conn: Request,
+    conn: Request
 ):
     conn = conn.state.conn
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
     resp = CoPilotResponse
     resp.response_type = "supportai"
     if query.method.lower() == "hnswoverlap":
@@ -373,7 +365,7 @@ async def answer_question(
 
 
 @router.get("/{graphname}/supportai/buildconcepts")
-async def build_concepts(
+def build_concepts(
     graphname,
     background_tasks: BackgroundTasks,
     conn: Request,
@@ -397,5 +389,5 @@ async def force_update(
     graphname: str, conn: Request
 ):
     conn = conn.state.conn
-    await get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname)
     return {"status": "success"}
