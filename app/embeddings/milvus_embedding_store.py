@@ -1,9 +1,13 @@
+import time
+import asyncio
+
 from datetime import datetime
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
 import logging
-from pymilvus import connections, utility
-from time import time
+from pymilvus import connections, utility, Milvus
+from pymilvus.exceptions import MilvusException
+
 from typing import Iterable, Tuple, List, Optional, Union
 
 from fastapi import HTTPException
@@ -30,6 +34,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
         username: str = "",
         password: str = "",
         alias: str = "alias",
+        retry_interval: int = 5, 
+        max_retry_attempts: int = 10, 
     ):
         self.embedding_service = embedding_service
         self.vector_field = vector_field
@@ -38,6 +44,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.support_ai_instance = support_ai_instance
         self.collection_name = collection_name
         self.milvus_alias = alias
+        self.retry_interval = retry_interval
+        self.max_retry_attempts = max_retry_attempts
 
         if host.startswith("http"):
             if host.endswith(str(port)):
@@ -62,23 +70,37 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 "timeout": 30,
             }
 
-        connections.connect(**self.milvus_connection)
-        metrics.milvus_active_connections.labels(self.collection_name).inc
-        LogWriter.info(
-            f"Initializing Milvus with host={host}, port={port}, username={username}, collection={collection_name}"
-        )
-        self.milvus = Milvus(
-            embedding_function=embedding_service,
-            collection_name=collection_name,
-            connection_args=self.milvus_connection,
-            auto_id=True,
-            drop_old=False,
-            text_field=text_field,
-            vector_field=vector_field,
-        )
+        self.connect_to_milvus()
 
         if not self.support_ai_instance:
             self.load_documents()
+
+    def connect_to_milvus(self):
+        retry_attempt = 0
+        while retry_attempt < self.max_retry_attempts:
+            try:
+                connections.connect(**self.milvus_connection)
+                metrics.milvus_active_connections.labels(self.collection_name).inc
+                LogWriter.info(
+                    f"Initializing Milvus with host={self.milvus_connection['host']}, port={self.milvus_connection['port']}, username={self.milvus_connection['user']}, collection={self.collection_name}"
+                )
+                self.milvus = Milvus(
+                    embedding_function=self.embedding_service,
+                    collection_name=self.collection_name,
+                    connection_args=self.milvus_connection,
+                    auto_id=True,
+                    drop_old=False,
+                    text_field=self.text_field,
+                    vector_field=self.vector_field,
+                )
+                return
+            except MilvusException as e:
+                retry_attempt += 1
+                if retry_attempt >= self.max_retry_attempts:
+                    raise e
+                else:
+                    LogWriter.info(f"Failed to connect to Milvus. Retrying in {self.retry_interval} seconds.")
+                    time.sleep(self.retry_interval)
 
     def check_collection_exists(self):
         connections.connect(**self.milvus_connection)
