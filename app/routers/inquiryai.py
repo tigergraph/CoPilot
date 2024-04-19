@@ -321,7 +321,6 @@ def retrieve_docs(
 
 @router.post("/{graphname}/login")
 def login(graphname, conn: Request):
-    conn.state.conn
     session_id = session_handler.create_session(conn.state.conn.username, conn)
     return {"session_id": session_id}
 
