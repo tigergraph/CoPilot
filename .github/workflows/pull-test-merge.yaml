@@ -23,5 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt  # Adjust as needed
 
+      - name: Check Python path
+        run: python -c "import sys; print(sys.path)"
+
       - name: Run pytest
         run: pytest -m tests
