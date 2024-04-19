@@ -18,4 +18,4 @@ ENV MILVUS_CONFIG="/milvus_config.json"
 # INFO, DEBUG, DEBUG_PII
 ENV LOGLEVEL="INFO"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
