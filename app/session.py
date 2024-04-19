@@ -6,7 +6,7 @@ class Session:
         self.session_id = session_id
         self.user_id = user_id
         self.db_conn = db_conn
-        self.graphname = db_conn.graphname
+        self.graphname = db_conn.state.conn.graphname
 
 
 class SessionHandler:
