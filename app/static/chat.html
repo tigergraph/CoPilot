@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -30,7 +31,7 @@
 
 
         .logo {
-           float: left;
+            float: left;
         }
 
         .logout-button {
@@ -52,7 +53,7 @@
         }
 
         .loader-line-wrap {
-            animation: 
+            animation:
                 spin 2000ms cubic-bezier(.175, .885, .32, 1.275) infinite
             ;
             box-sizing: border-box;
@@ -76,7 +77,7 @@
             top: 0;
             width: 50px;
         }
-        .loader-line-wrap:nth-child(1) { animation-delay: -50ms; }
+.loader-line-wrap:nth-child(1) { animation-delay: -50ms; }
         .loader-line-wrap:nth-child(2) { animation-delay: -100ms; }
         .loader-line-wrap:nth-child(3) { animation-delay: -150ms; }
 
@@ -100,7 +101,7 @@
         }
 
         @keyframes spin {
-            0%, 15% {
+0%, 15% {
                 transform: rotate(0);
             }
             100% {
@@ -188,7 +189,7 @@
             </form>
         </div>
     </div>
-    
+
     <div id="chatwindow" style="width: 40%; padding-bottom: 5%; bottom: 0; left: 30%; position: absolute;">
         <div id="chatbox" style="overflow-y: auto; width: 100%; height:95%; background-color: #2d5e77;">
         </div>
@@ -218,11 +219,12 @@
         window.onload = function() {
             modal = document.getElementById("loginModal");
             modal.style.display = "block";
+            login()
         }
 
         async function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            // const username = document.getElementById('username').value;
+            // const password = document.getElementById('password').value;
             const url = window.location.pathname.split('/');
             const graphname = url[1];
             const hostname = window.location.hostname;
@@ -235,7 +237,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ username, password }),
+                    // body: JSON.stringify({ username, password }),
                 });
 
                 const loginData = await loginResponse.json();
@@ -248,7 +250,7 @@
                 var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 
                 socket = new WebSocket(wsProtocol+`${hostname}:${port}/${graphname}/ws?session_id=${sessionId}`);
-                
+
                 console.log(modal);
 
                 socket.onopen = function(event) {
@@ -291,7 +293,7 @@
             // Perform logout (adjust the URL and method based on your API)
             const sessionId = sessionStorage.getItem('sessionId');
             const url = `/${graphname}/logout?session_id=${sessionId}`;
-            
+
             fetch(url, { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
