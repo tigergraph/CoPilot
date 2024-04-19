@@ -101,7 +101,7 @@ async def log_requests(request: Request, call_next):
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    graphname = request.url.components.path.split("/")[-2]
+    graphname = request.url.components.path.split("/")[1]
     authorization = request.headers.get("Authorization")
     if authorization:
         scheme, credentials = authorization.split()

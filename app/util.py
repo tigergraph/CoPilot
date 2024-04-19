@@ -67,16 +67,12 @@ def get_db_connection_pwd(graphname, credentials: Annotated[HTTPBasicCredentials
     return conn
 
 
-def get_eventual_consistency_checker(graphname: str):
+def get_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
     if not db_config.get("enable_consistency_checker", True):
         logger.debug("Eventual consistency checker disabled")
         return
 
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
-    credentials = HTTPBasicCredentials(
-        username=db_config["username"], password=db_config["password"]
-    )
-    conn = get_db_connection_pwd(graphname, credentials)
 
     if graphname not in consistency_checkers:
         vector_indices = {}

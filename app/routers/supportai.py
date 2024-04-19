@@ -211,7 +211,7 @@ def ingest(
     conn: Request
 ):
     conn = conn.state.conn
-    background_tasks.add_task(get_eventual_consistency_checker, graphname)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname, conn)
     if loader_info.file_path is None:
         raise Exception("File path not provided")
     if loader_info.load_job_id is None:
@@ -389,5 +389,5 @@ async def force_update(
     graphname: str, conn: Request
 ):
     conn = conn.state.conn
-    get_eventual_consistency_checker(graphname)
+    get_eventual_consistency_checker(graphname, conn)
     return {"status": "success"}
