@@ -82,7 +82,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 connections.connect(**self.milvus_connection)
                 metrics.milvus_active_connections.labels(self.collection_name).inc
                 LogWriter.info(
-                    f"Initializing Milvus with host={self.milvus_connection['host']}, port={self.milvus_connection['port']}, username={self.milvus_connection['user']}, collection={self.collection_name}"
+                    f'''Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
+                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, collection={self.collection_name}'''
                 )
                 self.milvus = Milvus(
                     embedding_function=self.embedding_service,
@@ -449,6 +450,19 @@ class MilvusEmbeddingStore(EmbeddingStore):
         query_params["vector_field_name"] = "document_vector"
         query_params["vertex_id_field_name"] = "vertex_id"
         return query_params
+    
+    def list_registered_documents(self, collection_name: str, graphname: str = None, only_custom: bool = False):
+        print(self.milvus.address)
+        if only_custom and graphname:
+            res = self.milvus.query(collection_name=collection_name, expr="custom_query == true and graphname == '" + graphname + "'")
+        elif only_custom:
+            res = self.milvus.query(collection_name=collection_name, expr="custom_query == true")
+        elif graphname:
+            res = self.milvus.query(collection_name=collection_name, expr="graphname == '" + graphname + "'")
+        else:
+            res = self.milvus.query(collection_name=collection_name, expr="")
+        
+        return res
 
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec

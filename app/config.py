@@ -115,7 +115,7 @@ def get_llm_service(llm_config):
         raise Exception("LLM Completion Service Not Supported")
 
 
-embedding_store = FAISS_EmbeddingStore(embedding_service)
+#embedding_store = FAISS_EmbeddingStore(embedding_service)
 
 if milvus_config.get("enabled") == "true":
     LogWriter.info(

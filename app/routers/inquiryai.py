@@ -166,6 +166,14 @@ def retrieve_answer(
 
     return resp
 
+@router.get("/{graphname}/list_registered_queries")
+def list_registered_queries(graphname, conn: Request):
+    conn = conn.state.conn
+    queries = embedding_store.list_registered_documents("tg_inquiry_documents", None, only_custom=False)
+    #query_desc = conn.getQueryDescription(queries)
+
+    return queries
+
 
 @router.post("/{graphname}/getqueryembedding")
 def get_query_embedding(
@@ -334,6 +342,7 @@ def logout(graphname, session_id: str):
 @router.get("/{graphname}/chat")
 def chat(request: Request):
     return HTMLResponse(open("app/static/chat.html").read())
+
 
 
 @router.websocket("/{graphname}/ws")
