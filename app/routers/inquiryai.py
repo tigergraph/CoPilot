@@ -16,9 +16,9 @@ from app.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock, AzureOpenAI,
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
+from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo, GSQLQueryList,
                                     NaturalLanguageQuery, QueryDeleteRequest,
-                                    QueryUperstRequest)
+                                    QueryUpsertRequest)
 from app.tools.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
 
@@ -191,7 +191,7 @@ def get_query_embedding(
     return embedding_service.embed_query(query.query)
 
 
-@router.post("/{graphname}/register_docs")
+#@router.post("/{graphname}/register_docs")
 def register_docs(
     graphname,
     query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
@@ -229,11 +229,61 @@ def register_docs(
 
     return results
 
+@router.post("/{graphname}/upsert_from_gsql")
+def upsert_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request
+):
+    conn = conn.state.conn
 
-@router.post("/{graphname}/upsert_docs")
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+
+    query_info_list = []
+    for query_desc in query_descs:
+        params = query_desc["params"]
+        q_info = GSQLQueryInfo(
+                function_header=query_desc["function_header"],
+                description=query_desc["docstring"] + " Run with runInstalledQuery("+query_desc["function_header"]+"params={})".format(json.dumps(params)),
+                docstring=query_desc["docstring"],
+                param_types=query_desc["param_types"],
+            )
+
+        query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
+    return upsert_docs(graphname, query_info_list)
+
+@router.post("/{graphname}/delete_from_gsql")
+def delete_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request
+):
+    conn = conn.state.conn
+
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+
+    func_counter = 0
+
+    for query_desc in query_descs:
+        q_info = GSQLQueryInfo(
+                function_header=query_desc["function_header"],
+                description=query_desc["docstring"],
+                docstring=query_desc["docstring"],
+                param_types=query_desc["param_types"],
+            )
+        
+        delete_docs(graphname, QueryDeleteRequest(ids=None, expr=f"function_header=='{query_desc['function_header']}'"))
+        func_counter += 1
+
+    return {"deleted_functions": query_descs, "deleted_count": func_counter}
+
+
+#@router.post("/{graphname}/upsert_docs")
 def upsert_docs(
     graphname,
-    request_data: Union[QueryUperstRequest, List[QueryUperstRequest]],
+    request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
 ):
     try:
         results = []
@@ -283,7 +333,7 @@ def upsert_docs(
         )
 
 
-@router.post("/{graphname}/delete_docs")
+#@router.post("/{graphname}/delete_docs")
 def delete_docs(graphname, request_data: QueryDeleteRequest):
     ids = request_data.ids
     expr = request_data.expr

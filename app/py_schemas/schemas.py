@@ -25,6 +25,9 @@ class GSQLQueryInfo(BaseModel):
     docstring: str
     param_types: dict = {}
 
+class GSQLQueryList(BaseModel):
+    queries: List[str]
+
 
 class CoPilotResponse(BaseModel):
     natural_language_response: str
@@ -114,6 +117,6 @@ class QueryDeleteRequest(BaseModel):
     expr: Optional[str]
 
 
-class QueryUperstRequest(BaseModel):
+class QueryUpsertRequest(BaseModel):
     id: Optional[str]
     query_info: Optional[GSQLQueryInfo]
