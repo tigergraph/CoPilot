@@ -117,43 +117,42 @@ def get_llm_service(llm_config):
 
 #embedding_store = FAISS_EmbeddingStore(embedding_service)
 
-if milvus_config.get("enabled") == "true":
-    LogWriter.info(
-        f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
-    )
+LogWriter.info(
+    f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
+)
 
-    LogWriter.info(f"Setting up Milvus embedding store for InquiryAI")
-    embedding_store = MilvusEmbeddingStore(
-        embedding_service,
-        host=milvus_config["host"],
-        port=milvus_config["port"],
-        collection_name="tg_inquiry_documents",
-        support_ai_instance=False,
-        username=milvus_config.get("username", ""),
-        password=milvus_config.get("password", ""),
-        alias=milvus_config.get("alias", "default"),
-    )
+LogWriter.info(f"Setting up Milvus embedding store for InquiryAI")
+embedding_store = MilvusEmbeddingStore(
+    embedding_service,
+    host=milvus_config["host"],
+    port=milvus_config["port"],
+    collection_name="tg_inquiry_documents",
+    support_ai_instance=False,
+    username=milvus_config.get("username", ""),
+    password=milvus_config.get("password", ""),
+    alias=milvus_config.get("alias", "default"),
+)
 
-    support_collection_name = milvus_config.get(
-        "collection_name", "tg_support_documents"
-    )
-    LogWriter.info(
-        f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
-    )
-    vertex_field = milvus_config.get("vertex_field", "vertex_id")
-    support_ai_embedding_store = MilvusEmbeddingStore(
-        embedding_service,
-        host=milvus_config["host"],
-        port=milvus_config["port"],
-        support_ai_instance=True,
-        collection_name=support_collection_name,
-        username=milvus_config.get("username", ""),
-        password=milvus_config.get("password", ""),
-        vector_field=milvus_config.get("vector_field", "document_vector"),
-        text_field=milvus_config.get("text_field", "document_content"),
-        vertex_field=vertex_field,
-        alias=milvus_config.get("alias", "default"),
-    )
+support_collection_name = milvus_config.get(
+    "collection_name", "tg_support_documents"
+)
+LogWriter.info(
+    f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
+)
+vertex_field = milvus_config.get("vertex_field", "vertex_id")
+support_ai_embedding_store = MilvusEmbeddingStore(
+    embedding_service,
+    host=milvus_config["host"],
+    port=milvus_config["port"],
+    support_ai_instance=True,
+    collection_name=support_collection_name,
+    username=milvus_config.get("username", ""),
+    password=milvus_config.get("password", ""),
+    vector_field=milvus_config.get("vector_field", "document_vector"),
+    text_field=milvus_config.get("text_field", "document_content"),
+    vertex_field=vertex_field,
+    alias=milvus_config.get("alias", "default"),
+)
 
 
 if DOC_PROCESSING_CONFIG is None or (
