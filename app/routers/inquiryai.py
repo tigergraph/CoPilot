@@ -169,10 +169,13 @@ def retrieve_answer(
 @router.get("/{graphname}/list_registered_queries")
 def list_registered_queries(graphname, conn: Request):
     conn = conn.state.conn
-    queries = embedding_store.list_registered_documents("tg_inquiry_documents", None, only_custom=False)
-    #query_desc = conn.getQueryDescription(queries)
+    if conn.getVer().split(".")[0] <= "3":
+        query_descs = embedding_store.list_registered_documents(only_custom=True, output_fields=["function_header", "text"])
+    else:
+        queries = embedding_store.list_registered_documents(only_custom=True, output_fields=["function_header"])
+        query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
 
-    return queries
+    return query_descs
 
 
 @router.post("/{graphname}/getqueryembedding")

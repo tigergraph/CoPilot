@@ -5,7 +5,7 @@ from datetime import datetime
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
 import logging
-from pymilvus import connections, utility, Milvus
+from pymilvus import connections, utility #, Milvus
 from pymilvus.exceptions import MilvusException
 
 from typing import Iterable, Tuple, List, Optional, Union
@@ -451,18 +451,16 @@ class MilvusEmbeddingStore(EmbeddingStore):
         query_params["vertex_id_field_name"] = "vertex_id"
         return query_params
     
-    def list_registered_documents(self, collection_name: str, graphname: str = None, only_custom: bool = False):
-        print(self.milvus.address)
+    def list_registered_documents(self, graphname: str = None, only_custom: bool = False, output_fields: List[str] = ["*"]):
         if only_custom and graphname:
-            res = self.milvus.query(collection_name=collection_name, expr="custom_query == true and graphname == '" + graphname + "'")
+            res = self.milvus.col.query(expr="custom_query == true and graphname == '" + graphname + "'", output_fields=output_fields)
         elif only_custom:
-            res = self.milvus.query(collection_name=collection_name, expr="custom_query == true")
+            res = self.milvus.col.query(expr="custom_query == true", output_fields=output_fields)
         elif graphname:
-            res = self.milvus.query(collection_name=collection_name, expr="graphname == '" + graphname + "'")
+            res = self.milvus.col.query(expr="graphname == '" + graphname + "'", output_fields=output_fields)
         else:
-            res = self.milvus.query(collection_name=collection_name, expr="")
-        
+            res = self.milvus.col.query(expr="", limit=5000, output_fields=output_fields)
         return res
-
+    
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec
