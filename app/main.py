@@ -104,7 +104,8 @@ async def log_requests(request: Request, call_next):
 async def auth_middleware(request: Request, call_next):
     graphname = request.url.components.path.split("/")[1]
     if (graphname == "" or graphname == "docs"
-        or graphname == "openapi.json" or graphname == "metrics"):
+        or graphname == "openapi.json"
+        or graphname == "metrics" or graphname == "health"):
         return await call_next(request)
     authorization = request.headers.get("Authorization")
     if authorization:
