@@ -16,6 +16,7 @@ from app.embeddings.base_embedding_store import EmbeddingStore
 from app.metrics.prometheus_metrics import metrics
 from app.log import req_id_cv
 from app.tools.logwriter import LogWriter
+from time import time
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 metadata["description"] = record.get("description")
                 metadata["param_types"] = record.get("param_types")
                 metadata["custom_query"] = record.get("custom_query")
-
+                metadata["graphname"] = "all"
                 return metadata
 
             LogWriter.info("Milvus add initial load documents init()")

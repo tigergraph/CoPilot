@@ -170,9 +170,11 @@ def retrieve_answer(
 def list_registered_queries(graphname, conn: Request):
     conn = conn.state.conn
     if conn.getVer().split(".")[0] <= "3":
-        query_descs = embedding_store.list_registered_documents(only_custom=True, output_fields=["function_header", "text"])
+        query_descs = embedding_store.list_registered_documents(graphname=graphname, only_custom=True, output_fields=["function_header", "text"])
     else:
-        queries = embedding_store.list_registered_documents(only_custom=True, output_fields=["function_header"])
+        queries = embedding_store.list_registered_documents(graphname=graphname, only_custom=True, output_fields=["function_header"])
+        if not queries:
+            return {"queries": {}}
         query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
 
     return query_descs
@@ -181,8 +183,7 @@ def list_registered_queries(graphname, conn: Request):
 @router.post("/{graphname}/getqueryembedding")
 def get_query_embedding(
     graphname,
-    query: NaturalLanguageQuery,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+    query: NaturalLanguageQuery
 ):
     logger.debug(
         f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}"
@@ -191,11 +192,20 @@ def get_query_embedding(
     return embedding_service.embed_query(query.query)
 
 
-#@router.post("/{graphname}/register_docs")
+@router.post("/{graphname}/register_docs")
 def register_docs(
     graphname,
     query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
+    conn: Request
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -216,6 +226,7 @@ def register_docs(
                     "description": query_info.description,
                     "param_types": query_info.param_types,
                     "custom_query": True,
+                    "graphname": query_info.graphname
                 }
             ],
         )
@@ -242,12 +253,22 @@ def upsert_from_gsql(
 
     query_info_list = []
     for query_desc in query_descs:
-        params = query_desc["params"]
+        print(query_desc)
+        params = query_desc["parameters"]
+        if params == []:
+            params = {}
+        else:
+            tmp_params = {}
+            for param in params:
+                tmp_params[param["paramName"]] = "INSERT " + param.get("description", "VALUE") + " HERE"
+            params = tmp_params
+        param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
         q_info = GSQLQueryInfo(
-                function_header=query_desc["function_header"],
-                description=query_desc["docstring"] + " Run with runInstalledQuery("+query_desc["function_header"]+"params={})".format(json.dumps(params)),
-                docstring=query_desc["docstring"],
-                param_types=query_desc["param_types"],
+                function_header=query_desc["queryName"],
+                description=query_desc["description"],
+                docstring=query_desc["description"]+ ".\nRun with runInstalledQuery('"+query_desc["queryName"]+"', params={})".format(json.dumps(params)),
+                param_types={list(x.keys())[0]: x[list(x.keys())[0]] for x in param_types},
+                graphname=graphname
             )
 
         query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
@@ -267,24 +288,26 @@ def delete_from_gsql(
     func_counter = 0
 
     for query_desc in query_descs:
-        q_info = GSQLQueryInfo(
-                function_header=query_desc["function_header"],
-                description=query_desc["docstring"],
-                docstring=query_desc["docstring"],
-                param_types=query_desc["param_types"],
-            )
-        
-        delete_docs(graphname, QueryDeleteRequest(ids=None, expr=f"function_header=='{query_desc['function_header']}'"))
+        delete_docs(graphname, QueryDeleteRequest(ids=None, expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'"))
         func_counter += 1
 
     return {"deleted_functions": query_descs, "deleted_count": func_counter}
 
 
-#@router.post("/{graphname}/upsert_docs")
+@router.post("/{graphname}/upsert_docs")
 def upsert_docs(
     graphname,
     request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
+    conn: Request
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     try:
         results = []
 
@@ -315,6 +338,7 @@ def upsert_docs(
                         "description": query_info.description,
                         "param_types": query_info.param_types,
                         "custom_query": True,
+                        "graphname": query_info.graphname
                     }
                 ],
             )
