@@ -135,7 +135,9 @@ class GenerateFunction(BaseTool):
         )
 
         docs = self.embedding_store.retrieve_similar(
-            self.embedding_model.embed_query(lookup_question), top_k=3
+            self.embedding_model.embed_query(lookup_question),
+            top_k=3,
+            filter_expr="graphname == '{}' or graphname == 'all'".format(self.conn.graphname)
         )
 
         if len(docs) == 0:
