@@ -6,8 +6,9 @@ from base64 import b64decode
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBasicCredentials
 from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import routers
 from app.config import PATH_PREFIX, PRODUCTION
@@ -112,6 +113,8 @@ async def auth_middleware(request: Request, call_next):
         else:
             conn = get_db_connection_id_token(graphname, credentials)
         request.state.conn = conn
+    else:
+        return JSONResponse(None, 401, {"WWW-Authenticate": "Basic"})
     response = await call_next(request)
     return response
 

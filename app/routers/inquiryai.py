@@ -16,9 +16,9 @@ from app.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock, AzureOpenAI,
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
+from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo, GSQLQueryList,
                                     NaturalLanguageQuery, QueryDeleteRequest,
-                                    QueryUperstRequest)
+                                    QueryUpsertRequest)
 from app.tools.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
 
@@ -166,12 +166,24 @@ def retrieve_answer(
 
     return resp
 
+@router.get("/{graphname}/list_registered_queries")
+def list_registered_queries(graphname, conn: Request):
+    conn = conn.state.conn
+    if conn.getVer().split(".")[0] <= "3":
+        query_descs = embedding_store.list_registered_documents(graphname=graphname, only_custom=True, output_fields=["function_header", "text"])
+    else:
+        queries = embedding_store.list_registered_documents(graphname=graphname, only_custom=True, output_fields=["function_header"])
+        if not queries:
+            return {"queries": {}}
+        query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
+
+    return query_descs
+
 
 @router.post("/{graphname}/getqueryembedding")
 def get_query_embedding(
     graphname,
-    query: NaturalLanguageQuery,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+    query: NaturalLanguageQuery
 ):
     logger.debug(
         f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}"
@@ -184,7 +196,16 @@ def get_query_embedding(
 def register_docs(
     graphname,
     query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
+    conn: Request
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -205,6 +226,7 @@ def register_docs(
                     "description": query_info.description,
                     "param_types": query_info.param_types,
                     "custom_query": True,
+                    "graphname": query_info.graphname
                 }
             ],
         )
@@ -218,12 +240,74 @@ def register_docs(
 
     return results
 
+@router.post("/{graphname}/upsert_from_gsql")
+def upsert_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request
+):
+    conn = conn.state.conn
+
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+
+    query_info_list = []
+    for query_desc in query_descs:
+        print(query_desc)
+        params = query_desc["parameters"]
+        if params == []:
+            params = {}
+        else:
+            tmp_params = {}
+            for param in params:
+                tmp_params[param["paramName"]] = "INSERT " + param.get("description", "VALUE") + " HERE"
+            params = tmp_params
+        param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
+        q_info = GSQLQueryInfo(
+                function_header=query_desc["queryName"],
+                description=query_desc["description"],
+                docstring=query_desc["description"]+ ".\nRun with runInstalledQuery('"+query_desc["queryName"]+"', params={})".format(json.dumps(params)),
+                param_types={list(x.keys())[0]: x[list(x.keys())[0]] for x in param_types},
+                graphname=graphname
+            )
+
+        query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
+    return upsert_docs(graphname, query_info_list)
+
+@router.post("/{graphname}/delete_from_gsql")
+def delete_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request
+):
+    conn = conn.state.conn
+
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+
+    func_counter = 0
+
+    for query_desc in query_descs:
+        delete_docs(graphname, QueryDeleteRequest(ids=None, expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'"))
+        func_counter += 1
+
+    return {"deleted_functions": query_descs, "deleted_count": func_counter}
+
 
 @router.post("/{graphname}/upsert_docs")
 def upsert_docs(
     graphname,
-    request_data: Union[QueryUperstRequest, List[QueryUperstRequest]],
+    request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
+    conn: Request
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     try:
         results = []
 
@@ -254,6 +338,7 @@ def upsert_docs(
                         "description": query_info.description,
                         "param_types": query_info.param_types,
                         "custom_query": True,
+                        "graphname": query_info.graphname
                     }
                 ],
             )
@@ -273,7 +358,15 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest):
+def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     ids = request_data.ids
     expr = request_data.expr
 
@@ -334,6 +427,7 @@ def logout(graphname, session_id: str):
 @router.get("/{graphname}/chat")
 def chat(request: Request):
     return HTMLResponse(open("app/static/chat.html").read())
+
 
 
 @router.websocket("/{graphname}/ws")
