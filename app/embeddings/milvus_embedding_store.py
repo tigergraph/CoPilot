@@ -1,6 +1,3 @@
-import time
-import asyncio
-
 from datetime import datetime
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
@@ -16,7 +13,7 @@ from app.embeddings.base_embedding_store import EmbeddingStore
 from app.metrics.prometheus_metrics import metrics
 from app.log import req_id_cv
 from app.tools.logwriter import LogWriter
-from time import time
+from time import time, sleep
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +32,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         username: str = "",
         password: str = "",
         alias: str = "alias",
-        retry_interval: int = 5, 
+        retry_interval: int = 2, 
         max_retry_attempts: int = 10, 
     ):
         self.embedding_service = embedding_service
@@ -102,7 +99,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     raise e
                 else:
                     LogWriter.info(f"Failed to connect to Milvus. Retrying in {self.retry_interval} seconds.")
-                    time.sleep(self.retry_interval)
+                    sleep(self.retry_interval)
 
     def check_collection_exists(self):
         connections.connect(**self.milvus_connection)
