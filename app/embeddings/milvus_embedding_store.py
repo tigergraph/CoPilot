@@ -5,7 +5,7 @@ from datetime import datetime
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
 import logging
-from pymilvus import connections, utility, Milvus
+from pymilvus import connections, utility#, Milvus
 from pymilvus.exceptions import MilvusException
 
 from typing import Iterable, Tuple, List, Optional, Union
@@ -368,7 +368,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             LogWriter.error(error_message)
             raise e
 
-    def retrieve_similar(self, query_embedding, top_k=10):
+    def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -390,7 +390,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 self.collection_name, "similarity_search_by_vector"
             ).inc()
             similar = self.milvus.similarity_search_by_vector(
-                embedding=query_embedding, k=top_k
+                embedding=query_embedding, k=top_k, expr=filter_expr
             )
             end_time = time()
             metrics.milvus_query_duration_seconds.labels(
