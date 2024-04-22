@@ -357,8 +357,16 @@ def upsert_docs(
         )
 
 
-#@router.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest):
+@router.post("/{graphname}/delete_docs")
+def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials"
+        )
     ids = request_data.ids
     expr = request_data.expr
 
