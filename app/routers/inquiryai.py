@@ -323,13 +323,15 @@ def upsert_docs(
                 )
             elif not id and query_info:
                 try: 
-                    expr = f"function_header in ['{query_info.function_header}']"
+                    # expr = f"function_header in ['{query_info.function_header}']"
+                    expr = f"function_header == '{query_info.function_header}'"
                     id = embedding_store.get_pks(expr)
                     if id:
                         id = str(id[0])
-                        logger.info(f"found document id {id} based on expression {expr}")
+                        logger.info(f"Found document id {id} based on expression {expr}")
                     else:
                         id = ""
+                        logger.info(f"No document found based on expression {expr}, inserting as a new document")
                 except Exception as e:
                     error_message = f"An error occurred while getting pks of document: {str(e)}"
                     raise e
