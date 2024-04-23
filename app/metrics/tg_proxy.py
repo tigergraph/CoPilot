@@ -105,4 +105,5 @@ class TigerGraphConnectionProxy:
         return result
 
     def __del__(self):
+        self._tg_connection.deleteToken()
         metrics.tg_active_connections.dec()
