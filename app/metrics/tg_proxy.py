@@ -9,6 +9,7 @@ from app.log import req_id_cv
 
 logger = logging.getLogger(__name__)
 
+
 class TigerGraphConnectionProxy:
     def __init__(self, tg_connection: TigerGraphConnection, auth_mode: str = "pwd"):
         self.original_req = tg_connection._req
@@ -33,32 +34,55 @@ class TigerGraphConnectionProxy:
             return original_attr
 
     def _req(self, method: str, url: str, authMode: str, *args, **kwargs):
-        # we always use token auth 
+        # we always use token auth
         # always use proxy endpoint in GUI for restpp and gsql
         if self.auth_mode == "pwd":
             return self.original_req(method, url, authMode, *args, **kwargs)
         else:
-            url = re.sub(r'/gsqlserver/', '/api/gsql-server/', url)
-            url = re.sub(r'/restpp/', '/api/restpp/', url)
+            url = re.sub(r"/gsqlserver/", "/api/gsql-server/", url)
+            url = re.sub(r"/restpp/", "/api/restpp/", url)
             return self.original_req(method, url, "token", *args, **kwargs)
 
     def _runInstalledQuery(self, query_name, params):
         start_time = time.time()
         metrics.tg_inprogress_requests.labels(query_name=query_name).inc()
         try:
-            restppid = self._tg_connection.runInstalledQuery(query_name, params, runAsync=True)
-            LogWriter.info(f"request_id={req_id_cv.get()} query {query_name} started with RESTPP ID {restppid}")
+            restppid = self._tg_connection.runInstalledQuery(
+                query_name, params, runAsync=True
+            )
+            LogWriter.info(
+                f"request_id={req_id_cv.get()} query {query_name} started with RESTPP ID {restppid}"
+            )
             result = None
             while not result:
-                if self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower() == "success":
-                    LogWriter.info(f"request_id={req_id_cv.get()} query {query_name} completed successfully with RESTPP ID {restppid}")
+                if (
+                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    == "success"
+                ):
+                    LogWriter.info(
+                        f"request_id={req_id_cv.get()} query {query_name} completed successfully with RESTPP ID {restppid}"
+                    )
                     result = self._tg_connection.getQueryResult(restppid)
-                elif self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower() == "aborted":
-                    LogWriter.error(f"request_id={req_id_cv.get()} query {query_name} with RESTPP ID {restppid} aborted")
-                    raise Exception(f"Query {query_name} with restppid {restppid} aborted")
-                elif self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower() == "timeout":
-                    LogWriter.error(f"request_id={req_id_cv.get()} query {query_name} with restppid {restppid} timed out")
-                    raise Exception(f"Query {query_name} with restppid {restppid} timed out")
+                elif (
+                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    == "aborted"
+                ):
+                    LogWriter.error(
+                        f"request_id={req_id_cv.get()} query {query_name} with RESTPP ID {restppid} aborted"
+                    )
+                    raise Exception(
+                        f"Query {query_name} with restppid {restppid} aborted"
+                    )
+                elif (
+                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    == "timeout"
+                ):
+                    LogWriter.error(
+                        f"request_id={req_id_cv.get()} query {query_name} with restppid {restppid} timed out"
+                    )
+                    raise Exception(
+                        f"Query {query_name} with restppid {restppid} timed out"
+                    )
                 time.sleep(0.1)
             success = True
         except Exception as e:

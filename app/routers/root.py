@@ -25,11 +25,15 @@ async def health():
         # Check if the required collections exist
         inquiry_collection_exists = utility.has_collection("tg_inquiry_documents")
         support_collection_exists = utility.has_collection("tg_support_documents")
-        
+
         if inquiry_collection_exists or support_collection_exists:
-            return {"status": "healthy",
-                    "llm_completion_model": llm_config["completion_service"]["llm_model"],
-                    "embedding_service": llm_config["embedding_service"]["embedding_model_service"]}
+            return {
+                "status": "healthy",
+                "llm_completion_model": llm_config["completion_service"]["llm_model"],
+                "embedding_service": llm_config["embedding_service"][
+                    "embedding_model_service"
+                ],
+            }
         else:
             return {"status": "Milvus is up and running, but no collection exist yet"}
     except Exception as e:

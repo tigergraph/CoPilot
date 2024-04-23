@@ -26,6 +26,7 @@ class GSQLQueryInfo(BaseModel):
     param_types: dict = {}
     graphname: str = "all"
 
+
 class GSQLQueryList(BaseModel):
     queries: List[str]
 
