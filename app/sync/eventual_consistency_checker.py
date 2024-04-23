@@ -250,7 +250,7 @@ class EventualConsistencyChecker:
             f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
         )
 
-    def getStatus(self):
+    def get_status(self):
         statuses = {}
         for v_type in self.embedding_indices:
             status = self.conn.runInstalledQuery(

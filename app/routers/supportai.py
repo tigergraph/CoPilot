@@ -393,4 +393,4 @@ async def force_update(graphname: str, conn: Request):
 async def consistency_status(graphname: str, conn: Request):
     conn = conn.state.conn
     ecc = get_eventual_consistency_checker(graphname, conn)
-    return ecc.getStatus()
+    return ecc.get_status()
