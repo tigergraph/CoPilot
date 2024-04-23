@@ -382,8 +382,7 @@ def build_concepts(
 
 
 @router.get("/{graphname}/supportai/forceupdate")
-async def force_update(graphname: str, conn: Request):
+async def force_update(graphname: str, background_tasks: BackgroundTasks, conn: Request):
     conn = conn.state.conn
-    ecc = get_eventual_consistency_checker(graphname, conn)
-    ecc.initialize()
+    background_tasks.add_task(get_eventual_consistency_checker, graphname, conn)
     return {"status": "success"}
