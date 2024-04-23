@@ -135,35 +135,19 @@ def retrieve_answer(
                 # "An error occurred while processing the response. Please try again."
                 "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
             )
-            resp.query_sources = (
-                {} if len(steps) == 0 else {"agent_history": str(steps)}
-            )
-            resp.answered_question = False
-            LogWriter.warning(
-                f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
-            )
-            exc = traceback.format_exc()
-            logger.debug_pii(
-                f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
-            )
         except:
             # the output wasn't json. It was likely a message from the agent to the user
-            resp.natural_language_response = (
-                str(steps["output"])
-            )
+            resp.natural_language_response = str(steps["output"])
 
-            resp.query_sources = (
-                {} if len(steps) == 0 else {"agent_history": str(steps)}
-            )
-            resp.answered_question = False
-            LogWriter.warning(
-                f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
-            )
-            exc = traceback.format_exc()
-            logger.debug_pii(
-                f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
-            )
-
+        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
+        resp.answered_question = False
+        LogWriter.warning(
+            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+        )
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
 
     return resp
