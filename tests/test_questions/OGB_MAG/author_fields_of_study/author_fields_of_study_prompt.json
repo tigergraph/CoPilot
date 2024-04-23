@@ -4,5 +4,6 @@
     "docstring": "The author_fields_of_study query traverses from an Author Vertex to FieldOfStudy Vertices through the Papers that the particular Author has written.\nTo run the query, use `runInstalledQuery('author_fields_of_study', params={'auth_id': AUTHOR_ID_HERE})`\nReplace `AUTHOR_ID_HERE` with the appropriate author id mentioned in the question.",
     "param_types": {
         "auth_id": "int"
-    }
+    },
+    "graphname": "OGB_MAG"
 }
