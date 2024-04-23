@@ -241,7 +241,9 @@ class EventualConsistencyChecker:
             f"Eventual Consistency Check running for graphname {self.graphname} "
         )
         self.is_initialized = True
-        ok = self.fetch_and_process_vertex()
+        ok = True
+        while ok:
+            ok = self.fetch_and_process_vertex()
         LogWriter.info(
             f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
         )
