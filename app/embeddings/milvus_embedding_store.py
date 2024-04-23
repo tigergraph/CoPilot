@@ -1,6 +1,5 @@
 import logging
-import time
-from time import time
+from time import sleep, time
 from typing import Iterable, List, Optional, Tuple
 
 from langchain_community.vectorstores import Milvus
@@ -31,7 +30,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         username: str = "",
         password: str = "",
         alias: str = "alias",
-        retry_interval: int = 5,
+        retry_interval: int = 2,
         max_retry_attempts: int = 10,
     ):
         self.embedding_service = embedding_service
@@ -100,7 +99,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     LogWriter.info(
                         f"Failed to connect to Milvus. Retrying in {self.retry_interval} seconds."
                     )
-                    time.sleep(self.retry_interval)
+                    sleep(self.retry_interval)
 
     def check_collection_exists(self):
         connections.connect(**self.milvus_connection)
@@ -368,7 +367,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             LogWriter.error(error_message)
             raise e
 
-    def retrieve_similar(self, query_embedding, top_k=10):
+    def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -390,7 +389,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 self.collection_name, "similarity_search_by_vector"
             ).inc()
             similar = self.milvus.similarity_search_by_vector(
-                embedding=query_embedding, k=top_k
+                embedding=query_embedding, k=top_k, expr=filter_expr
             )
             end_time = time()
             metrics.milvus_query_duration_seconds.labels(

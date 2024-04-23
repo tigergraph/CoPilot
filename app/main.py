@@ -103,6 +103,10 @@ async def log_requests(request: Request, call_next):
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     graphname = request.url.components.path.split("/")[1]
+    if (graphname == "" or graphname == "docs"
+        or graphname == "openapi.json"
+        or graphname == "metrics" or graphname == "health"):
+        return await call_next(request)
     authorization = request.headers.get("Authorization")
     if authorization:
         scheme, credentials = authorization.split()
@@ -113,8 +117,6 @@ async def auth_middleware(request: Request, call_next):
         else:
             conn = get_db_connection_id_token(graphname, credentials)
         request.state.conn = conn
-    else:
-        return JSONResponse(None, 401, {"WWW-Authenticate": "Basic"})
     response = await call_next(request)
     return response
 

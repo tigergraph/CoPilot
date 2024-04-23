@@ -111,7 +111,7 @@ LogWriter.info(
     f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
 )
 
-LogWriter.info(f"Setting up Milvus embedding store for InquiryAI")
+LogWriter.info("Setting up Milvus embedding store for InquiryAI")
 embedding_store = MilvusEmbeddingStore(
     embedding_service,
     host=milvus_config["host"],
