@@ -390,7 +390,7 @@ async def force_update(graphname: str, conn: Request):
 
 
 @router.get("/{graphname}/supportai/consistency_status")
-async def consistency_status(graphname: str, conn: Request):
+def consistency_status(graphname: str, conn: Request):
     conn = conn.state.conn
     ecc = get_eventual_consistency_checker(graphname, conn)
     return ecc.get_status()
