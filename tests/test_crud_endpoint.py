@@ -182,8 +182,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 422)
 
-        self.assertEqual(response.status_code, 200)
-
     def test_upsert_new_existing_noid_docs(self):
         # ms_dependency_chain exists in milvus, find the id basded on function_header and update the description
         # ms_dependency_chain_11111 doesn't exist, no id found, insert directly
