@@ -105,4 +105,6 @@ class TigerGraphConnectionProxy:
         return result
 
     def __del__(self):
+        if self.auth_mode == "pwd":
+            self._tg_connection.deleteToken()
         metrics.tg_active_connections.dec()
