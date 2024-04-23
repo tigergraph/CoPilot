@@ -14,14 +14,16 @@ from app.embeddings.base_embedding_store import EmbeddingStore
 from app.embeddings.embedding_services import EmbeddingModel
 from app.log import req_id_cv
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas import (GenerateFunctionResponse,
-                            MapQuestionToSchemaResponse)
+from app.py_schemas import GenerateFunctionResponse, MapQuestionToSchemaResponse
 from app.tools.logwriter import LogWriter
 
-from .validation_utils import (InvalidFunctionCallException,
-                               MapQuestionToSchemaException,
-                               NoDocumentsFoundException,
-                               validate_function_call, validate_schema)
+from .validation_utils import (
+    InvalidFunctionCallException,
+    MapQuestionToSchemaException,
+    NoDocumentsFoundException,
+    validate_function_call,
+    validate_schema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +140,9 @@ class GenerateFunction(BaseTool):
         docs = self.embedding_store.retrieve_similar(
             self.embedding_model.embed_query(lookup_question),
             top_k=3,
-            filter_expr="graphname == '{}' or graphname == 'all'".format(self.conn.graphname)
+            filter_expr="graphname == '{}' or graphname == 'all'".format(
+                self.conn.graphname
+            ),
         )
 
         if len(docs) == 0:

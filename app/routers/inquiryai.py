@@ -7,15 +7,24 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, status
 from fastapi.responses import HTMLResponse
 
 from app.agent import TigerGraphAgent
-from app.config import (embedding_service, embedding_store, llm_config,
-                        session_handler)
-from app.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock, AzureOpenAI,
-                              GoogleVertexAI, OpenAI)
+from app.config import embedding_service, embedding_store, llm_config, session_handler
+from app.llm_services import (
+    AWS_SageMaker_Endpoint,
+    AWSBedrock,
+    AzureOpenAI,
+    GoogleVertexAI,
+    OpenAI,
+)
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
-from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
-                                    GSQLQueryList, NaturalLanguageQuery,
-                                    QueryDeleteRequest, QueryUpsertRequest)
+from app.py_schemas.schemas import (
+    CoPilotResponse,
+    GSQLQueryInfo,
+    GSQLQueryList,
+    NaturalLanguageQuery,
+    QueryDeleteRequest,
+    QueryUpsertRequest,
+)
 from app.tools.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
 
