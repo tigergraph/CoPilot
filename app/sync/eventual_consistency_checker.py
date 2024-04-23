@@ -39,6 +39,7 @@ class EventualConsistencyChecker:
 
         self._check_query_install("Scan_For_Updates")
         self._check_query_install("Update_Vertices_Processing_Status")
+        self._check_query_install("ECC_Status")
 
     def _install_query(self, query_name):
         LogWriter.info(f"Installing query {query_name}")
@@ -230,6 +231,7 @@ class EventualConsistencyChecker:
                 self.conn.runInstalledQuery(
                     "Update_Vertices_Processing_Status",
                     {"processed_vertices": vertex_ids},
+                    usePost=True
                 )
             else:
                 LogWriter.error(f"No changes detected for vertex type: {v_type}")
@@ -247,3 +249,12 @@ class EventualConsistencyChecker:
         LogWriter.info(
             f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
         )
+
+    def get_status(self):
+        statuses = {}
+        for v_type in self.embedding_indices:
+            status = self.conn.runInstalledQuery(
+                "ECC_Status", {"v_type": v_type}
+            )["results"]
+            statuses[v_type] = status
+        return self.is_initialized
