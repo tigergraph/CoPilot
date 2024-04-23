@@ -212,6 +212,25 @@ class MilvusEmbeddingStore(EmbeddingStore):
             error_message = f"An error occurred while registerin document: {str(e)}"
             LogWriter.error(error_message)
             raise e
+        
+    def get_pks(
+        self,
+        expr: str,
+    ):
+        try:
+            LogWriter.info(
+                f"request_id={req_id_cv.get()} Milvus ENTRY get_pks()"
+            )
+            
+            ids = self.milvus.get_pks(expr=expr)
+            if ids:
+                return ids
+            else:
+                return []
+        except Exception as e:
+            error_message = f"An error occurred while getting pks of document: {str(e)}"
+            LogWriter.error(error_message)
+            raise e
 
     def upsert_embeddings(
         self,
