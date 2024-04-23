@@ -384,5 +384,6 @@ def build_concepts(
 @router.get("/{graphname}/supportai/forceupdate")
 async def force_update(graphname: str, conn: Request):
     conn = conn.state.conn
-    get_eventual_consistency_checker(graphname, conn)
+    ecc = get_eventual_consistency_checker(graphname, conn)
+    ecc.initialize()
     return {"status": "success"}
