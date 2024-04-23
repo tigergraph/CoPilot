@@ -106,7 +106,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         return utility.has_collection(self.collection_name, using=self.milvus_alias)
 
     def load_documents(self):
-        if self.check_collection_exists():
+        if not self.check_collection_exists():
             from langchain.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
