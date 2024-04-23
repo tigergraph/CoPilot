@@ -130,7 +130,6 @@ def retrieve_answer(
     except Exception:
         try:
             # if the output is json, it's intermediate agent output
-            print(str(steps["output"]))
             json.loads(str(steps["output"]))  # TODO: don't use errors as control flow
             resp.natural_language_response = (
                 # "An error occurred while processing the response. Please try again."
