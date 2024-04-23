@@ -126,7 +126,7 @@ class TestCRUDInquiryAI(unittest.TestCase):
 
     def test_upsert_custom_query_ids(self):
         upsert_query = {
-            "ids": "448543540718863740",
+            "id": "448543540718863740",
             "query_info": {
                 "function_header": "ms_dependency_chain_test_id",
                 "description": "Finds dependents of a given microservice up to k hops.",
@@ -148,7 +148,7 @@ class TestCRUDInquiryAI(unittest.TestCase):
 
     def test_upsert_custom_query_docs(self):
         upsert_query = {
-            "ids": "",
+            "id": "",
             "expr": {
                 "function_header": "ms_dependency_chain_test_docs",
                 "description": "Finds dependents of a given microservice up to k hops.",
