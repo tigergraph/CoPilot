@@ -3,21 +3,13 @@ import os
 
 from fastapi.security import HTTPBasic
 
-from app.embeddings.embedding_services import (
-    AWS_Bedrock_Embedding,
-    AzureOpenAI_Ada002,
-    OpenAI_Embedding,
-    VertexAI_PaLM_Embedding,
-)
-from app.embeddings.faiss_embedding_store import FAISS_EmbeddingStore
+from app.embeddings.embedding_services import (AWS_Bedrock_Embedding,
+                                               AzureOpenAI_Ada002,
+                                               OpenAI_Embedding,
+                                               VertexAI_PaLM_Embedding)
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
-from app.llm_services import (
-    AWS_SageMaker_Endpoint,
-    AWSBedrock,
-    AzureOpenAI,
-    GoogleVertexAI,
-    OpenAI,
-)
+from app.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock, AzureOpenAI,
+                              GoogleVertexAI, OpenAI)
 from app.session import SessionHandler
 from app.status import StatusManager
 from app.tools.logwriter import LogWriter
@@ -115,8 +107,6 @@ def get_llm_service(llm_config):
         raise Exception("LLM Completion Service Not Supported")
 
 
-#embedding_store = FAISS_EmbeddingStore(embedding_service)
-
 LogWriter.info(
     f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
 )
@@ -133,9 +123,7 @@ embedding_store = MilvusEmbeddingStore(
     alias=milvus_config.get("alias", "default"),
 )
 
-support_collection_name = milvus_config.get(
-    "collection_name", "tg_support_documents"
-)
+support_collection_name = milvus_config.get("collection_name", "tg_support_documents")
 LogWriter.info(
     f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
 )

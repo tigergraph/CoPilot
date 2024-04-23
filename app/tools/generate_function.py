@@ -1,26 +1,27 @@
-from langchain.tools import BaseTool
-from langchain.llms.base import LLM
-from langchain.tools.base import ToolException
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
-from typing import List, Dict, Type, Optional, Union
-from app.embeddings.embedding_services import EmbeddingModel
-from app.embeddings.base_embedding_store import EmbeddingStore
-from .validation_utils import (
-    validate_schema,
-    validate_function_call,
-    MapQuestionToSchemaException,
-    InvalidFunctionCallException,
-    NoDocumentsFoundException,
-)
 import json
 import logging
+from typing import Dict, List, Optional, Type, Union
+
+from langchain.chains import LLMChain
+from langchain.llms.base import LLM
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import PromptTemplate
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.tools import BaseTool
+from langchain.tools.base import ToolException
+
+from app.embeddings.base_embedding_store import EmbeddingStore
+from app.embeddings.embedding_services import EmbeddingModel
 from app.log import req_id_cv
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
+from app.py_schemas import (GenerateFunctionResponse,
+                            MapQuestionToSchemaResponse)
 from app.tools.logwriter import LogWriter
+
+from .validation_utils import (InvalidFunctionCallException,
+                               MapQuestionToSchemaException,
+                               NoDocumentsFoundException,
+                               validate_function_call, validate_schema)
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ class GenerateFunction(BaseTool):
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
         generated = func_parser.invoke(generated)
-        #LogWriter.info(f"generated_function: {generated}")
+        # LogWriter.info(f"generated_function: {generated}")
 
         try:
             parsed_func = validate_function_call(
