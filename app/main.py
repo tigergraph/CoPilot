@@ -117,14 +117,18 @@ async def auth_middleware(request: Request, call_next):
     if authorization:
         scheme, credentials = authorization.split()
         if scheme.lower() == "basic":
+            LogWriter.info("Authenticating with basic auth")
             username, password = b64decode(credentials).decode().split(":", 1)
             credentials = HTTPBasicCredentials(username=username, password=password)
             conn = get_db_connection_pwd(graphname, credentials)
         else:
+            LogWriter.info("Authenticating with id token")
             conn = get_db_connection_id_token(graphname, credentials)
         request.state.conn = conn
     else:
-        return JSONResponse(status_code=401, content={"message": "Authorization header is required. Please provide a valid token or username and password."})
+        LogWriter.error("Authorization header is required. Please provide a valid token or username and password.")
+        return JSONResponse(status_code=401,
+                            content={"message": "Authorization header is required.Please provide a valid token or username and password."})
     response = await call_next(request)
     return response
 
