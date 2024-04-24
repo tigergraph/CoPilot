@@ -112,8 +112,6 @@ async def auth_middleware(request: Request, call_next):
     ):
         return await call_next(request)
     authorization = request.headers.get("Authorization")
-    if not authorization:
-        authorization = request.headers.get("authorization")
     if authorization:
         scheme, credentials = authorization.split()
         if scheme.lower() == "basic":
