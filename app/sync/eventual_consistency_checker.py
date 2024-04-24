@@ -255,6 +255,6 @@ class EventualConsistencyChecker:
         for v_type in self.embedding_indices:
             status = self.conn.runInstalledQuery(
                 "ECC_Status", {"v_type": v_type}
-            )["results"]
+            )[0]["results"]
             statuses[v_type] = status
         return self.is_initialized
