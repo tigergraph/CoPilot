@@ -227,7 +227,7 @@ class EventualConsistencyChecker:
                 f"Updating the TigerGraph vertex ids to confirm that processing was completed"
             )
             if vertex_ids:
-                vertex_ids = [(vertex_id, v_type) for vertex_id in vertex_ids]
+                vertex_ids = [{"id": vertex_id, "type": v_type} for vertex_id in vertex_ids]
                 self.conn.runInstalledQuery(
                     "Update_Vertices_Processing_Status",
                     {"processed_vertices": vertex_ids},

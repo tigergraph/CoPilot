@@ -124,11 +124,7 @@ async def auth_middleware(request: Request, call_next):
             conn = get_db_connection_id_token(graphname, credentials)
         request.state.conn = conn
     else:
-        raise HTTPException(
-            status_code=401,
-            detail="Authorization header is required. Please provide a valid token or username and password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return JSONResponse(status_code=401, content={"message": "Authorization header is required. Please provide a valid token or username and password."})
     response = await call_next(request)
     return response
 
