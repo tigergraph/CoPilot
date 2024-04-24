@@ -118,15 +118,21 @@ async def auth_middleware(request: Request, call_next):
             LogWriter.info("Authenticating with basic auth")
             username, password = b64decode(credentials).decode().split(":", 1)
             credentials = HTTPBasicCredentials(username=username, password=password)
-            conn = get_db_connection_pwd(graphname, credentials)
+            try:
+                conn = get_db_connection_pwd(graphname, credentials)
+            except HTTPException as e:
+                LogWriter.error("Failed to connect to TigerGraph. Incorrect username or password.")
+                return JSONResponse(status_code=401,
+                                    content={"message": "Failed to connect to TigerGraph. Incorrect username or password."})
         else:
             LogWriter.info("Authenticating with id token")
-            conn = get_db_connection_id_token(graphname, credentials)
+            try:
+                conn = get_db_connection_id_token(graphname, credentials)
+            except HTTPException as e:
+                LogWriter.error("Failed to connect to TigerGraph. Incorrect ID Token.")
+                return JSONResponse(status_code=401,
+                                    content={"message": "Failed to connect to TigerGraph. Incorrect ID Token."})
         request.state.conn = conn
-    else:
-        LogWriter.error("Authorization header is required. Please provide a valid token or username and password.")
-        return JSONResponse(status_code=401,
-                            content={"message": "Authorization header is required.Please provide a valid token or username and password."})
     response = await call_next(request)
     return response
 

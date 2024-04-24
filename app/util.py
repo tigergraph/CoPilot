@@ -49,7 +49,7 @@ def get_db_connection_id_token(
             detail="Incorrect token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    LogWriter.info("Connected to TigerGraph")
+    LogWriter.info("Connected to TigerGraph with ID Token")
     return conn
 
 
@@ -60,7 +60,7 @@ def get_db_connection_pwd(
         host=db_config["hostname"],
         username=credentials.username,
         password=credentials.password,
-        graphname=graphname,
+        graphname=graphname
     )
 
     if db_config["getToken"]:
@@ -84,14 +84,14 @@ def get_db_connection_pwd(
             username=credentials.username,
             password=credentials.password,
             graphname=graphname,
-            apiToken=apiToken,
+            apiToken=apiToken
         )
 
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
     )
     conn = TigerGraphConnectionProxy(conn)
-    LogWriter.info("Connected to TigerGraph")
+    LogWriter.info("Connected to TigerGraph with password")
     return conn
 
 
