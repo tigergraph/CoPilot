@@ -392,7 +392,12 @@ async def force_update(graphname: str, background_tasks: BackgroundTasks, conn: 
 
 
 @router.get("/{graphname}/supportai/consistency_status")
-def consistency_status(graphname: str, conn: Request, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+def consistency_status(graphname: str, conn: Request):
     conn = conn.state.conn
     ecc = get_eventual_consistency_checker(graphname, conn)
     return ecc.get_status()
+
+
+@router.get("/{graphname}/supportai/auth_check")
+def auth_check(graphname: str, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    return {"status": "success"}
