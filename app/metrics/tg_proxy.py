@@ -43,12 +43,12 @@ class TigerGraphConnectionProxy:
             url = re.sub(r"/restpp/", "/api/restpp/", url)
             return self.original_req(method, url, "token", *args, **kwargs)
 
-    def _runInstalledQuery(self, query_name, params):
+    def _runInstalledQuery(self, query_name, params, usePost=False):
         start_time = time.time()
         metrics.tg_inprogress_requests.labels(query_name=query_name).inc()
         try:
             restppid = self._tg_connection.runInstalledQuery(
-                query_name, params, runAsync=True
+                query_name, params, runAsync=True, usePost=usePost
             )
             LogWriter.info(
                 f"request_id={req_id_cv.get()} query {query_name} started with RESTPP ID {restppid}"
