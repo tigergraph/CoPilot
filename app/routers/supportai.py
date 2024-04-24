@@ -1,8 +1,10 @@
 import json
 import logging
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.config import embedding_service, embedding_store, get_llm_service, llm_config
 
@@ -30,6 +32,7 @@ from app.util import get_eventual_consistency_checker
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
+security = HTTPBasic()
 
 @router.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: Request):
@@ -389,7 +392,7 @@ async def force_update(graphname: str, background_tasks: BackgroundTasks, conn: 
 
 
 @router.get("/{graphname}/supportai/consistency_status")
-def consistency_status(graphname: str, conn: Request):
+def consistency_status(graphname: str, conn: Request, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
     conn = conn.state.conn
     ecc = get_eventual_consistency_checker(graphname, conn)
     return ecc.get_status()
