@@ -131,6 +131,9 @@ class GenerateFunction(BaseTool):
                 "doc1",
                 "doc2",
                 "doc3",
+                "doc4",
+                "doc5",
+                "doc6"
             ],
             partial_variables={
                 "format_instructions": func_parser.get_format_instructions()
@@ -177,8 +180,7 @@ class GenerateFunction(BaseTool):
             }
         ]
 
-        doc_ids = [doc.metadata.get("function_header") for doc in docs]
-        logger.debug(f"request_id={req_id_cv.get()} retrieved documents={doc_ids}")
+        logger.debug(f"request_id={req_id_cv.get()} retrieved documents={docs}")
 
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
