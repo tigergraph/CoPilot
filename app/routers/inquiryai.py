@@ -1,10 +1,11 @@
 import json
 import logging
 import traceback
-from typing import List, Union
+from typing import List, Union, Annotated
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, status
+from fastapi import APIRouter, HTTPException, Request, WebSocket, status, Depends
 from fastapi.responses import HTMLResponse
+from fastapi.security.http import HTTPBase
 
 from app.agent import TigerGraphAgent
 from app.config import embedding_service, embedding_store, llm_config, session_handler
@@ -30,6 +31,7 @@ from app.tools.validation_utils import MapQuestionToSchemaException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
+security = HTTPBase(scheme="both", auto_error=False)
 
 
 @router.post("/{graphname}/query")
@@ -37,6 +39,7 @@ def retrieve_answer(
     graphname,
     query: NaturalLanguageQuery,
     conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ) -> CoPilotResponse:
     conn = conn.state.conn
     logger.debug_pii(
@@ -163,7 +166,7 @@ def retrieve_answer(
 
 
 @router.get("/{graphname}/list_registered_queries")
-def list_registered_queries(graphname, conn: Request):
+def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     if conn.getVer().split(".")[0] <= "3":
         query_descs = embedding_store.list_registered_documents(
@@ -193,7 +196,7 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery):
 
 @router.post("/{graphname}/register_docs")
 def register_docs(
-    graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], conn: Request
+    graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
 ):
     conn = conn.state.conn
     # auth check
@@ -237,7 +240,7 @@ def register_docs(
 
 
 @router.post("/{graphname}/upsert_from_gsql")
-def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request):
+def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
 
     query_names = query_list.queries
@@ -273,7 +276,7 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request):
 
 
 @router.post("/{graphname}/delete_from_gsql")
-def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request):
+def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
 
     query_names = query_list.queries
@@ -299,6 +302,7 @@ def upsert_docs(
     graphname,
     request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
     conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ):
     conn = conn.state.conn
     # auth check
@@ -370,7 +374,7 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request):
+def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     # auth check
     try:
@@ -412,7 +416,8 @@ def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request):
 def retrieve_docs(
     graphname,
     query: NaturalLanguageQuery,
-    top_k: int = 3,
+    credentials: Annotated[HTTPBase, Depends(security)],
+    top_k: int = 3
 ):
     logger.debug_pii(
         f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}"
@@ -423,13 +428,13 @@ def retrieve_docs(
 
 
 @router.post("/{graphname}/login")
-def login(graphname, conn: Request):
+def login(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     session_id = session_handler.create_session(conn.state.conn.username, conn)
     return {"session_id": session_id}
 
 
 @router.post("/{graphname}/logout")
-def logout(graphname, session_id: str):
+def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
     session_handler.delete_session(session_id)
     return {"status": "success"}
 
@@ -440,7 +445,7 @@ def chat(request: Request):
 
 
 @router.websocket("/{graphname}/ws")
-async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
+async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
     session = session_handler.get_session(session_id)
     await websocket.accept()
     while True:

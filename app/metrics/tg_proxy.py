@@ -110,6 +110,6 @@ class TigerGraphConnectionProxy:
                 self._tg_connection.restppUrl + "/requesttoken",
                 authMode="pwd",
                 data=str({"token": self._tg_connection.apiToken}),
-                resKey="results",
+                resKey=None
             )
         metrics.tg_active_connections.dec()
