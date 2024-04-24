@@ -137,13 +137,24 @@ class GenerateFunction(BaseTool):
             },
         )
 
-        docs = self.embedding_store.retrieve_similar(
+        pytg_docs = self.embedding_store.retrieve_similar(
             self.embedding_model.embed_query(lookup_question),
             top_k=3,
-            filter_expr="graphname == '{}' or graphname == 'all'".format(
+            filter_expr="graphname == 'all'"
+        )
+
+        custom_docs = self.embedding_store.retrieve_similar(
+            self.embedding_model.embed_query(lookup_question),
+            top_k=3,
+            filter_expr="graphname == '{}'".format(
                 self.conn.graphname
             ),
         )
+
+        # Prioritize pyTigerGraph docs over custom docs
+        docs = pytg_docs + custom_docs
+
+        valid_function_calls = [x["function_header"] for x in self.embedding_store.list_registered_documents(output_fields=["function_header"])]
 
         if len(docs) == 0:
             LogWriter.warning(f"request_id={req_id_cv.get()} WARN no documents found")
@@ -160,6 +171,9 @@ class GenerateFunction(BaseTool):
                 "doc1": docs[0].page_content,
                 "doc2": docs[1].page_content if len(docs) > 1 else "",
                 "doc3": docs[2].page_content if len(docs) > 2 else "",
+                "doc4": docs[3].page_content if len(docs) > 3 else "",
+                "doc5": docs[4].page_content if len(docs) > 4 else "",
+                "doc6": docs[5].page_content if len(docs) > 5 else ""
             }
         ]
 
@@ -174,7 +188,7 @@ class GenerateFunction(BaseTool):
 
         try:
             parsed_func = validate_function_call(
-                self.conn, generated.connection_func_call, docs
+                self.conn, generated.connection_func_call, valid_function_calls
             )
         except InvalidFunctionCallException as e:
             LogWriter.warning(
