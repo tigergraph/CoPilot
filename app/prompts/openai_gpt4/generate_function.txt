@@ -12,6 +12,9 @@ Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
+Fourth Docstring: {doc4}
+Fifth Docstring: {doc5}
+Sixth Docstring: {doc6}
 
 Follow the output directions below on how to structure your response: 
 {format_instructions} 
