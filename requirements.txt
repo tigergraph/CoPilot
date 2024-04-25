@@ -89,7 +89,7 @@ python-iso639==2023.6.15
 python-magic==0.4.27
 pymilvus==2.3.6
 pyTigerDriver==1.0.15
-pyTigerGraph @ git+https://github.com/tigergraph/pyTigerGraph.git
+pyTigerGraph==1.6
 pytz==2023.3.post1
 PyYAML==6.0.1
 rapidfuzz==3.4.0
