@@ -127,7 +127,7 @@ class MapQuestionToSchema(BaseTool):
                 [
                     {
                         "parsed_attrs": parsed_q.target_vertex_attributes[vertex],
-                        "real_attrs": self.conn.getVertexAttrs(vertex),
+                        "real_attrs": [attr[0] for attr in self.conn.getVertexAttrs(vertex)],
                     }
                 ]
             )[0]["text"]
