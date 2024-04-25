@@ -32,7 +32,7 @@ from app.util import get_eventual_consistency_checker
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
-security = HTTPBase(scheme="both", auto_error=False)
+security = HTTPBase(scheme="basic", auto_error=False)
 
 @router.post("/{graphname}/supportai/initialize")
 def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):

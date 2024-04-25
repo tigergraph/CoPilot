@@ -74,7 +74,8 @@ class MapQuestionToSchema(BaseTool):
         vertices_info = []
         for vertex in vertices:
             vertex_attrs = self.conn.getVertexAttrs(vertex)
-            vertex_info = {"vertex": vertex, "attributes": vertex_attrs}
+            attributes = [attr[0] for attr in vertex_attrs]
+            vertex_info = {"vertex": vertex, "attributes": attributes}
             vertices_info.append(vertex_info)
 
         edges_info = []

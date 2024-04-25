@@ -31,7 +31,7 @@ from app.tools.validation_utils import MapQuestionToSchemaException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
-security = HTTPBase(scheme="both", auto_error=False)
+security = HTTPBase(scheme="basic", auto_error=False)
 
 
 @router.post("/{graphname}/query")
