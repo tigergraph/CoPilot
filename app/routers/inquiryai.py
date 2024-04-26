@@ -241,14 +241,16 @@ def register_docs(
 
 @router.post("/{graphname}/upsert_from_gsql")
 def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    req = conn
     conn = conn.state.conn
 
     query_names = query_list.queries
     query_descs = conn.getQueryDescription(query_names)
+    logger.debug("retrieved query descriptions from GSQL"+str(query_descs))
 
     query_info_list = []
     for query_desc in query_descs:
-        print(query_desc)
+        logger.debug("processing query description: "+str(query_desc))
         params = query_desc["parameters"]
         if params == []:
             params = {}
@@ -272,11 +274,12 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
         )
 
         query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
-    return upsert_docs(graphname, query_info_list)
+    return upsert_docs(graphname, query_info_list, req, credentials)
 
 
 @router.post("/{graphname}/delete_from_gsql")
 def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    req = conn
     conn = conn.state.conn
 
     query_names = query_list.queries
@@ -291,6 +294,8 @@ def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
                 ids=None,
                 expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'",
             ),
+            req,
+            credentials
         )
         func_counter += 1
 

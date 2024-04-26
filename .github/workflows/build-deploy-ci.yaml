@@ -2,7 +2,7 @@ name: CoPilot Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "cloud-main" ]
   workflow_dispatch:
 
 env:
