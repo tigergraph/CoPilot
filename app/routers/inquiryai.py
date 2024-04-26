@@ -275,7 +275,7 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
         )
 
         query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
-    return upsert_docs(graphname, query_info_list)
+    return upsert_docs(graphname, query_info_list, conn, credentials)
 
 
 @router.post("/{graphname}/delete_from_gsql")
@@ -294,6 +294,8 @@ def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
                 ids=None,
                 expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'",
             ),
+            conn,
+            credentials
         )
         func_counter += 1
 
