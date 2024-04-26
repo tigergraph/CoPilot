@@ -247,11 +247,11 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
 
     query_names = query_list.queries
     query_descs = conn.getQueryDescription(query_names)
-    LogWriter.debug("retrieved query descriptions from GSQL"+str(query_descs))
+    logger.debug("retrieved query descriptions from GSQL"+str(query_descs))
 
     query_info_list = []
     for query_desc in query_descs:
-        LogWriter.debug("processing query description: "+str(query_desc))
+        logger.debug("processing query description: "+str(query_desc))
         params = query_desc["parameters"]
         if params == []:
             params = {}
