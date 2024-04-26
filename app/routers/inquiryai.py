@@ -168,7 +168,6 @@ def retrieve_answer(
 @router.get("/{graphname}/list_registered_queries")
 def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
-    '''
     if conn.getVer().split(".")[0] <= "3":
         query_descs = embedding_store.list_registered_documents(
             graphname=graphname,
@@ -176,13 +175,12 @@ def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTT
             output_fields=["function_header", "text"],
         )
     else:
-    '''
-    queries = embedding_store.list_registered_documents(
-        graphname=graphname, only_custom=True, output_fields=["function_header"]
-    )
-    if not queries:
-        return {"queries": {}}
-    query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
+        queries = embedding_store.list_registered_documents(
+            graphname=graphname, only_custom=True, output_fields=["function_header"]
+        )
+        if not queries:
+            return {"queries": {}}
+        query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
 
     return query_descs
 
