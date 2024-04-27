@@ -181,7 +181,7 @@ def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTT
         graphname=graphname, only_custom=True, output_fields=["function_header"]
     )
     if not queries:
-        return {"queries": {}}
+        return {"queries": []}
     query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
 
     return query_descs
