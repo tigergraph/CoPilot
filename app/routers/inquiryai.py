@@ -263,7 +263,10 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
                     "INSERT " + param.get("description", "VALUE") + " HERE"
                 )
             params = tmp_params
-        param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
+        if conn.auth_mode == "pwd":
+            param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
+        else: # due to GUI proxying
+            param_types = conn.getQueryMetadata(query_desc["queryName"])["results"]["input"]
         q_info = GSQLQueryInfo(
             function_header=query_desc["queryName"],
             description=query_desc["description"],
