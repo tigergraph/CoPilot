@@ -1,0 +1,13 @@
+{
+    "function_header": "tg_cosine_nbor_ss",
+    "description": "The cosine similarity algorithm finds the nodes that are the most similar to a source node based on its connections to other nodes in the graph, and calculates a similarity score for vertices in the graph.",
+    "docstring": "This query finds the most similar vertices to a source vertex based on it's weighted connections in graph. Run the query with `gds.featurizer().runAlgorithm('tg_cosine_nbor_ss', params={'source': 'INSERT_source_HERE', 'e_type_set': ['INSERT_e_types_HERE'], ['reverse_e_type_set': 'INSERT_reverse_e_types_HERE'], 'weight_attribute': 'INSERT_weight_attribute_HERE', 'top_k': 'INSERT_top_k_HERE' })`, where the parameters are : \n 'source': The node that the algorithm is running on. \n 'e_type_set': The set of edge types to run the algorithm on. \n 'reverse_e_type_set': The reverse of the e_type_set edges. \n 'weight_attribute': The weight attribute that is on the edges. \n 'top_k': The number of top scoring vertices to return.",
+    "param_types": {
+        "source" : "VERTEX",
+        "e_type_set" : "LIST<STRING>",
+        "reverse_e_type_set" : "LIST<STRING>",
+        "weight_attribute" : "STRING",
+        "top_k" : "INT"
+    },
+    "custom_query": false
+}
