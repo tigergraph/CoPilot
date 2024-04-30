@@ -165,7 +165,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 return metadata
 
             loader = DirectoryLoader(
-                "./app/tg_graph_algorithms/",
+                "./app/"+ self.algorithms_collection_name +"/",
                 glob="*.json",
                 loader_cls=JSONLoader,
                 loader_kwargs={
