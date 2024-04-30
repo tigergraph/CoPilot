@@ -24,6 +24,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         port: str,
         support_ai_instance: bool,
         collection_name: str = "tg_documents",
+        algorithms_collection_name = "tg_graph_algorithms",
         vector_field: str = "vector_field",
         text_field: str = "text",
         vertex_field: str = "",
@@ -39,6 +40,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.text_field = text_field
         self.support_ai_instance = support_ai_instance
         self.collection_name = collection_name
+        self.algorithms_collection_name = algorithms_collection_name
         self.milvus_alias = alias
         self.retry_interval = retry_interval
         self.max_retry_attempts = max_retry_attempts
@@ -70,7 +72,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         if not self.support_ai_instance:
             self.load_documents()
-            self.register_graph_algortihms("tg_algorithms")
+            self.register_graph_algortihms()
 
     def connect_to_milvus(self):
         retry_attempt = 0
@@ -149,9 +151,9 @@ class MilvusEmbeddingStore(EmbeddingStore):
         else:
             LogWriter.info("Milvus already initialized, skipping initial document load")
 
-    def register_graph_algortihms(self, collectionName: str):
+    def register_graph_algortihms(self):
         LogWriter.info("Register graph algorithms")
-        if not utility.has_collection(collectionName, using=self.milvus_alias):
+        if not utility.has_collection(self.algorithms_collection_name, using=self.milvus_alias):
             from langchain.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
@@ -175,7 +177,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             docs = loader.load()
             operation_type = "load_upsert"
             metrics.milvus_query_total.labels(
-                collectionName, operation_type
+                self.algorithms_collection_name, operation_type
             ).inc()
             start_time = time()
             LogWriter.info("Milvus upload graph algorithms")
@@ -183,7 +185,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             duration = time() - start_time
             metrics.milvus_query_duration_seconds.labels(
-                collectionName, operation_type
+                self.algorithms_collection_name, operation_type
             ).observe(duration)
             LogWriter.info("Milvus finished loading graph algorithms ")
         else:
