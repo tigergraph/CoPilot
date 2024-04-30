@@ -70,7 +70,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         if not self.support_ai_instance:
             self.load_documents()
-            self.register_graph_algortihms()
+            self.register_graph_algortihms("tg_algorithms")
 
     def connect_to_milvus(self):
         retry_attempt = 0
@@ -149,10 +149,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
         else:
             LogWriter.info("Milvus already initialized, skipping initial document load")
 
-    def register_graph_algortihms(self):
+    def register_graph_algortihms(self, collectionName: str):
         LogWriter.info("Register graph algorithms")
-        collectionName = "tg_algorithms"
-        connections.connect(**self.milvus_connection)
         if not utility.has_collection(collectionName, using=self.milvus_alias):
             from langchain.document_loaders import DirectoryLoader, JSONLoader
 
