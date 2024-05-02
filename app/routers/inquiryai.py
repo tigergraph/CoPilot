@@ -110,12 +110,14 @@ def retrieve_answer(
     )
     steps = ""
     try:
-        steps = agent.question_for_agent(query.query)
+        resp = agent.question_for_agent(query.query)
+        '''
         # try again if there were no steps taken
         if len(steps["intermediate_steps"]) == 0:
             steps = agent.question_for_agent(query.query)
 
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
+        
         generate_func_output = steps["intermediate_steps"][-1][-1]
         resp.natural_language_response = steps["output"]
         resp.query_sources = {
@@ -124,6 +126,7 @@ def retrieve_answer(
             "reasoning": generate_func_output["reasoning"],
         }
         resp.answered_question = True
+        '''
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
