@@ -21,9 +21,10 @@ class TigerGraphAgentRouter:
         """
         LogWriter.info(f"request_id={req_id_cv.get()} ENTRY route_question")
         prompt = PromptTemplate(
-            template="""You are an expert at routing a user question to a vectorstore or graph database function calls. \n
+            template="""You are an expert at routing a user question to a vectorstore or function calls. \n
             Use the vectorstore for questions on that would be best suited by text documents. \n
-            Otherwise, use graph function calls. Give a binary choice 'graph_functions' or 'vectorstore' based on the question. \n
+            Use the function calls for questions that ask about structured data, or operations on structured data. \n
+            Otherwise, use function calls. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
             Return the a JSON with a single key 'datasource' and no premable or explaination. \n
             Question to route: {question}""",
             input_variables=["question"],

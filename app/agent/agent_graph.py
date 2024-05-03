@@ -5,6 +5,7 @@ from langgraph.graph import END, StateGraph
 from app.agent.agent_generation import TigerGraphAgentGenerator
 from app.agent.agent_router import TigerGraphAgentRouter
 from app.agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
+from app.agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
 
 from app.tools import MapQuestionToSchemaException
 from app.supportai.retrievers import HNSWOverlapRetriever
@@ -20,6 +21,7 @@ class GraphState(TypedDict):
     generation: str
     context: str
     answer: Optional[CoPilotResponse]
+    lookup_source: Optional[str]
     schema_mapping: Optional[MapQuestionToSchemaResponse]
 
 
@@ -46,7 +48,7 @@ class TigerGraphAgentGraph:
         source = step.route_question(state['question'])
         if source["datasource"] == "vectorstore":
             return "supportai_lookup"
-        elif source["datasource"] == "graph_functions":
+        elif source["datasource"] == "functions":
             return "inquiryai_lookup"
         
     def map_question_to_schema(self, state):
@@ -72,19 +74,24 @@ class TigerGraphAgentGraph:
                                   state["schema_mapping"].target_edge_types,
                                   state["schema_mapping"].target_edge_attributes)
         state["context"] = step
+        state["lookup_source"] = "inquiryai"
         return state
     
     def hnsw_overlap_search(self, state):
         """
         Run the agent overlap search.
         """
+        retriever = HNSWOverlapRetriever(self.embedding_model,
+                                         self.embedding_store,
+                                         self.llm_provider.model,
+                                         self.db_connection)
+        step = retriever.search(state['question'],
+                                indices=["DocumentChunk", "Entity", "Relationship"],
+                                num_seen_min=1)
 
-        # TODO: Fix this
-        retriever = HNSWOverlapRetriever(self.agent.embedding_model,
-                                         self.agent.embedding_store,
-                                         self.agent.llm.model,
-                                         self.agent.conn)
-        step = retriever.search(state['question'])
+        state["context"] = step[0]
+        state["lookup_source"] = "supportai"
+        return state
         
     
     def generate_answer(self, state):
@@ -96,7 +103,7 @@ class TigerGraphAgentGraph:
         
         resp = CoPilotResponse(natural_language_response=answer,
                                answered_question=True,
-                               response_type="inquiryai",
+                               response_type=state["lookup_source"],
                                query_sources=state["context"])
         state["answer"] = resp
         
@@ -112,7 +119,31 @@ class TigerGraphAgentGraph:
             return "grounded"
         else:
             return "hallucination"
-
+        
+    def check_answer_for_usefulness(self, state):
+        """
+        Run the agent usefulness check.
+        """
+        step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
+        usefulness = step.check_usefulness(state["question"], state["answer"])
+        if usefulness["score"] == "yes":
+            return "useful"
+        else:
+            return "not_useful"
+        
+    def check_answer_for_usefulness_and_hallucinations(self, state):
+        """
+        Run the agent usefulness and hallucination check.
+        """
+        hallucinated = self.check_answer_for_hallucinations(state)
+        if hallucinated == "hallucination":
+            return "hallucination"
+        else:
+            useful = self.check_answer_for_usefulness(state)
+            if useful == "useful":
+                return "grounded"
+            else:
+                return "not_useful"
 
     def create_graph(self):
         """
@@ -141,7 +172,8 @@ class TigerGraphAgentGraph:
             self.check_answer_for_hallucinations,
             {
                 "hallucination": END,
-                "grounded": END
+                "grounded": END,
+                "not_useful": END
             }
         )
 

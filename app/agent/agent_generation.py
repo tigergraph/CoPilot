@@ -23,6 +23,7 @@ class TigerGraphAgentGenerator:
         prompt = PromptTemplate(
             template="""Given the question and the context, generate an answer. \n
                         Use the context to generate the answer. \n
+                        Make sure to answer the question in a friendly, but concise, and informative way. \n
                         Return the answer as a string. \n
                         Question: {question} \n
                         Context: {context}""",
