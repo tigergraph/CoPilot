@@ -1,0 +1,9 @@
+CREATE OR REPLACE QUERY ECC_Status(STRING v_type) {
+  start = {v_type};
+  res = SELECT s FROM start:s WHERE s.epoch_processed != 0;
+  res1 = SELECT s FROM start:s WHERE s.epoch_processing != 0 and s.epoch_processed == 0;
+
+  PRINT res.size() AS processed_count;
+  PRINT res1.size() AS processing_count;
+  PRINT start.size() AS total_count;
+}

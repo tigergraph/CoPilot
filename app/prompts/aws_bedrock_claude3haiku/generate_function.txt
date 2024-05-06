@@ -12,6 +12,9 @@ Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
 Third Docstring: {doc3}
+Fourth Docstring: {doc4}
+Fifth Docstring: {doc5}
+Sixth Docstring: {doc6}
 
 If the output of this function answers the user's question, immediately return that answer.
 

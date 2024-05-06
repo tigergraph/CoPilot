@@ -1,29 +1,37 @@
 import json
 import logging
 import traceback
-from typing import Annotated, List, Union, Optional
+from typing import List, Union, Annotated
 
-from fastapi import (APIRouter, Depends, HTTPException, Request, WebSocket,
-                     status)
+from fastapi import APIRouter, HTTPException, Request, WebSocket, status, Depends
 from fastapi.responses import HTMLResponse
-from fastapi.security import HTTPBasicCredentials
+from fastapi.security.http import HTTPBase
 
 from app.agent import TigerGraphAgent
-from app.config import (embedding_service, embedding_store, llm_config,
-                        security, session_handler)
-from app.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock, AzureOpenAI,
-                              GoogleVertexAI, OpenAI)
+from app.config import embedding_service, embedding_store, llm_config, session_handler
+from app.llm_services import (
+    AWS_SageMaker_Endpoint,
+    AWSBedrock,
+    AzureOpenAI,
+    GoogleVertexAI,
+    OpenAI,
+)
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
-                                    NaturalLanguageQuery, QueryDeleteRequest,
-                                    QueryUperstRequest)
+from app.py_schemas.schemas import (
+    CoPilotResponse,
+    GSQLQueryInfo,
+    GSQLQueryList,
+    NaturalLanguageQuery,
+    QueryDeleteRequest,
+    QueryUpsertRequest,
+)
 from app.tools.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
+security = HTTPBase(scheme="basic", auto_error=False)
 
 
 @router.post("/{graphname}/query")
@@ -31,6 +39,7 @@ def retrieve_answer(
     graphname,
     query: NaturalLanguageQuery,
     conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ) -> CoPilotResponse:
     conn = conn.state.conn
     logger.debug_pii(
@@ -107,33 +116,15 @@ def retrieve_answer(
             steps = agent.question_for_agent(query.query)
 
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
-        try:
-            generate_func_output = steps["intermediate_steps"][-1][-1]
-            resp.natural_language_response = steps["output"]
-            resp.query_sources = {
-                "function_call": generate_func_output["function_call"],
-                "result": json.loads(generate_func_output["result"]),
-                "reasoning": generate_func_output["reasoning"],
-            }
-            resp.answered_question = True
-            pmetrics.llm_success_response_total.labels(
-                embedding_service.model_name
-            ).inc()
-        except Exception:
-            resp.natural_language_response = (
-                # "An error occurred while processing the response. Please try again."
-                str(steps["output"])
-            )
-            resp.query_sources = {"agent_history": str(steps)}
-            resp.answered_question = False
-            LogWriter.warning(
-                f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
-            )
-            pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
-            exc = traceback.format_exc()
-            logger.debug_pii(
-                f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
-            )
+        generate_func_output = steps["intermediate_steps"][-1][-1]
+        resp.natural_language_response = steps["output"]
+        resp.query_sources = {
+            "function_call": generate_func_output["function_call"],
+            "result": json.loads(generate_func_output["result"]),
+            "reasoning": generate_func_output["reasoning"],
+        }
+        resp.answered_question = True
+        pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
             "A schema mapping error occurred. Please try rephrasing your question."
@@ -148,11 +139,18 @@ def retrieve_answer(
         logger.debug_pii(
             f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
-    except Exception as e:
-        resp.natural_language_response = (
-            # "An error occurred while processing the response. Please try again."
-            str(steps["output"])
-        )
+    except Exception:
+        try:
+            # if the output is json, it's intermediate agent output
+            json.loads(str(steps["output"]))  # TODO: don't use errors as control flow
+            resp.natural_language_response = (
+                # "An error occurred while processing the response. Please try again."
+                "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
+            )
+        except:
+            # the output wasn't json. It was likely a message from the agent to the user
+            resp.natural_language_response = str(steps["output"])
+
         resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
         LogWriter.warning(
@@ -167,12 +165,28 @@ def retrieve_answer(
     return resp
 
 
+@router.get("/{graphname}/list_registered_queries")
+def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    conn = conn.state.conn
+    if conn.getVer().split(".")[0] <= "3":
+        query_descs = embedding_store.list_registered_documents(
+            graphname=graphname,
+            only_custom=True,
+            output_fields=["function_header", "text"],
+        )
+    else:
+        queries = embedding_store.list_registered_documents(
+            graphname=graphname, only_custom=True, output_fields=["function_header"]
+        )
+        if not queries:
+            return {"queries": []}
+        query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
+
+    return query_descs
+
+
 @router.post("/{graphname}/getqueryembedding")
-def get_query_embedding(
-    graphname,
-    query: NaturalLanguageQuery,
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
-):
+def get_query_embedding(graphname, query: NaturalLanguageQuery):
     logger.debug(
         f"/{graphname}/getqueryembedding request_id={req_id_cv.get()} question={query.query}"
     )
@@ -182,9 +196,14 @@ def get_query_embedding(
 
 @router.post("/{graphname}/register_docs")
 def register_docs(
-    graphname,
-    query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
+    graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     logger.debug(f"Using embedding store: {embedding_store}")
     results = []
 
@@ -205,6 +224,7 @@ def register_docs(
                     "description": query_info.description,
                     "param_types": query_info.param_types,
                     "custom_query": True,
+                    "graphname": query_info.graphname,
                 }
             ],
         )
@@ -219,11 +239,82 @@ def register_docs(
     return results
 
 
+@router.post("/{graphname}/upsert_from_gsql")
+def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    req = conn
+    conn = conn.state.conn
+
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+    logger.debug("retrieved query descriptions from GSQL"+str(query_descs))
+
+    query_info_list = []
+    for query_desc in query_descs:
+        logger.debug("processing query description: "+str(query_desc))
+        params = query_desc["parameters"]
+        if params == []:
+            params = {}
+        else:
+            tmp_params = {}
+            for param in params:
+                tmp_params[param["paramName"]] = (
+                    "INSERT " + param.get("description", "VALUE") + " HERE"
+                )
+            params = tmp_params
+        param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
+        q_info = GSQLQueryInfo(
+            function_header=query_desc["queryName"],
+            description=query_desc["description"],
+            docstring=query_desc["description"]
+            + ".\nRun with runInstalledQuery('"
+            + query_desc["queryName"]
+            + "', params={})".format(json.dumps(params)),
+            param_types={list(x.keys())[0]: x[list(x.keys())[0]] for x in param_types},
+            graphname=graphname,
+        )
+
+        query_info_list.append(QueryUpsertRequest(id=None, query_info=q_info))
+    return upsert_docs(graphname, query_info_list, req, credentials)
+
+
+@router.post("/{graphname}/delete_from_gsql")
+def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    req = conn
+    conn = conn.state.conn
+
+    query_names = query_list.queries
+    query_descs = conn.getQueryDescription(query_names)
+
+    func_counter = 0
+
+    for query_desc in query_descs:
+        delete_docs(
+            graphname,
+            QueryDeleteRequest(
+                ids=None,
+                expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'",
+            ),
+            req,
+            credentials
+        )
+        func_counter += 1
+
+    return {"deleted_functions": query_descs, "deleted_count": func_counter}
+
+
 @router.post("/{graphname}/upsert_docs")
 def upsert_docs(
     graphname,
-    request_data: Union[QueryUperstRequest, List[QueryUperstRequest]],
+    request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     try:
         results = []
 
@@ -239,6 +330,20 @@ def upsert_docs(
                     status_code=400,
                     detail="At least one of 'id' or 'query_info' is required",
                 )
+            elif not id and query_info:
+                try: 
+                    # expr = f"function_header in ['{query_info.function_header}']"
+                    expr = f"function_header == '{query_info.function_header}'"
+                    id = embedding_store.get_pks(expr)
+                    if id:
+                        id = str(id[0])
+                        logger.info(f"Found document id {id} based on expression {expr}")
+                    else:
+                        id = ""
+                        logger.info(f"No document found based on expression {expr}, inserting as a new document")
+                except Exception as e:
+                    error_message = f"An error occurred while getting pks of document: {str(e)}"
+                    raise e
 
             logger.debug(
                 f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)"
@@ -254,6 +359,7 @@ def upsert_docs(
                         "description": query_info.description,
                         "param_types": query_info.param_types,
                         "custom_query": True,
+                        "graphname": query_info.graphname,
                     }
                 ],
             )
@@ -273,7 +379,13 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest):
+def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    conn = conn.state.conn
+    # auth check
+    try:
+        conn.echo()
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     ids = request_data.ids
     expr = request_data.expr
 
@@ -309,7 +421,8 @@ def delete_docs(graphname, request_data: QueryDeleteRequest):
 def retrieve_docs(
     graphname,
     query: NaturalLanguageQuery,
-    top_k: int = 3,
+    credentials: Annotated[HTTPBase, Depends(security)],
+    top_k: int = 3
 ):
     logger.debug_pii(
         f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}"
@@ -320,14 +433,13 @@ def retrieve_docs(
 
 
 @router.post("/{graphname}/login")
-def login(graphname, conn: Request):
-    conn.state.conn
-    session_id = session_handler.create_session(conn.username, conn)
+def login(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    session_id = session_handler.create_session(conn.state.conn.username, conn)
     return {"session_id": session_id}
 
 
 @router.post("/{graphname}/logout")
-def logout(graphname, session_id: str):
+def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
     session_handler.delete_session(session_id)
     return {"status": "success"}
 
@@ -338,7 +450,7 @@ def chat(request: Request):
 
 
 @router.websocket("/{graphname}/ws")
-async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
+async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
     session = session_handler.get_session(session_id)
     await websocket.accept()
     while True:

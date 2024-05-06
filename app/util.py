@@ -4,36 +4,63 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
 from pyTigerGraph import TigerGraphConnection
+from requests import HTTPError
 
-from app.config import (db_config, embedding_service, get_llm_service,
-                        llm_config, milvus_config, security, doc_processing_config)
+from app.config import (
+    db_config,
+    embedding_service,
+    get_llm_service,
+    llm_config,
+    milvus_config,
+    security,
+    doc_processing_config,
+)
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.sync.eventual_consistency_checker import EventualConsistencyChecker
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
 
-def get_db_connection_id_token(graphname: str, credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
+
+def get_db_connection_id_token(
+    graphname: str,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
         graphname=graphname,
-        apiToken = credentials,
-        tgCloud = True,
-        sslPort=14240
+        apiToken=credentials,
+        tgCloud=True,
+        sslPort=14240,
     )
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
     )
     conn = TigerGraphConnectionProxy(conn, auth_mode="id_token")
+
+    try:
+        conn.gsql("USE GRAPH " + graphname)
+    except HTTPError:
+        LogWriter.error("Failed to connect to TigerGraph. Incorrect ID Token.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    LogWriter.info("Connected to TigerGraph with ID Token")
     return conn
 
-def get_db_connection_pwd(graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> TigerGraphConnectionProxy:
+
+def get_db_connection_pwd(
+    graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
         username=credentials.username,
         password=credentials.password,
-        graphname=graphname,
+        graphname=graphname
     )
 
     if db_config["getToken"]:
@@ -44,7 +71,8 @@ def get_db_connection_pwd(graphname, credentials: Annotated[HTTPBasicCredentials
                 data=str({"graph": conn.graphname}),
                 resKey="results",
             )["token"]
-        except:
+        except HTTPError:
+            LogWriter.error("Failed to get token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
@@ -56,14 +84,14 @@ def get_db_connection_pwd(graphname, credentials: Annotated[HTTPBasicCredentials
             username=credentials.username,
             password=credentials.password,
             graphname=graphname,
-            apiToken=apiToken,
+            apiToken=apiToken
         )
 
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
     )
     conn = TigerGraphConnectionProxy(conn)
-
+    LogWriter.info("Connected to TigerGraph with password")
     return conn
 
 
@@ -108,30 +136,35 @@ def get_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionP
             from app.supportai.chunkers.regex_chunker import RegexChunker
 
             chunker = RegexChunker(
-                pattern=doc_processing_config["chunker_config"].get("pattern", "\\r?\\n")
+                pattern=doc_processing_config["chunker_config"].get(
+                    "pattern", "\\r?\\n"
+                )
             )
         elif doc_processing_config.get("chunker") == "character":
             from app.supportai.chunkers.character_chunker import CharacterChunker
 
             chunker = CharacterChunker(
-                chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
-                overlap_size=doc_processing_config["chunker_config"].get("overlap_size", 0)
+                chunk_size=doc_processing_config["chunker_config"].get(
+                    "chunk_size", 1024
+                ),
+                overlap_size=doc_processing_config["chunker_config"].get(
+                    "overlap_size", 0
+                ),
             )
         else:
             raise ValueError("Invalid chunker type")
-        
 
         if doc_processing_config.get("extractor") == "llm":
             from app.supportai.extractors import LLMEntityRelationshipExtractor
+
             extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
         else:
             raise ValueError("Invalid extractor type")
-        
 
         checker = EventualConsistencyChecker(
             check_interval_seconds,
             graphname,
-            vertex_field, #FIXME: if milvus is not enabled, this is not defined and will crash here (vertex_field used before assignment)
+            vertex_field,  # FIXME: if milvus is not enabled, this is not defined and will crash here (vertex_field used before assignment)
             embedding_service,
             index_names,
             vector_indices,

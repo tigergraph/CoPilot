@@ -39,7 +39,7 @@ class EmbeddingStore(ABC):
 
     @abstractmethod
     def retrieve_similar(
-        self, query_embedding: List[float], top_k: int = 10
+        self, query_embedding: List[float], top_k: int = 10, filter_expr: str = None
     ) -> List[Tuple[str, float]]:
         """Retrieve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
@@ -48,6 +48,8 @@ class EmbeddingStore(ABC):
                 The embedding to search with.
             top_k (int, optional):
                 The number of documents to return. Defaults to 10.
+            filter_expr (str, optional):
+                Filter expression to apply to the query. Defaults to None.
         Returns:
             A list of Tuples containing vector id and vector embedding
         """

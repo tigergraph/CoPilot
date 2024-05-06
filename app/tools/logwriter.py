@@ -52,7 +52,7 @@ class LogWriter:
             "[EMAIL REDACTED]",
         ),
         (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "[SSN REDACTED]"),
-        (re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b"), "[CREDIT CARD REDACTED]"),
+        (re.compile(r"\b(?<!-)(?:\d{4}[ -]?){3}\d{4}(?!-)\b"), "[CREDIT CARD REDACTED]"),
         (re.compile(r"\b(?:\d{3}-)?\d{3}-\d{4}\b"), "[PHONE REDACTED]"),
         (re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"), "[IPV4 REDACTED]"),
         (

@@ -1,26 +1,29 @@
-from langchain.tools import BaseTool
-from langchain.llms.base import LLM
-from langchain.tools.base import ToolException
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.py_schemas import MapQuestionToSchemaResponse, GenerateFunctionResponse
-from typing import List, Dict, Type, Optional, Union
-from app.embeddings.embedding_services import EmbeddingModel
-from app.embeddings.base_embedding_store import EmbeddingStore
-from .validation_utils import (
-    validate_schema,
-    validate_function_call,
-    MapQuestionToSchemaException,
-    InvalidFunctionCallException,
-    NoDocumentsFoundException,
-)
 import json
 import logging
+from typing import Dict, List, Optional, Type, Union
+
+from langchain.chains import LLMChain
+from langchain.llms.base import LLM
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import PromptTemplate
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.tools import BaseTool
+from langchain.tools.base import ToolException
+
+from app.embeddings.base_embedding_store import EmbeddingStore
+from app.embeddings.embedding_services import EmbeddingModel
 from app.log import req_id_cv
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
+from app.py_schemas import GenerateFunctionResponse, MapQuestionToSchemaResponse
 from app.tools.logwriter import LogWriter
+
+from .validation_utils import (
+    InvalidFunctionCallException,
+    MapQuestionToSchemaException,
+    NoDocumentsFoundException,
+    validate_function_call,
+    validate_schema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -128,15 +131,33 @@ class GenerateFunction(BaseTool):
                 "doc1",
                 "doc2",
                 "doc3",
+                "doc4",
+                "doc5",
+                "doc6"
             ],
             partial_variables={
                 "format_instructions": func_parser.get_format_instructions()
             },
         )
 
-        docs = self.embedding_store.retrieve_similar(
-            self.embedding_model.embed_query(lookup_question), top_k=3
+        pytg_docs = self.embedding_store.retrieve_similar(
+            self.embedding_model.embed_query(lookup_question),
+            top_k=3,
+            filter_expr="graphname == 'all'"
         )
+
+        custom_docs = self.embedding_store.retrieve_similar(
+            self.embedding_model.embed_query(lookup_question),
+            top_k=3,
+            filter_expr="graphname == '{}'".format(
+                self.conn.graphname
+            ),
+        )
+
+        # Prioritize pyTigerGraph docs over custom docs
+        docs = pytg_docs + custom_docs
+
+        valid_function_calls = [x["function_header"] for x in self.embedding_store.list_registered_documents(output_fields=["function_header"])]
 
         if len(docs) == 0:
             LogWriter.warning(f"request_id={req_id_cv.get()} WARN no documents found")
@@ -153,21 +174,23 @@ class GenerateFunction(BaseTool):
                 "doc1": docs[0].page_content,
                 "doc2": docs[1].page_content if len(docs) > 1 else "",
                 "doc3": docs[2].page_content if len(docs) > 2 else "",
+                "doc4": docs[3].page_content if len(docs) > 3 else "",
+                "doc5": docs[4].page_content if len(docs) > 4 else "",
+                "doc6": docs[5].page_content if len(docs) > 5 else ""
             }
         ]
 
-        doc_ids = [doc.metadata.get("function_header") for doc in docs]
-        logger.debug(f"request_id={req_id_cv.get()} retrieved documents={doc_ids}")
+        logger.debug(f"request_id={req_id_cv.get()} retrieved documents={docs}")
 
         chain = LLMChain(llm=self.llm, prompt=PROMPT)
         generated = chain.apply(inputs)[0]["text"]
         logger.debug(f"request_id={req_id_cv.get()} generated function")
-        generated = func_parser.invoke(generated)
-        #LogWriter.info(f"generated_function: {generated}")
-
+        generated = func_parser.invoke(generated)  
+        # LogWriter.info(f"generated_function: {generated}")
+      
         try:
             parsed_func = validate_function_call(
-                self.conn, generated.connection_func_call, docs
+                self.conn, generated.connection_func_call, valid_function_calls
             )
         except InvalidFunctionCallException as e:
             LogWriter.warning(

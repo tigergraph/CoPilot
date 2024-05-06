@@ -74,7 +74,8 @@ class MapQuestionToSchema(BaseTool):
         vertices_info = []
         for vertex in vertices:
             vertex_attrs = self.conn.getVertexAttrs(vertex)
-            vertex_info = {"vertex": vertex, "attributes": vertex_attrs}
+            attributes = [attr[0] for attr in vertex_attrs]
+            vertex_info = {"vertex": vertex, "attributes": attributes}
             vertices_info.append(vertex_info)
 
         edges_info = []
@@ -126,7 +127,7 @@ class MapQuestionToSchema(BaseTool):
                 [
                     {
                         "parsed_attrs": parsed_q.target_vertex_attributes[vertex],
-                        "real_attrs": self.conn.getVertexAttrs(vertex),
+                        "real_attrs": [attr[0] for attr in self.conn.getVertexAttrs(vertex)],
                     }
                 ]
             )[0]["text"]

@@ -1,14 +1,13 @@
 import unittest
-
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 import json
 import os
 import pyTigerGraph as tg
+
+
 class TestCRUDInquiryAI(unittest.TestCase):
-
-
     def setUp(self):
         self.client = TestClient(app)
         db_config = os.getenv("DB_CONFIG")
@@ -24,7 +23,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         if self.use_token:
             self.conn.getToken()
 
-    
     def test_register_custom_query_list(self):
         query_list = [
             {
@@ -52,7 +50,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_register_custom_query_single(self):
         single_query = {
             "function_header": "ms_dependency_chain",
@@ -72,7 +69,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_delete_custom_query_expr(self):
         delete_query = {"ids": "", "expr": "function_header in ['ms_dependency_chain']"}
 
@@ -87,7 +83,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_delete_custom_query_ids(self):
         delete_query = {"ids": "448543540718863740", "expr": ""}
 
@@ -102,7 +97,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_delete_custom_query_idlist(self):
         delete_query = {"ids": ["448631022823408704", "448631022823408707"], "expr": ""}
 
@@ -117,7 +111,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_delete_custom_query_noinput(self):
         delete_query = {"ids": "", "expr": ""}
 
@@ -132,10 +125,9 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 500)
 
-    
     def test_upsert_custom_query_ids(self):
         upsert_query = {
-            "ids": "448543540718863740",
+            "id": "448543540718863740",
             "query_info": {
                 "function_header": "ms_dependency_chain_test_id",
                 "description": "Finds dependents of a given microservice up to k hops.",
@@ -155,10 +147,9 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_upsert_custom_query_docs(self):
         upsert_query = {
-            "ids": "",
+            "id": "",
             "expr": {
                 "function_header": "ms_dependency_chain_test_docs",
                 "description": "Finds dependents of a given microservice up to k hops.",
@@ -178,7 +169,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 200)
 
-    
     def test_upsert_custom_query_noinput(self):
         upsert_query = {"ids": "", "expr": {}}
 
@@ -193,7 +183,45 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print(response.text)
         self.assertEqual(response.status_code, 422)
 
-    
+    def test_upsert_new_existing_noid_docs(self):
+        # ms_dependency_chain exists in milvus, find the id basded on function_header and update the description
+        # ms_dependency_chain_11111 doesn't exist, no id found, insert directly
+        # return two new ids after upserting
+        upsert_query = [
+            {
+                "id": "",
+                "query_info": {
+                "function_header": "ms_dependency_chain",
+                "description": "Testing Finds dependents of a given microservice up to k hops.",
+                "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
+                "param_types": {"microservice": "str", "depth": "int"},
+                "graphname": "DigitalInfra"
+                }
+            },
+            {
+                "id": "",
+                "query_info": {
+                "function_header": "ms_dependency_chain_11111",
+                "description": "Testing Finds dependents of a given microservice up to k hops.",
+                "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
+                "param_types": {"microservice": "str", "depth": "int"},
+                "graphname": "DigitalInfra"
+                }
+            }
+        ]
+
+        response = self.client.post(
+            "/DigitalInfra/upsert_docs",
+            json=upsert_query,
+            auth=(self.username, self.password),
+        )
+        print("-----------------------")
+        print()
+        print("response json")
+        print(response.text)
+        self.assertEqual(response.status_code, 200)
+
+
     def test_retrieve_custom_query(self):
         query = "how many microservices are there?"
 
@@ -207,7 +235,6 @@ class TestCRUDInquiryAI(unittest.TestCase):
         print("response json")
         print(response.text)
         self.assertEqual(response.status_code, 200)
-
 
 if __name__ == "__main__":
     unittest.main()

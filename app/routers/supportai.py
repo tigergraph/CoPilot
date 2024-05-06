@@ -1,29 +1,41 @@
 import json
 import logging
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi.security.http import HTTPBase
 
-from app.config import (embedding_service, embedding_store, get_llm_service,
-                        llm_config)
+from app.config import embedding_service, embedding_store, get_llm_service, llm_config
 
-from app.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
-                                    LoadingInfo, SupportAIQuestion)
+from app.py_schemas.schemas import (
+    CoPilotResponse,
+    CreateIngestConfig,
+    LoadingInfo,
+    SupportAIQuestion,
+)
 from app.supportai.concept_management.create_concepts import (
-    CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
-    RelationshipConceptCreator)
-from app.supportai.retrievers import (EntityRelationshipRetriever,
-                                      HNSWOverlapRetriever, HNSWRetriever,
-                                      HNSWSiblingRetriever)
+    CommunityConceptCreator,
+    EntityConceptCreator,
+    HigherLevelConceptCreator,
+    RelationshipConceptCreator,
+)
+from app.supportai.retrievers import (
+    EntityRelationshipRetriever,
+    HNSWOverlapRetriever,
+    HNSWRetriever,
+    HNSWSiblingRetriever,
+)
 
 from app.util import get_eventual_consistency_checker
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
+security = HTTPBase(scheme="basic", auto_error=False)
 
 @router.post("/{graphname}/supportai/initialize")
-def initialize(graphname, conn: Request):
+def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     # need to open the file using the absolute path
     file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
@@ -69,16 +81,12 @@ def initialize(graphname, conn: Request):
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
-        "index_creation_status": json.dumps(index_res)
+        "index_creation_status": json.dumps(index_res),
     }
 
 
 @router.post("/{graphname}/supportai/create_ingest")
-def create_ingest(
-    graphname,
-    ingest_config: CreateIngestConfig,
-    conn: Request
-):
+def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
 
     if ingest_config.file_format.lower() == "json":
@@ -208,7 +216,8 @@ def ingest(
     graphname,
     loader_info: LoadingInfo,
     background_tasks: BackgroundTasks,
-    conn: Request
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ):
     conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname, conn)
@@ -252,11 +261,7 @@ def ingest(
 
 
 @router.post("/{graphname}/supportai/search")
-def search(
-    graphname,
-    query: SupportAIQuestion,
-    conn: Request
-):
+def search(graphname, query: SupportAIQuestion, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
@@ -305,11 +310,7 @@ def search(
 
 
 @router.post("/{graphname}/supportai/answerquestion")
-def answer_question(
-    graphname,
-    query: SupportAIQuestion,
-    conn: Request
-):
+def answer_question(graphname, query: SupportAIQuestion, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
@@ -369,6 +370,7 @@ def build_concepts(
     graphname,
     background_tasks: BackgroundTasks,
     conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)]
 ):
     conn = conn.state.conn
     background_tasks.add_task(get_eventual_consistency_checker, graphname)
@@ -385,9 +387,19 @@ def build_concepts(
 
 
 @router.get("/{graphname}/supportai/forceupdate")
-async def force_update(
-    graphname: str, conn: Request
-):
+async def force_update(graphname: str, background_tasks: BackgroundTasks, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
-    get_eventual_consistency_checker(graphname, conn)
+    background_tasks.add_task(get_eventual_consistency_checker, graphname, conn)
+    return {"status": "success"}
+
+
+@router.get("/{graphname}/supportai/consistency_status")
+def consistency_status(graphname: str, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    conn = conn.state.conn
+    ecc = get_eventual_consistency_checker(graphname, conn)
+    return ecc.get_status()
+
+
+@router.get("/{graphname}/supportai/auth_check")
+def auth_check(graphname: str, credentials: Annotated[HTTPBase, Depends(security)]):
     return {"status": "success"}
