@@ -18,6 +18,5 @@ COPY ./.git /code/.git
 
 # INFO, DEBUG, DEBUG_PII
 ENV LOGLEVEL="INFO"
-ENV OPENBLAS_NUM_THREADS="2"
 
 WORKDIR /code/tests

@@ -26,6 +26,8 @@ docker-pycreds==0.4.0
 emoji==2.8.0
 environs==9.5.0
 exceptiongroup==1.1.3
+faiss==1.7.4
+faiss-cpu==1.7.4
 fastapi==0.103.1
 filetype==1.2.0
 frozenlist==1.4.0
@@ -70,6 +72,7 @@ langsmith==0.1.24
 lxml==4.9.3
 marshmallow==3.20.1
 minio==7.2.5
+mkl-service==2.4.0
 multidict==6.0.4
 mypy-extensions==1.0.0
 nltk==3.8.1
