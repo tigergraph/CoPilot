@@ -6,6 +6,7 @@ from app.agent.agent_generation import TigerGraphAgentGenerator
 from app.agent.agent_router import TigerGraphAgentRouter
 from app.agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
 from app.agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
+from app.agent.agent_rewrite import TigerGraphAgentRewriter
 
 from app.tools import MapQuestionToSchemaException
 from app.supportai.retrievers import HNSWOverlapRetriever
@@ -31,7 +32,8 @@ class TigerGraphAgentGraph:
                  embedding_model,
                  embedding_store,
                  mq2s_tool,
-                 gen_func_tool):
+                 gen_func_tool,
+                 enable_human_in_loop=False):
         self.workflow = StateGraph(GraphState)
         self.llm_provider = llm_provider
         self.db_connection = db_connection
@@ -39,6 +41,7 @@ class TigerGraphAgentGraph:
         self.embedding_store = embedding_store
         self.mq2s = mq2s_tool
         self.gen_func = gen_func_tool
+        self.enable_human_in_loop = enable_human_in_loop
 
     def route_question(self, state):
         """
@@ -86,8 +89,9 @@ class TigerGraphAgentGraph:
                                          self.llm_provider.model,
                                          self.db_connection)
         step = retriever.search(state['question'],
-                                indices=["DocumentChunk", "Entity", "Relationship"],
-                                num_seen_min=1)
+                                indices=["Document", "DocumentChunk",
+                                         "Entity", "Relationship"],
+                                num_seen_min=2)
 
         state["context"] = step[0]
         state["lookup_source"] = "supportai"
@@ -107,6 +111,14 @@ class TigerGraphAgentGraph:
                                query_sources=state["context"])
         state["answer"] = resp
         
+        return state
+    
+    def rewrite_question(self, state):
+        """
+        Run the agent question rewriter.
+        """
+        step = TigerGraphAgentRewriter(self.llm_provider)
+        state["question"] = step.rewrite_question(state["question"])
         return state
     
     def check_answer_for_hallucinations(self, state):
@@ -149,13 +161,16 @@ class TigerGraphAgentGraph:
         """
         Create a graph of the agent.
         """
-        
+        self.workflow.set_entry_point("entry")
+        self.workflow.add_node("entry", lambda x: x)
         self.workflow.add_node("generate_answer", self.generate_answer)
         self.workflow.add_node("map_question_to_schema", self.map_question_to_schema)
         self.workflow.add_node("generate_function", self.generate_function)
         self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
+        self.workflow.add_node("rewrite_question", self.rewrite_question)
 
-        self.workflow.set_conditional_entry_point(
+        self.workflow.add_conditional_edges(
+            "entry",
             self.route_question,
             {
                 "supportai_lookup": "hnsw_overlap_search",
@@ -166,14 +181,15 @@ class TigerGraphAgentGraph:
         self.workflow.add_edge("map_question_to_schema", "generate_function")
         self.workflow.add_edge("generate_function", "generate_answer")
         self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
+        self.workflow.add_edge("rewrite_question", "entry")
 
         self.workflow.add_conditional_edges(
             "generate_answer",
-            self.check_answer_for_hallucinations,
+            self.check_answer_for_usefulness_and_hallucinations,
             {
-                "hallucination": END,
+                "hallucination": "rewrite_question",
                 "grounded": END,
-                "not_useful": END
+                "not_useful": "rewrite_question"
             }
         )
 
