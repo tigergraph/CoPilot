@@ -48,7 +48,7 @@ jobs:
       - name: Run pytest
         run: |
           source venv/bin/activate
-          pytest -m tests
+          /opt/actions-runner/_work/CoPilot/CoPilot/venv/bin/python -m pytest -m tests
         env:
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
       
