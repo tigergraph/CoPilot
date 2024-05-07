@@ -55,6 +55,7 @@ jobs:
           which python
           python --version
           echo $PATH
+          echo $PYTHONPATH
 
       - name: Run pytest
         run: |
