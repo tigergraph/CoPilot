@@ -168,7 +168,7 @@ class CommonTests:
 
             def test(self):
                 resp = self.client.post(
-                    "/" + dataset + "/registercustomquery",
+                    "/" + dataset + "/register_docs",
                     json=json.loads(query_json),
                     auth=(username, password),
                 )
