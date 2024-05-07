@@ -108,7 +108,6 @@ class TigerGraphConnectionProxy:
         if self.auth_mode == "pwd":
             resp = self._tg_connection._delete(
                 self._tg_connection.restppUrl + "/requesttoken",
-                authMode="pwd",
-                resKey=None
+                authMode="pwd"
             )
         metrics.tg_active_connections.dec()

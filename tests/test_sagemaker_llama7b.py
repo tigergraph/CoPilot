@@ -26,6 +26,7 @@ if USE_WANDB:
     ]
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
 class TestWithLlama(CommonTests, unittest.TestCase):
     
     @classmethod

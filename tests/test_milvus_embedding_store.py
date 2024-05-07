@@ -50,7 +50,7 @@ class TestMilvusEmbeddingStore(unittest.TestCase):
             query_embedding=embedded_query, top_k=4
         )
 
-        mock_milvus_function.assert_called_once_with(embedding=embedded_query, k=4)
+        mock_milvus_function.assert_called_once_with(embedding=embedded_query, k=4, expr=None)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].page_content, "What is the meaning of life?")
         self.assertEqual(result[0].metadata["vertex_id"], "123")

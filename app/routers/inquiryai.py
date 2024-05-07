@@ -110,6 +110,8 @@ def retrieve_answer(
     )
     steps = ""
     try:
+        print("HERE IS THE QUESTION")
+        print(query.query)
         steps = agent.question_for_agent(query.query)
         # try again if there were no steps taken
         if len(steps["intermediate_steps"]) == 0:
@@ -149,6 +151,9 @@ def retrieve_answer(
             )
         except:
             # the output wasn't json. It was likely a message from the agent to the user
+            print("HERE IS THE STEPS OUTPUT")
+            print(resp)
+            print(steps)
             resp.natural_language_response = str(steps["output"])
 
         resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}

@@ -9,6 +9,7 @@ import parse_test_config
 import sys
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
 class TestWithOpenAI(CommonTests, unittest.TestCase):
     
     @classmethod
