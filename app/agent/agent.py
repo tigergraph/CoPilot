@@ -91,11 +91,7 @@ class TigerGraphAgent:
             
             for output in self.agent.stream({"question": question}):
                 for key, value in output.items():
-                    # Node
-                    print(f"Node '{key}':")
-                    # Optional: print full state at each node
-                    # pprint.pprint(value["keys"], indent=2, width=80, depth=None)
-                print("\n---\n")
+                    LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
             return value["answer"]
