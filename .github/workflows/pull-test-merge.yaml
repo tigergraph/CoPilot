@@ -9,6 +9,13 @@ jobs:
   test:
     runs-on: [ self-hosted, dind ]
 
+    services:
+      milvus:
+        image: milvusdb/milvus:latest
+        ports:
+          - 19530:19530
+          - 19121:19121
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
