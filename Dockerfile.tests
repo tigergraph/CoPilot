@@ -18,5 +18,6 @@ COPY ./.git /code/.git
 
 # INFO, DEBUG, DEBUG_PII
 ENV LOGLEVEL="INFO"
+ENV MILVUS_CONFIG="/milvus_config.json"
 
 WORKDIR /code/tests
