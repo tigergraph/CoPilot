@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.10'
+          python-version: '3.11.8'
 
       - name: Set up Python environment
         run: |
@@ -42,13 +42,6 @@ jobs:
           which pip
           pip list
 
-      - name: Run pytest
-        run: |
-          source venv/bin/activate
-          pytest -m tests
-        env:
-          PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.10.14/x64/lib/python3.10/site-packages
-      
       - name: List directories and check modules
         run: |
           ls -la /opt/actions-runner/_work/CoPilot/CoPilot/app/
@@ -56,3 +49,11 @@ jobs:
           cat /opt/actions-runner/_work/CoPilot/CoPilot/app/__init__.py
           cat /opt/actions-runner/_work/CoPilot/CoPilot/app/tools/__init__.py
           python -c "import app; print(dir(app))"
+
+      - name: Run pytest
+        run: |
+          source venv/bin/activate
+          pytest -m tests
+        env:
+          PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.10.14/x64/lib/python3.10/site-packages
+      
