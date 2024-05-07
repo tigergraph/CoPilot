@@ -31,6 +31,7 @@ jobs:
           source venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
           which python
           python --version
           pip --version
@@ -48,7 +49,7 @@ jobs:
       - name: Run pytest
         run: |
           source venv/bin/activate
-          /opt/actions-runner/_work/CoPilot/CoPilot/venv/bin/python -m pytest -m tests
+          ./venv/bin/python -m pytest -m tests
         env:
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
       
