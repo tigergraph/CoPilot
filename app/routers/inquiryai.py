@@ -164,7 +164,7 @@ def retrieve_answer(
             # the output wasn't json. It was likely a message from the agent to the user
             resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
-        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
+        resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
             f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
