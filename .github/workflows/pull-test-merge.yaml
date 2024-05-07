@@ -44,11 +44,17 @@ jobs:
 
       - name: List directories and check modules
         run: |
-          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/app/
-          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/app/tools/
-          cat /opt/actions-runner/_work/CoPilot/CoPilot/app/__init__.py
-          cat /opt/actions-runner/_work/CoPilot/CoPilot/app/tools/__init__.py
+          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/
+          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/tools/
+          cat /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/__init__.py
+          cat /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/tools/__init__.py
           python -c "import app; print(dir(app))"
+          
+      - name: Verify Python Version and Path
+        run: |
+          which python
+          python --version
+          echo $PATH
 
       - name: Run pytest
         run: |
