@@ -119,7 +119,6 @@ def retrieve_answer(
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
-    steps = ""
     try:
         resp = agent.question_for_agent(query.query)
         '''
@@ -156,14 +155,14 @@ def retrieve_answer(
     except Exception:
         try:
             # if the output is json, it's intermediate agent output
-            json.loads(str(steps["output"]))  # TODO: don't use errors as control flow
+            #json.loads(str(steps))  # TODO: don't use errors as control flow
             resp.natural_language_response = (
                 # "An error occurred while processing the response. Please try again."
                 "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
             )
         except:
             # the output wasn't json. It was likely a message from the agent to the user
-            resp.natural_language_response = str(steps["output"])
+            resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
         resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
         resp.answered_question = False
