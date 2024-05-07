@@ -70,7 +70,6 @@ langsmith==0.1.24
 lxml==4.9.3
 marshmallow==3.20.1
 minio==7.2.5
-mkl==2024.1.0
 multidict==6.0.4
 mypy-extensions==1.0.0
 nltk==3.8.1
