@@ -25,37 +25,25 @@ jobs:
         with:
           python-version: '3.11.8'
 
-      - name: Set up Python environment
+      - name: Install and Check Python Setup
         run: |
           python -m venv venv
           source venv/bin/activate
-
-      - name: Install dependencies
-        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Check Python and Pip paths
-        run: |
-          python -c "import sys; print(sys.path)"
-          pip --version
-          which pip
-          pip list
-
-      - name: List directories and check modules
-        run: |
-          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/
-          ls -la /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/tools/
-          cat /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/__init__.py
-          cat /opt/actions-runner/_work/CoPilot/CoPilot/tests/app/tools/__init__.py
-          python -c "import app; print(dir(app))"
-          
-      - name: Verify Python Version and Path
-        run: |
           which python
           python --version
-          echo $PATH
-          echo $PYTHONPATH
+          pip --version
+          pip list
+
+      - name: Verify Python Version and Path
+        run: |
+          source venv/bin/activate
+          which python
+          python --version
+          echo "PATH: $PATH"
+          echo "PYTHONPATH: $PYTHONPATH"
+          python -c "import sys; print('Python sys.path:', sys.path)"
 
       - name: Run pytest
         run: |
