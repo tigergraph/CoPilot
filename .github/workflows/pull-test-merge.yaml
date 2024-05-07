@@ -21,10 +21,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt  # Adjust as needed
+          pip install --user -r requirements.txt
 
-      - name: Check Python path
-        run: python -c "import sys; print(sys.path)"
+      - name: Check Python and Pip paths
+        run: |
+          python -c "import sys; print(sys.path)"
+          pip --version
+          which pip
 
       - name: Run pytest
         run: pytest -m tests
