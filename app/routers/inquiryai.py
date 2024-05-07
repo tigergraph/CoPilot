@@ -50,6 +50,8 @@ def retrieve_answer(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
 
+
+    # TODO: This needs to be refactored just to use config.py
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         logger.debug(
             f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"

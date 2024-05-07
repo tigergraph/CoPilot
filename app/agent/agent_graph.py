@@ -104,11 +104,17 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentGenerator(self.llm_provider)
         answer = step.generate_answer(state['question'], state["context"])
-        
-        resp = CoPilotResponse(natural_language_response=answer,
-                               answered_question=True,
-                               response_type=state["lookup_source"],
-                               query_sources=state["context"])
+
+        try:
+            resp = CoPilotResponse(natural_language_response=answer,
+                                answered_question=True,
+                                response_type=state["lookup_source"],
+                                query_sources=state["context"])
+        except Exception as e:
+            resp = CoPilotResponse(natural_language_response="I'm sorry, I don't know the answer to that question.",
+                                answered_question=False,
+                                response_type=state["lookup_source"],
+                                query_sources={"error": str(e)})
         state["answer"] = resp
         
         return state
