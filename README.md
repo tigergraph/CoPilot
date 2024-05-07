@@ -41,7 +41,7 @@ QueryAI is the third component of TigerGraph CoPilot. It is designed to be used 
 ## Getting Started
 
 ### TigerGraph Cloud
-CoPilot is available as an add-on service to your workspace on TigerGraph Cloud. Please follow the [instructions here] to start on TigerGraph Cloud within minutes.
+CoPilot is available as an add-on service to your workspace on TigerGraph Cloud. Please follow the [instructions here](https://docs.tigergraph.com/tg-copilot/current/getstarted/oncloud) to start on TigerGraph Cloud within minutes.
 
 ### Self-Managed
 TigerGraph CoPilot is open-source and can be deployed to your own infrastructure. This repo only includes the backend service of CoPilot but you can still access all of its functions through the APIs. What is different from CoPilot on TigerGraph Cloud is the absence of the graphical user interface and the extra steps to set it up and maintenance.
@@ -210,7 +210,7 @@ You can also disable the consistency_checker, which reconciles Milvus and TigerG
 ```
 
 ##### Milvus configuration
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  enabled="true" means use Milvus as the embedding store, enabled="false" means use FAISS - This will be removed eventually.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported.
 ```json
 {
     "host": "milvus-standalone",
@@ -247,7 +247,7 @@ This line can be changed to support different logging levels. The levels are des
 ## Using TigerGraph CoPilot
 
 ### TigerGraph Cloud
-A chat interface is available on TigerGraph Cloud, with which you can “talk” to your graph to get more insights and value from your data. Please follow the [instructions here] to access CoPilot on TigerGraph Cloud.
+A chat interface is available on TigerGraph Cloud, with which you can “talk” to your graph to get more insights and value from your data. Please follow the [instructions here](https://docs.tigergraph.com/tg-copilot/current/using-copilot/how2-use-on-cloud) to access CoPilot on TigerGraph Cloud.
 
 ### Using API
 You can also access CoPilot via its API for both self-managed and TigerGraph Cloud-managed services. Two types of API access are provided for now: REST http endpoints and pyTigerGraph interface. Additionally, there is a primitive chatbot interface for testing purpose only. And LangChain interface is available for InquiryAI with more integrations coming soon. 
