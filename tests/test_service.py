@@ -1,6 +1,3 @@
-import os
-os.environ['OPENBLAS_NUM_THREADS'] = '2'
-
 import pandas as pd
 import os
 from fastapi.testclient import TestClient
