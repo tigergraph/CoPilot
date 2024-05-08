@@ -48,6 +48,8 @@ jobs:
           echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
           echo "$MILVUS_CONFIG" > configs/milvus_config.json
           ls configs
+          cat configs/db_config.json
+          cat configs/llm_config.json
           ./venv/bin/python -m pytest -m tests
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
