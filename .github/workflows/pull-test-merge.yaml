@@ -47,6 +47,7 @@ jobs:
           echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
           echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
           echo "$MILVUS_CONFIG" > configs/milvus_config.json
+          ls configs
           ./venv/bin/python -m pytest -m tests
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
