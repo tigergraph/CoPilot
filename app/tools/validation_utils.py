@@ -108,6 +108,11 @@ def validate_function_call(conn, generated_call: str, valid_functions: list) -> 
         return validate_function_call(
             conn, generated_call.strip("conn."), valid_functions
         )
+    elif "gds.featurizer().runAlgorithm" == generated_call[:29]:
+        logger.debug(
+            f"request_id={req_id_cv.get()} validate_function_call() validating function_call={generated_call}"
+        )
+        return generated_call
     else:  # handle pyTG functions
         func_header = generated_call.split("(")[0]
         if (
