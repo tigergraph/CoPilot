@@ -7,19 +7,10 @@ import os
 import pyTigerGraph as tg
 from unittest.mock import patch
 
-
-def getenv_side_effect(variable_name, default=None):
-    if variable_name == "MILVUS_CONFIG":
-        return '{"host":"localhost", "port":"19530", "enabled":"true"}'
-    else:
-        return os.environ.get(variable_name, default)
-
-
 @pytest.mark.skip(reason="Does not work with automatic runs for some reason, coming back to it in second iteration")
 class TestInquiryAI(unittest.TestCase):
 
-    @patch("os.getenv", side_effect=getenv_side_effect)
-    def setUp(self, mocked_getenv):
+    def setUp(self):
         from app.main import app
 
         self.client = TestClient(app)
