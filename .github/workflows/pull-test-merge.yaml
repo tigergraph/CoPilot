@@ -33,8 +33,9 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Create db config
+      - name: Run pytest
         run: |
+          source venv/bin/activate
           mkdir configs
           echo "$DB_CONFIG" > configs/db_config.json
           echo "$LLM_CONFIG" > configs/openai_gpt4_config.json
@@ -57,10 +58,6 @@ jobs:
           GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
           LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
           MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
-
-      - name: Run pytest
-        run: |
-          source venv/bin/activate
           ./venv/bin/python -m pytest -m tests
         env:
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
