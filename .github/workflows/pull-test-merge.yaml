@@ -48,6 +48,7 @@ jobs:
           echo "$MILVUS_CONFIG" > configs/milvus_config.json
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
+          LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
           LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
           LLM_CONFIG_AZURE_GPT35: ${{ secrets.LLM_CONFIG_AZURE_GPT35 }}
           LLM_CONFIG_GCP_TEXT_BISON: ${{ secrets.LLM_CONFIG_GCP_TEXT_BISON }}
