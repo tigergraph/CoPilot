@@ -38,22 +38,12 @@ jobs:
           source venv/bin/activate
           mkdir configs
           echo "$DB_CONFIG" > configs/db_config.json
-          echo "$LLM_CONFIG_OPENAI_GPT4" > configs/llm_config.json
-          echo "$LLM_CONFIG_OPENAI_GPT4" > configs/openai_gpt4_config.json
-          echo "$LLM_CONFIG_AZURE_GPT35" > configs/azure_llm_config.json
-          echo "$LLM_CONFIG_OPENAI_GPT35" > configs/openai_gpt3.5-turbo_config.json
-          echo "$LLM_CONFIG_GCP_TEXT_BISON" > configs/gcp_text-bison_config.json
-          echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
-          echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
-          echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
+          echo "$LLM_CONFIG" > configs/llm_config.json
           echo "$MILVUS_CONFIG" > configs/milvus_config.json
-          ls configs
-          cat configs/db_config.json
-          cat configs/llm_config.json
           ./venv/bin/python -m pytest -m tests
         env:
-          DB_CONFIG: ${{ secrets.DB_CONFIG }}
-          LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
-          MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
+          DB_CONFIG: configs/db_config.json
+          LLM_CONFIG:  configs/llm_config.json
+          MILVUS_CONFIG: configs/milvus_config.json
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
       
