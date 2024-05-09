@@ -64,5 +64,15 @@ jobs:
           source venv/bin/activate
           ./venv/bin/python -m pytest -m tests
         env:
+          DB_CONFIG: ${{ secrets.DB_CONFIG }}
+          LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
+          LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
+          LLM_CONFIG_AZURE_GPT35: ${{ secrets.LLM_CONFIG_AZURE_GPT35 }}
+          LLM_CONFIG_GCP_TEXT_BISON: ${{ secrets.LLM_CONFIG_GCP_TEXT_BISON }}
+          LLM_CONFIG_OPENAI_GPT35: ${{ secrets.LLM_CONFIG_OPENAI_GPT35 }}
+          LLM_CONFIG_BEDROCK_CLAUDE3: ${{ secrets.LLM_CONFIG_BEDROCK_CLAUDE3 }}
+          GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
+          LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
+          MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
       
