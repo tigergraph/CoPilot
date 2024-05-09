@@ -46,7 +46,7 @@ class TestEventualConsistencyChecker(unittest.TestCase):
         graphname = "testGraph"
         conn = mock_get_db_connection.return_value
         
-        conn.getEndpoints.return_value = ["Scan_For_Updates", "Update_Vertices_Processing_Status"]
+        conn.getEndpoints.return_value = ["Scan_For_Updates", "Update_Vertices_Processing_Status", "ECC_Status"]
         mock_response = [{
             "@@v_and_text": {
                 1: "Doc1", 2: "Doc2", 3: "Doc3"
@@ -70,7 +70,7 @@ class TestEventualConsistencyChecker(unittest.TestCase):
         # Verify the sequence of calls and check the outputs
         conn.runInstalledQuery.assert_any_call("Scan_For_Updates", {"v_type": "index1", "num_samples": 10})
         conn.runInstalledQuery.assert_any_call(
-            "Update_Vertices_Processing_Status", {"processed_vertices": [(1, 'index1'), (2, 'index1'), (3, 'index1')]}
+            "Update_Vertices_Processing_Status", {'processed_vertices': [{'id': 1, 'type': 'index1'}, {'id': 2, 'type': 'index1'}, {'id': 3, 'type': 'index1'}]}, usePost=True
         )
         # Assertions to ensure the embedding service and store were interacted with correctly
         mock_embedding_store.remove_embeddings.assert_called_once()
