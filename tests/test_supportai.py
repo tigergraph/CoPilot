@@ -1,4 +1,6 @@
 import unittest
+
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 import json
@@ -6,7 +8,9 @@ import os
 import pyTigerGraph as tg
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
 class TestSupportAI(unittest.TestCase):
+    
     def setUp(self):
         self.client = TestClient(app)
         db_config = os.getenv("DB_CONFIG")
@@ -19,6 +23,7 @@ class TestSupportAI(unittest.TestCase):
             db_config["hostname"], username=self.username, password=self.password
         )
 
+    
     def test_initialize(self):
         self.conn.graphname = "SupportAI"
         if self.use_token:

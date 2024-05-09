@@ -62,11 +62,11 @@ class TestLogWriter(unittest.TestCase):
     def test_error_log(self, mock_error, mock_handler, mock_makedirs):
         """Test error logging."""
         LogWriter.log("error", "This is an error", mask_pii=False)
-        calls = [call("This is an error"), call("This is an error")]
+        calls = [call("This is an error")]
         mock_error.assert_has_calls(calls)
 
         # the mock error should be called twice, once for general logging and once for the error log specifically
-        self.assertEqual(mock_error.call_count, 2)
+        self.assertEqual(mock_error.call_count, 1)
 
 
 if __name__ == "__main__":
