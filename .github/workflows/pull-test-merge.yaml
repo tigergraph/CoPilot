@@ -62,7 +62,7 @@ jobs:
       - name: Run pytest
         run: |
           source venv/bin/activate
-          ./venv/bin/python -m pytest
+          ./venv/bin/python -m pytest --disable-warnings
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
           LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}

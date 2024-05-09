@@ -8,6 +8,7 @@ import os
 import pyTigerGraph as tg
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
 class TestSupportAI(unittest.TestCase):
     
     def setUp(self):
