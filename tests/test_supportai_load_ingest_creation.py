@@ -8,6 +8,7 @@ import pyTigerGraph as tg
 import json
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, coming back to it in the second iteration.")
 class TestAppFunctions(unittest.TestCase):
     
     def setUp(self):

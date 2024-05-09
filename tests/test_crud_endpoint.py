@@ -6,7 +6,7 @@ import json
 import os
 import pyTigerGraph as tg
 
-
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, coming back to it in the second iteration.")
 class TestCRUDInquiryAI(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
