@@ -47,7 +47,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent router.
         """
-        step = TigerGraphAgentRouter(self.llm_provider)
+        step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
         source = step.route_question(state['question'])
         if source["datasource"] == "vectorstore":
             return "supportai_lookup"
