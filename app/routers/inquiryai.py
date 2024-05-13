@@ -110,6 +110,10 @@ def retrieve_answer(
         )
         agent = TigerGraphAgent(
             Groq(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+        )
     elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
         logger.debug(
             f"/{graphname}/query request_id={req_id_cv.get()} llm_service=ollama agent created"
