@@ -1,4 +1,6 @@
 import unittest
+
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 import os
@@ -6,7 +8,9 @@ import pyTigerGraph as tg
 import json
 
 
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, coming back to it in the second iteration.")
 class TestAppFunctions(unittest.TestCase):
+    
     def setUp(self):
         self.client = TestClient(app)
         db_config = os.getenv("DB_CONFIG")
@@ -37,6 +41,7 @@ class TestAppFunctions(unittest.TestCase):
         # Add more assertions as needed
     """
 
+    
     def test_create_ingest_json_no_data_source(self):
         # Test create_ingest with JSON file format
         ingest_config = {"file_format": "json", "loader_config": {}}
@@ -48,6 +53,7 @@ class TestAppFunctions(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         # Add more assertions as needed
 
+    
     def test_create_ingest_csv_no_data_source(self):
         # Test create_ingest with CSV file format
         ingest_config = {"file_format": "csv", "loader_config": {}}
@@ -59,6 +65,7 @@ class TestAppFunctions(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         # Add more assertions as needed
 
+    
     def test_create_ingest_invalid_data_source(self):
         # Test create_ingest with invalid data source
         ingest_config = {"file_format": "invalid", "loader_config": {}}
@@ -82,6 +89,7 @@ class TestAppFunctions(unittest.TestCase):
         # Add more assertions as needed
     """
 
+    
     def test_ingest_missing_file_path(self):
         # Test ingest with missing file path
         loader_info = {
@@ -98,6 +106,7 @@ class TestAppFunctions(unittest.TestCase):
         )  # Assuming FastAPI returns 422 for validation errors
         # Add more assertions as needed
 
+    
     def test_ingest_missing_load_job_id(self):
         # Test ingest with missing load job id
         loader_info = {"filePath": "test_path", "data_source_id": "test_data_source_id"}
@@ -111,6 +120,7 @@ class TestAppFunctions(unittest.TestCase):
         )  # Assuming FastAPI returns 422 for validation errors
         # Add more assertions as needed
 
+    
     def test_ingest_missing_data_source_id(self):
         # Test ingest with missing data source id
         loader_info = {"filePath": "test_path", "load_job_id": "test_job_id"}

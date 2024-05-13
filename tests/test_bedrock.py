@@ -3,9 +3,10 @@ from fastapi.testclient import TestClient
 from test_service import CommonTests
 import wandb
 import parse_test_config
+import pytest
 import sys
 
-
+@pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
 class TestWithClaude3Bedrock(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

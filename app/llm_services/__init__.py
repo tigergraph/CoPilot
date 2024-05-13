@@ -5,3 +5,5 @@ from .aws_sagemaker_endpoint import AWS_SageMaker_Endpoint
 from .google_vertexai_service import GoogleVertexAI
 from .aws_bedrock_service import AWSBedrock
 from .groq_llm_service import Groq
+from .ollama import Ollama
+from .huggingface_endpoint import HuggingFaceEndpoint
