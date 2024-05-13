@@ -49,7 +49,9 @@ class TigerGraphAgentGraph:
         Run the agent router.
         """
         step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
-        if state["question_retry_count"] > 2:
+        if state.get("question_retry_count") is None:
+            state["question_retry_count"] = 0
+        elif state["question_retry_count"] > 2:
             return "apologize"
         state["question_retry_count"] += 1
         source = step.route_question(state['question'])
