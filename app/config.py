@@ -16,6 +16,8 @@ from app.llm_services import (
     AzureOpenAI,
     GoogleVertexAI,
     OpenAI,
+    Ollama,
+    HuggingFaceEndpoint
 )
 from app.session import SessionHandler
 from app.status import StatusManager
@@ -110,6 +112,10 @@ def get_llm_service(llm_config):
         return GoogleVertexAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
         return AWSBedrock(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
+        return Ollama(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
+        return HuggingFaceEndpoint(llm_config["completion_service"])
     else:
         raise Exception("LLM Completion Service Not Supported")
 
