@@ -1,14 +1,16 @@
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from app.tools.logwriter import LogWriter
+from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 import logging
 from app.log import req_id_cv
 
 logger = logging.getLogger(__name__)
 
 class TigerGraphAgentRouter:
-    def __init__(self, llm_model):
+    def __init__(self, llm_model, db_conn: TigerGraphConnection):
         self.llm = llm_model
+        self.db_conn = db_conn
 
     def route_question(self, question: str) -> str:
         """Route a question to the appropriate datasource.
@@ -20,16 +22,20 @@ class TigerGraphAgentRouter:
             str: The datasource to use for the question.
         """
         LogWriter.info(f"request_id={req_id_cv.get()} ENTRY route_question")
+        v_types = self.db_conn.getVertexTypes()
+        e_types = self.db_conn.getEdgeTypes()
         prompt = PromptTemplate(
             template="""You are an expert at routing a user question to a vectorstore or function calls. \n
             Use the vectorstore for questions on that would be best suited by text documents. \n
             Use the function calls for questions that ask about structured data, or operations on structured data. \n
+            Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls. \n
+            The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}. \n
             Otherwise, use function calls. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
             Return the a JSON with a single key 'datasource' and no premable or explaination. \n
             Question to route: {question}""",
-            input_variables=["question"],
+            input_variables=["question", "v_types", "e_types"],
         )
 
         question_router = prompt | self.llm.model | JsonOutputParser()
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question")
-        return question_router.invoke({"question": question})
+        return question_router.invoke({"question": question, "v_types": v_types, "e_types": e_types})
