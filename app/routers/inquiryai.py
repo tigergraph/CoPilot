@@ -15,7 +15,8 @@ from app.llm_services import (
     AzureOpenAI,
     GoogleVertexAI,
     OpenAI,
-    Ollama
+    Ollama,
+    HuggingFaceEndpoint
 )
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
@@ -106,6 +107,16 @@ def retrieve_answer(
         )
         agent = TigerGraphAgent(
             Ollama(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+        )
+    elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
+        logger.debug(
+            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=huggingface agent created"
+        )
+        agent = TigerGraphAgent(
+            HuggingFaceEndpoint(llm_config["completion_service"]),
             conn,
             embedding_service,
             embedding_store,

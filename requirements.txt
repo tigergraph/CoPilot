@@ -46,6 +46,7 @@ h11==0.14.0
 httpcore==0.18.0
 httptools==0.6.0
 httpx==0.25.0
+huggingface_hub==0.23.0
 idna==3.4
 isodate==0.6.1
 jmespath==1.0.1
