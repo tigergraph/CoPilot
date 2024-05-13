@@ -24,6 +24,7 @@ class GraphState(TypedDict):
     answer: Optional[CoPilotResponse]
     lookup_source: Optional[str]
     schema_mapping: Optional[MapQuestionToSchemaResponse]
+    question_retry_count: int = 0
 
 
 class TigerGraphAgentGraph:
@@ -48,11 +49,24 @@ class TigerGraphAgentGraph:
         Run the agent router.
         """
         step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
+        if state["question_retry_count"] > 2:
+            return "apologize"
+        state["question_retry_count"] += 1
         source = step.route_question(state['question'])
         if source["datasource"] == "vectorstore":
             return "supportai_lookup"
         elif source["datasource"] == "functions":
             return "inquiryai_lookup"
+        
+    def apologize(self, state):
+        """
+        Apologize for not being able to answer the question.
+        """
+        state["answer"] = CoPilotResponse(natural_language_response="I'm sorry, I don't know the answer to that question. Please try rephrasing your question.",
+                                answered_question=False,
+                                response_type="error",
+                                query_sources={"error": "Question could not be routed to a datasource."})
+        return state
         
     def map_question_to_schema(self, state):
         """
@@ -174,13 +188,15 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("generate_function", self.generate_function)
         self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
         self.workflow.add_node("rewrite_question", self.rewrite_question)
+        self.workflow.add_node("apologize", self.apologize)
 
         self.workflow.add_conditional_edges(
             "entry",
             self.route_question,
             {
                 "supportai_lookup": "hnsw_overlap_search",
-                "inquiryai_lookup": "map_question_to_schema"
+                "inquiryai_lookup": "map_question_to_schema",
+                "apologize": "apologize"
             }
         )
 
@@ -188,7 +204,7 @@ class TigerGraphAgentGraph:
         self.workflow.add_edge("generate_function", "generate_answer")
         self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")
-
+        self.workflow.add_edge("apologize", END)
         self.workflow.add_conditional_edges(
             "generate_answer",
             self.check_answer_for_usefulness_and_hallucinations,
