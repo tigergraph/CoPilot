@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "build-test-ci" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
     types: [ labeled ]
   schedule:
     - cron: '45 22 * * 6'
