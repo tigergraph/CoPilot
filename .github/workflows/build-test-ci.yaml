@@ -71,7 +71,7 @@ jobs:
     - name: Execute PR Tests
       if: ${{ github.event_name }} == 'pull_request'
       run: |
-        docker exec nlqs-tests bash -c "export LOGLEVEL=DEBUG && ./run_tests.sh ${{ github.event.label.name }} all"
+        docker exec nlqs-tests bash -c "./run_tests.sh ${{ github.event.label.name }} all"
         status=$?
         if [ $status -ne 0 ]; then
           echo "test failed with status $status"
@@ -79,6 +79,8 @@ jobs:
         fi
         url=$(docker exec nlqs-tests bash -c "cat /code/tests/report_url.txt")
         echo "REPORT_URL=${url}" >> $GITHUB_ENV
+      env:
+        LOGLEVEL: DEBUG
       
     - name: Execute Regress Tests
       if: ${{ github.event_name == 'schedule' }}
