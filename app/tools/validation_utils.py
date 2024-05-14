@@ -80,6 +80,8 @@ def validate_function_call(conn, generated_call: str, valid_functions: list) -> 
     installed_queries = [q.split("/")[-1] for q in endpoints]
 
     if "runInstalledQuery(" == generated_call[:18]:
+        LogWriter.info(f"request_id={req_id_cv.get()} validate_function_call() validating custom query")
+        logger.debug_pii(f"request_id={req_id_cv.get()} validate_function_call() validating custom query {generated_call}")
         query_name = (
             generated_call.split(",")[0].split("runInstalledQuery(")[1].strip("'")
         )
@@ -109,11 +111,13 @@ def validate_function_call(conn, generated_call: str, valid_functions: list) -> 
             conn, generated_call.strip("conn."), valid_functions
         )
     elif "gds.featurizer().runAlgorithm" == generated_call[:29]:
+        LogWriter.info(f"request_id={req_id_cv.get()} validate_function_call() validating featurizer")
         logger.debug(
             f"request_id={req_id_cv.get()} validate_function_call() validating function_call={generated_call}"
         )
         return generated_call
     else:  # handle pyTG functions
+        LogWriter.info(f"request_id={req_id_cv.get()} validate_function_call() validating function_call")
         func_header = generated_call.split("(")[0]
         if (
             func_header in valid_functions
