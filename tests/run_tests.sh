@@ -71,6 +71,9 @@ case "$llm_service" in
     "openai_gpt4")
         execute_service "$openai_gpt4_script" "$openai_gpt4_config"
         ;;
+    "openai_gpt4o")
+        execute_service "$openai_gpt4o_script" "$openai_gpt4o_config"
+        ;;
     "gcp_textbison")
         execute_service "$gcp_textbison_script" "$gcp_textbison_config"
         ;;
