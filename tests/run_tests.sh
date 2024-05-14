@@ -33,6 +33,9 @@ openai_gpt35_config="../configs/openai_gpt3.5-turbo_config.json"
 openai_gpt4_script="test_openai_gpt4.py"
 openai_gpt4_config="../configs/openai_gpt4_config.json"
 
+openai_gpt4o_script="test_openai_gpt4o.py"
+openai_gpt4o_config="../configs/openai_gpt4o_config.json"
+
 gcp_textbison_script="test_gcp_text-bison.py"
 gcp_textbison_config="../configs/gcp_text-bison_config.json"
 
