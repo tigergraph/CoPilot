@@ -115,6 +115,9 @@ def validate_function_call(conn, generated_call: str, valid_functions: list) -> 
         logger.debug(
             f"request_id={req_id_cv.get()} validate_function_call() validating function_call={generated_call}"
         )
+        LogWriter.info(
+            f"request_id={req_id_cv.get()} EXIT validate_function_call()"
+        )
         return generated_call
     else:  # handle pyTG functions
         LogWriter.info(f"request_id={req_id_cv.get()} validate_function_call() validating function_call")
