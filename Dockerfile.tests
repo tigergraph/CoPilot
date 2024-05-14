@@ -17,6 +17,6 @@ COPY ./tests /code/tests
 COPY ./.git /code/.git
 
 # INFO, DEBUG, DEBUG_PII
-ENV LOGLEVEL="INFO"
+ENV LOGLEVEL="DEBUG_PII"
 
 WORKDIR /code/tests
