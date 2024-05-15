@@ -6,7 +6,6 @@ COPY ./requirements.txt /code/requirements.txt
 
  
 RUN apt-get update && apt-get upgrade -y
-RUN apt-get install ca-certificates -y
 RUN pip install -r /code/requirements.txt
 # 
 WORKDIR /code
