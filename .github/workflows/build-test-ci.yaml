@@ -68,6 +68,12 @@ jobs:
         docker rm -f nlqs-tests || true
         docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER="DailyRegression" --name nlqs-tests -d nlqs/tests:0.1
 
+    - name: Curl raw github content
+      if: ${{ github.event_name }} == 'pull_request'
+      run: |
+        docker exec nlqs-tests bash -c "curl https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/manifest.json"
+        docker exec nlqs-tests bash -c "curl https://raw.githubusercontent.com/tigergraph/gsql-graph-algorithms/master/algorithms/Centrality/pagerank/global/unweighted/tg_pagerank.gsql"
+
     - name: Execute PR Tests
       if: ${{ github.event_name }} == 'pull_request'
       run: |
