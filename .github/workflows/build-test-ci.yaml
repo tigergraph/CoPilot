@@ -60,13 +60,13 @@ jobs:
       if: ${{ github.event_name }} == 'pull_request'
       run: |
         docker rm -f nlqs-tests || true
-        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }}  --dns 8.8.8.8 --name nlqs-tests -d nlqs/tests:0.1
+        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }} --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Run Docker Container for Regress
       if: ${{ github.event_name == 'schedule' }}
       run: |
         docker rm -f nlqs-tests || true
-        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER="DailyRegression" --dns 8.8.8.8 --name nlqs-tests -d nlqs/tests:0.1
+        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER="DailyRegression" --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Execute PR Tests
       if: ${{ github.event_name }} == 'pull_request'
