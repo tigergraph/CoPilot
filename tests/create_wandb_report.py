@@ -51,7 +51,7 @@ rt_llm_service_bar_plot = wr.PanelGrid(
     panels=[
         wr.BarPlot(
             title="Average Response Time by LLM Service",
-            metrics=["Response Time (seconds)"],
+            metrics=["Average Response Time (seconds)"],
             groupby="llm_service",
             groupby_aggfunc="mean",
             groupby_rangefunc="stddev",
@@ -87,7 +87,7 @@ rt_question_type_bar_plot = wr.PanelGrid(
     panels=[
         wr.BarPlot(
             title="Average Response Time by Question Type",
-            metrics=["Response Time (seconds)"],
+            metrics=["Average Response Time (seconds)"],
             groupby="question_type",
             groupby_aggfunc="mean",
             groupby_rangefunc="stddev",
@@ -120,7 +120,7 @@ rt_parallel_cords = wr.PanelGrid(
                 wr.PCColumn(metric="c::llm_service"),
                 wr.PCColumn(metric="c::dataset"),
                 wr.PCColumn(metric="c::question_type"),
-                wr.PCColumn(metric="Response Time (seconds)"),
+                wr.PCColumn(metric="Average Response Time (seconds)"),
             ],
             layout={"w": 24, "h": 16},  # change the layout!
         )
