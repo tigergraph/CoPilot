@@ -1,1 +1,1 @@
-from .agent.agent import TigerGraphAgent
+from .agent import TigerGraphAgent
