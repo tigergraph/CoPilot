@@ -15,6 +15,7 @@ from app.llm_services import (
     AzureOpenAI,
     GoogleVertexAI,
     OpenAI,
+    Groq,
     Ollama,
     HuggingFaceEndpoint
 )
@@ -51,6 +52,8 @@ def retrieve_answer(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
 
+
+    # TODO: This needs to be refactored just to use config.py
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         logger.debug(
             f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"
@@ -101,6 +104,16 @@ def retrieve_answer(
             embedding_service,
             embedding_store,
         )
+    elif llm_config["completion_service"]["llm_service"].lower() == "groq":
+        logger.debug(
+            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=groq agent created"
+        )
+        agent = TigerGraphAgent(
+            Groq(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+        )
     elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
         logger.debug(
             f"/{graphname}/query request_id={req_id_cv.get()} llm_service=ollama agent created"
@@ -130,14 +143,15 @@ def retrieve_answer(
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
-    steps = ""
     try:
-        steps = agent.question_for_agent(query.query)
+        resp = agent.question_for_agent(query.query)
+        '''
         # try again if there were no steps taken
         if len(steps["intermediate_steps"]) == 0:
             steps = agent.question_for_agent(query.query)
 
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
+        
         generate_func_output = steps["intermediate_steps"][-1][-1]
         resp.natural_language_response = steps["output"]
         resp.query_sources = {
@@ -146,6 +160,7 @@ def retrieve_answer(
             "reasoning": generate_func_output["reasoning"],
         }
         resp.answered_question = True
+        '''
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -164,16 +179,16 @@ def retrieve_answer(
     except Exception:
         try:
             # if the output is json, it's intermediate agent output
-            json.loads(str(steps["output"]))  # TODO: don't use errors as control flow
+            #json.loads(str(steps))  # TODO: don't use errors as control flow
             resp.natural_language_response = (
                 # "An error occurred while processing the response. Please try again."
                 "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
             )
         except:
             # the output wasn't json. It was likely a message from the agent to the user
-            resp.natural_language_response = str(steps["output"])
+            resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
-        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
+        resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
             f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"

@@ -1,7 +1,7 @@
 #!/bin/sh
 export DB_CONFIG=../configs/db_config.json
 export MILVUS_CONFIG=../configs/milvus_config.json
-export LOGLEVEL=INFO
+export LOGLEVEL=DEBUG
 
 # Set default values
 llm_service="all"

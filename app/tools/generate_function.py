@@ -133,7 +133,9 @@ class GenerateFunction(BaseTool):
                 "doc3",
                 "doc4",
                 "doc5",
-                "doc6"
+                "doc6",
+                "doc7",
+                "doc8"
             ],
             partial_variables={
                 "format_instructions": func_parser.get_format_instructions()
@@ -142,7 +144,7 @@ class GenerateFunction(BaseTool):
 
         pytg_docs = self.embedding_store.retrieve_similar(
             self.embedding_model.embed_query(lookup_question),
-            top_k=3,
+            top_k=5,
             filter_expr="graphname == 'all'"
         )
 
@@ -176,7 +178,9 @@ class GenerateFunction(BaseTool):
                 "doc3": docs[2].page_content if len(docs) > 2 else "",
                 "doc4": docs[3].page_content if len(docs) > 3 else "",
                 "doc5": docs[4].page_content if len(docs) > 4 else "",
-                "doc6": docs[5].page_content if len(docs) > 5 else ""
+                "doc6": docs[5].page_content if len(docs) > 5 else "",
+                "doc7": docs[6].page_content if len(docs) > 6 else "",
+                "doc8": docs[7].page_content if len(docs) > 7 else ""
             }
         ]
 
