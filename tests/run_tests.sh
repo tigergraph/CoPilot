@@ -85,6 +85,7 @@ case "$llm_service" in
         ;;
     "huggingface_phi3")
         execute_service "$huggingface_phi3_script" "$huggingface_phi3_config"
+        ;;
     "groq_mixtral")
         execute_service "$groq_mixtral_script" "$groq_mixtral_config"
         ;;
