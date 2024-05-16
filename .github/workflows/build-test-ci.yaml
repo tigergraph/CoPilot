@@ -41,6 +41,7 @@ jobs:
         echo "$LLM_CONFIG_GCP_TEXT_BISON" > configs/gcp_text-bison_config.json
         echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
         echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
+        echo "$LLM_CONFIG_GROQ_MIXTRAL" > configs/groq_mixtral_config.json
         echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
         echo "$MILVUS_CONFIG" > configs/milvus_config.json
       env:
@@ -49,6 +50,7 @@ jobs:
         LLM_CONFIG_AZURE_GPT35: ${{ secrets.LLM_CONFIG_AZURE_GPT35 }}
         LLM_CONFIG_GCP_TEXT_BISON: ${{ secrets.LLM_CONFIG_GCP_TEXT_BISON }}
         LLM_CONFIG_OPENAI_GPT35: ${{ secrets.LLM_CONFIG_OPENAI_GPT35 }}
+        LLM_CONFIG_GROQ_MIXTRAL: ${{ secrets.LLM_CONFIG_GROQ_MIXTRAL }}
         LLM_CONFIG_BEDROCK_CLAUDE3: ${{ secrets.LLM_CONFIG_BEDROCK_CLAUDE3 }}
         LLM_CONFIG_OPENAI_GPT4O: ${{ secrets.LLM_CONFIG_OPENAI_GPT4O }}
         GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
