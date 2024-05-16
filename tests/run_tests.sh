@@ -33,6 +33,9 @@ openai_gpt35_config="../configs/openai_gpt3.5-turbo_config.json"
 openai_gpt4_script="test_openai_gpt4.py"
 openai_gpt4_config="../configs/openai_gpt4_config.json"
 
+huggingface_phi3_script="test_huggingface_phi3.py"
+huggingface_phi3_config="../configs/huggingface_severless_endpoint_phi3_config.json"
+
 openai_gpt4o_script="test_openai_gpt4o.py"
 openai_gpt4o_config="../configs/openai_gpt4o_config.json"
 
@@ -77,12 +80,15 @@ case "$llm_service" in
     "gcp_textbison")
         execute_service "$gcp_textbison_script" "$gcp_textbison_config"
         ;;
+    "huggingface_phi3")
+        execute_service "$huggingface_phi3_script" "$huggingface_phi3_config"
+        ;;
     "aws_bedrock")
         execute_service "$aws_bedrock_script" "$aws_bedrock_config"
         ;;
     "all")
         echo "Executing all services..."
-        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config" "$aws_bedrock_script $aws_bedrock_config" "$openai_gpt4o_script $openai_gpt4o_config"; do
+        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config" "$aws_bedrock_script $aws_bedrock_config" "$openai_gpt4o_script $openai_gpt4o_config" "$huggingface_phi3_script $huggingface_phi3_config"; do
             execute_service $service_script_pair
         done
         ;;
