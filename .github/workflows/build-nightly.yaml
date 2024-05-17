@@ -41,4 +41,4 @@ jobs:
         push: true
         tags: |
            ${{ env.IMAGE }}
-           tginternal/copilot:nightly
+           tginternal/copilot:dev
