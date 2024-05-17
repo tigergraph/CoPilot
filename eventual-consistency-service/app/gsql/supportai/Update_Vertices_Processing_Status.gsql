@@ -1,0 +1,8 @@
+CREATE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed_vertices) { 
+  start = {processed_vertices};
+  
+  res = SELECT s FROM start:s
+        POST-ACCUM
+            s.epoch_processed = datetime_to_epoch(now());
+  PRINT res;
+}
