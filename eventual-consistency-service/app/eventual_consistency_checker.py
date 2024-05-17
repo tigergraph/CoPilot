@@ -39,7 +39,7 @@ class EventualConsistencyChecker:
 
     def _install_query(self, query_name):
         LogWriter.info(f"Installing query {query_name}")
-        with open(f"app/gsql/supportai/{query_name}.gsql", "r") as f:
+        with open(f"common/gsql/supportai/{query_name}.gsql", "r") as f:
             query = f.read()
         res = self.conn.gsql(
             "USE GRAPH "

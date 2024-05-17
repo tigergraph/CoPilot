@@ -1,4 +1,4 @@
-from app.storage.base_blob_store import BlobStorage
+from common.storage.base_blob_store import BlobStorage
 from google.cloud import storage
 
 

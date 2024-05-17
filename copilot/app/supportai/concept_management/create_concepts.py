@@ -6,7 +6,7 @@ class BaseConceptCreator:
 
     def _install_query(self, query_name):
         with open(
-            f"app/gsql/supportai/concept_curation/concept_creation/{query_name}.gsql",
+            f"common/gsql/supportai/concept_curation/concept_creation/{query_name}.gsql",
             "r",
         ) as f:
             query = f.read()

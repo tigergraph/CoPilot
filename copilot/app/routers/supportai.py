@@ -36,7 +36,7 @@ security = HTTPBase(scheme="basic", auto_error=False)
 def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
     # need to open the file using the absolute path
-    file_path = "app/gsql/supportai/SupportAI_Schema.gsql"
+    file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
         schema = f.read()
     schema_res = conn.gsql(
@@ -45,7 +45,7 @@ def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depend
         )
     )
 
-    file_path = "app/gsql/supportai/SupportAI_IndexCreation.gsql"
+    file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
     with open(file_path) as f:
         index = f.read()
     index_res = conn.gsql(
@@ -54,7 +54,7 @@ def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depend
         )
     )
 
-    file_path = "app/gsql/supportai/Scan_For_Updates.gsql"
+    file_path = "common/gsql/supportai/Scan_For_Updates.gsql"
     with open(file_path) as f:
         scan_for_updates = f.read()
     res = conn.gsql(
@@ -65,7 +65,7 @@ def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depend
         + "\n INSTALL QUERY Scan_For_Updates"
     )
 
-    file_path = "app/gsql/supportai/Update_Vertices_Processing_Status.gsql"
+    file_path = "common/gsql/supportai/Update_Vertices_Processing_Status.gsql"
     with open(file_path) as f:
         update_vertices = f.read()
     res = conn.gsql(
@@ -88,7 +88,7 @@ def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Request, c
     conn = conn.state.conn
 
     if ingest_config.file_format.lower() == "json":
-        file_path = "app/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
+        file_path = "common/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
 
         with open(file_path) as f:
             ingest_template = f.read()
@@ -99,7 +99,7 @@ def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Request, c
         ingest_template = ingest_template.replace('"content"', '"{}"'.format(doc_text))
 
     if ingest_config.file_format.lower() == "csv":
-        file_path = "app/gsql/supportai/SupportAI_InitialLoadCSV.gsql"
+        file_path = "common/gsql/supportai/SupportAI_InitialLoadCSV.gsql"
 
         with open(file_path) as f:
             ingest_template = f.read()
@@ -113,7 +113,7 @@ def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Request, c
         ingest_template = ingest_template.replace('"\\n"', '"{}"'.format(eol))
         ingest_template = ingest_template.replace('"double"', '"{}"'.format(quote))
 
-    file_path = "app/gsql/supportai/SupportAI_DataSourceCreation.gsql"
+    file_path = "common/gsql/supportai/SupportAI_DataSourceCreation.gsql"
 
     with open(file_path) as f:
         data_stream_conn = f.read()

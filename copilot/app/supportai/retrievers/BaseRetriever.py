@@ -20,7 +20,7 @@ class BaseRetriever:
         self.embedding_store = embedding_store
 
     def _install_query(self, query_name):
-        with open(f"app/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
+        with open(f"common/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
             query = f.read()
         res = self.conn.gsql(
             "USE GRAPH "
