@@ -39,6 +39,7 @@ jobs:
         echo "$LLM_CONFIG_AZURE_GPT35" > configs/azure_llm_config.json
         echo "$LLM_CONFIG_OPENAI_GPT35" > configs/openai_gpt3.5-turbo_config.json
         echo "$LLM_CONFIG_GCP_TEXT_BISON" > configs/gcp_text-bison_config.json
+        echo "$LLM_CONFIG_HUGGINGFACE_PHI3" > configs/huggingface_severless_endpoint_phi3_config.json
         echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
         echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
         echo "$LLM_CONFIG_GROQ_MIXTRAL" > configs/groq_mixtral_config.json
@@ -53,6 +54,7 @@ jobs:
         LLM_CONFIG_OPENAI_GPT35: ${{ secrets.LLM_CONFIG_OPENAI_GPT35 }}
         LLM_CONFIG_GROQ_MIXTRAL: ${{ secrets.LLM_CONFIG_GROQ_MIXTRAL }}
         LLM_CONFIG_BEDROCK_CLAUDE3: ${{ secrets.LLM_CONFIG_BEDROCK_CLAUDE3 }}
+        LLM_CONFIG_HUGGINGFACE_PHI3: ${{ secrets.LLM_CONFIG_HUGGINGFACE_PHI3 }}
         LLM_CONFIG_OPENAI_GPT4O: ${{ secrets.LLM_CONFIG_OPENAI_GPT4O }}
         LLM_CONFIG_HUGGINGFACE_LLAMA70B: ${{ secrets.LLM_CONFIG_HUGGINGFACE_LLAMA70B }}
         GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
