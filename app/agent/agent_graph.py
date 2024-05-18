@@ -63,9 +63,9 @@ class TigerGraphAgentGraph:
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question: {state['question']}")
         source = step.route_question(state['question'])
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
-        if source["datasource"] == "vectorstore":
+        if source.datasource == "vectorstore":
             return "supportai_lookup"
-        elif source["datasource"] == "functions":
+        elif source.datasource == "functions":
             return "inquiryai_lookup"
         
     def apologize(self, state):
