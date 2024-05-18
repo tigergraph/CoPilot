@@ -7,6 +7,8 @@ import os
 
 branch_name = os.getenv("PR_NUMBER", Repository(".").head.shorthand)
 
+branch_name = branch_name + " " + str(Repository(".").head.shorthand)
+
 report = wr.Report(
     project="CoPilot",
     title="Test Summary For PR #"
