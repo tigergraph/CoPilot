@@ -55,9 +55,9 @@ class TigerGraphAgentGraph:
             return "apologize"
         state["question_retry_count"] += 1
         source = step.route_question(state['question'])
-        if source["datasource"] == "vectorstore":
+        if source.datasource == "vectorstore":
             return "supportai_lookup"
-        elif source["datasource"] == "functions":
+        elif source.datasource == "functions":
             return "inquiryai_lookup"
         
     def apologize(self, state):
