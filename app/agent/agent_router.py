@@ -1,5 +1,5 @@
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from app.tools.logwriter import LogWriter
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 import logging
@@ -31,8 +31,9 @@ class TigerGraphAgentRouter:
             Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls. \n
             The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}. \n
             Otherwise, use function calls. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
-            Return the a JSON with a single key 'datasource' and no premable or explaination. \n
-            Question to route: {question}""",
+            Return the a JSON with a single key 'datasource' and no premable or explaination. 
+            Question to route: {question}
+            Remember to only return the JSON document with the key 'datasource' and the value 'functions' or 'vectorstore'""",
             input_variables=["question", "v_types", "e_types"],
         )
 
