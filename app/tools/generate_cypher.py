@@ -1,125 +1,126 @@
+import logging
+from langchain_core.output_parsers import StrOutputParser
+from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
 from langchain.llms.base import LLM
-from langchain.tools.base import ToolException
-from langchain.chains.graph_qa.cypher import GraphCypherQAChain
-from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from pyTigerGraph import TigerGraphConnection
-from langchain.pydantic_v1 import BaseModel, Field, validator
-from app.schemas import MapQuestionToSchemaResponse
-from typing import List, Dict, Type, Optional, Union
-from app.embedding_utils.embedding_services import EmbeddingModel
-from app.embedding_utils.embedding_stores import EmbeddingStore
-from .validation_utils import validate_schema, validate_function_call, MapQuestionToSchemaException, InvalidFunctionCallException
-import json
-import logging
+
 from app.log import req_id_cv
+from app.metrics.tg_proxy import TigerGraphConnectionProxy
+from app.tools.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
 
-class GenerateFunction(BaseTool):
-    """ GenerateCypher Tool.
-        Tool to generate and execute Cypher pattern matching queries against the database. Only use if GenerateFunction has failed.
+
+class GenerateCypher(BaseTool):
+    """GenerateCypher Tool.
+    Tool to generate and execute the appropriate Cypher query for the question.
     """
     name = "GenerateCypher"
-    description = "Tool to generate and execute Cypher pattern matching queries against the database. Only use if GenerateFunction has failed."
-    conn: "TigerGraphConnection" = None
+    description = "Generates a Cypher query for the question."
+    conn: TigerGraphConnectionProxy = None
     llm: LLM = None
-    prompt: str = None
-    handle_tool_error: bool =True
-    embedding_model: EmbeddingModel = None
-    embedding_store: EmbeddingStore = None
-    args_schema: Type[MapQuestionToSchemaResponse] = MapQuestionToSchemaResponse
-    
-    def __init__(self, conn, llm, prompt):
-        """ Initialize GenerateFunction.
-            Args:
-                conn (TigerGraphConnection):
-                    pyTigerGraph TigerGraphConnection connection to the appropriate database/graph with correct permissions
-                llm (LLM_Model):
-                    LLM_Model class to interact with an external LLM API.
-                prompt (str):
-                    prompt to use with the LLM_Model. Varies depending on LLM service.
+
+    def __init__(self, conn: TigerGraphConnectionProxy, llm):
+        """Initialize GenerateCypher.
+        Args:
+            conn (TigerGraphConnection):
+                pyTigerGraph TigerGraphConnection connection to the appropriate database/graph with correct permissions
+            llm (LLM_Model):
+                LLM_Model class to interact with an external LLM API.
+            prompt (str):
+                prompt to use with the LLM_Model. Varies depending on LLM service.
         """
         super().__init__()
-        logger.debug(f"request_id={req_id_cv.get()} GenerateCypher instantiated")
         self.conn = conn
         self.llm = llm
-        self.prompt = prompt
-    
-    def _run(self, question: str,
-                   target_vertex_types: List[str] = [],
-                   target_vertex_attributes: Dict[str, List[str]] = {},
-                   target_vertex_ids: Dict[str, List[str]] = {},
-                   target_edge_types: List[str] = [],
-                   target_edge_attributes: Dict[str, List[str]] = {}) -> str:
-        """ Run the tool.
-            Args:
-                question (str):
-                    The question to answer with the database.
-                target_vertex_types (List[str]):
-                    The list of vertex types the question mentions.
-                target_vertex_attributes (Dict[str, List[str]]):
-                    The dictionary of vertex attributes the question mentions, in the form {"vertex_type": ["attr1", "attr2"]}
-                target_vertex_ids (Dict[str, List[str]):
-                    The dictionary of vertex ids the question mentions, in the form of {"vertex_type": ["v_id1", "v_id2"]}
-                target_edge_types (List[str]):
-                    The list of edge types the question mentions.
-                target_edge_attributes (Dict[str, List[str]]):
-                    The dictionary of edge attributes the question mentions, in the form {"edge_type": ["attr1", "attr2"]}
+
+    def _generate_schema_rep(self):
+        verts = self.conn.getVertexTypes()
+        edges = self.conn.getEdgeTypes()
+        vertex_schema = []
+        for vert in verts:
+            primary_id = self.conn.getVertexType(vert)["PrimaryId"]["AttributeName"]
+            attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] 
+                                        for attr in self.conn.getVertexType(vert)["Attributes"]])
+            if attributes == "":
+                attributes = "No attributes"
+            vertex_schema.append(f"{vert}\n\tPrimary Id Attribute: {primary_id}\n\tAttributes: \n\t\t{attributes}")
+
+        edge_schema = []
+        for edge in edges:
+            from_vertex = self.conn.getEdgeType(edge)["FromVertexTypeName"]
+            to_vertex = self.conn.getEdgeType(edge)["ToVertexTypeName"]
+            #reverse_edge = conn.getEdgeType(edge)["Config"].get("REVERSE_EDGE")
+            attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] 
+                                        for attr in self.conn.getVertexType(vert)["Attributes"]])
+            if attributes == "":
+                attributes = "No attributes"
+            edge_schema.append(f"""{edge}\n\tFrom Vertex: {from_vertex}\n\t
+                               To Vertex: {to_vertex}\n\tAttributes: \n\t\t{attributes}""")
+
+        schema_rep = f"""The schema of the graph is as follows:
+        Vertex Types:
+        {chr(10).join(vertex_schema)}
+
+        Edge Types:
+        {chr(10).join(edge_schema)}
         """
-        logger.info(f"request_id={req_id_cv.get()} ENTRY GenerateCypher._run()")
+        return schema_rep
+        
+    def generate_cypher(self, question: str) -> str:
+        """Generate Cypher query for the question.
+        Args:
+            question (str):
+                question to generate the Cypher query for.
+        Returns:
+            str:
+                Cypher query for the question.
+        """
         PROMPT = PromptTemplate(
-            template=self.prompt, input_variables=["question", "vertex_types", "edge_types", "vertex_attributes",
-                                                   "vertex_ids", "edge_attributes", "doc1", "doc2", "doc3"]
+            template="""Given the following schema: {schema}, what is the Cypher query that retrieves the {question} 
+                        Only include attributes that are found in the schema. Never include any attributes that are not found in the schema.
+                        If an attribute is not found in the schema, please exclude it from the query.
+                        Don't add the `name` attribute to the query, unless it is explicitly mentioned in the schema.
+                        Do not return attributes that are not explicitly mentioned in the question. If a vertex type is mentioned in the question, only return the vertex.
+                        Make sure to get the direction of the edges right.
+
+                        You cannot use the following clauses:
+                        OPTIONAL MATCH
+                        CREATE
+                        MERGE
+                        REMOVE
+                        UNION
+                        UNION ALL
+                        UNWIND
+                        SET
+
+                        Make sure to not name result aliases that are vertex or edge types.
+                        
+                        ONLY write the Cypher query in the response. Do not include any other information in the response.""",
+            input_variables=[
+                "question",
+                "schema"
+            ]
         )
 
-        if target_vertex_types == [] and target_edge_types == []:
-            return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
-
-        try:
-            validate_schema(self.conn,
-                            target_vertex_types, 
-                            target_edge_types,
-                            target_vertex_attributes, 
-                            target_edge_attributes)
-        except MapQuestionToSchemaException as e:
-            logger.warn(f"request_id={req_id_cv.get()} WARN input schema not valid")
-            return e
-
-        inputs = [{"question": question, 
-                    "vertex_types": target_vertex_types, #self.conn.getVertexTypes(), 
-                    "edge_types": target_edge_types, #self.conn.getEdgeTypes(), 
-                    "vertex_attributes": target_vertex_attributes,
-                    "vertex_ids": target_vertex_ids,
-                    "edge_attributes": target_edge_attributes,
-                  }]
-
-        chain = GraphCypherQAChain(llm=self.llm, prompt=PROMPT)
-        generated = chain.apply(inputs)[0]["text"]
-        logger.debug(f"request_id={req_id_cv.get()} generated Cypher Call")
-
-        try:
-            generated = generated # TODO: Replace with validate_cypher call
-        except InvalidFunctionCallException as e: # TODO: Replace with valid exception
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateCypher._run() with exception={e}")
-            return e
-
-        generated = """runInterpretedQuery('INTERPRET OPENCYPHER QUERY () FOR GRAPH """+self.conn.graphname+"""{"""+generated+"""}')"""
-
-        try:
-            loc = {}
-            exec("res = conn."+generated, {"conn": self.conn}, loc)
-            logger.info(f"request_id={req_id_cv.get()} EXIT GenerateCypher._run()")
-            return "Function {} produced the result {}".format(generated, json.dumps(loc["res"]))
-        except Exception as e:
-            logger.warn(f"request_id={req_id_cv.get()} EXIT GenerateCypher._run() with exception={e}")
-            raise ToolException("The function {} did not execute correctly. Please rephrase your question and try again".format(generated))
-
-
-    async def _arun(self) -> str:
-        """Use the tool asynchronously."""
-        raise NotImplementedError("custom_search does not support async")
-        
-    #def _handle_error(error:Union[ToolException, MapQuestionToSchemaException]) -> str:
-    #    return  "The following errors occurred during tool execution:" + error.args[0]+ "Please make sure the question is mapped to the schema correctly"
+        schema = self._generate_schema_rep()
+    
+        chain = PROMPT | self.llm.model | StrOutputParser()
+        out = chain.invoke({"question": question, "schema": schema}).strip("```cypher").strip("```")
+        query_header = "USE GRAPH " + self.conn.graphname + " "+ "\n" + "INTERPRET OPENCYPHER QUERY () {" + "\n"
+        query_footer = "\n}"
+        return query_header + out + query_footer
+    
+    def _run(self, question: str):
+        """Run the GenerateCypher tool.
+        Args:
+            question (str):
+                question to generate the Cypher query for.
+        Returns:
+            str:
+                Cypher query for the question.
+        """
+        return self.generate_cypher(question)
+    
+    def _arun(self, question: str):
+        raise NotImplementedError("Asynchronous execution is not supported for this tool.")

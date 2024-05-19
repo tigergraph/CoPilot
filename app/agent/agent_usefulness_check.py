@@ -1,7 +1,7 @@
 from langchain.prompts import PromptTemplate
-from langchain import hub
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from app.tools.logwriter import LogWriter
+import json
 import logging
 from app.log import req_id_cv
 
@@ -33,8 +33,10 @@ class TigerGraphAgentUsefulnessCheck:
         )
 
         # Chain
-        rag_chain = prompt | self.llm.model | JsonOutputParser()
+        rag_chain = prompt | self.llm.model | StrOutputParser()
 
-        prediction = rag_chain.invoke({"generation": answer, "question": question})
+        prediction = rag_chain.invoke({"generation": answer, "question": question}).strip("```json").strip("```").strip()
+        prediction = prediction.replace("\n", "")
+        prediction = json.loads(prediction)
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT check_usefulness")
         return prediction

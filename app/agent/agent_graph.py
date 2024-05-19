@@ -1,4 +1,5 @@
 from typing_extensions import TypedDict
+import json
 from typing import Optional
 from langgraph.graph import END, StateGraph
 
@@ -34,6 +35,7 @@ class TigerGraphAgentGraph:
                  embedding_store,
                  mq2s_tool,
                  gen_func_tool,
+                 cypher_gen_tool = None,
                  enable_human_in_loop=False):
         self.workflow = StateGraph(GraphState)
         self.llm_provider = llm_provider
@@ -42,6 +44,7 @@ class TigerGraphAgentGraph:
         self.embedding_store = embedding_store
         self.mq2s = mq2s_tool
         self.gen_func = gen_func_tool
+        self.cypher_gen = cypher_gen_tool
         self.enable_human_in_loop = enable_human_in_loop
 
     def route_question(self, state):
@@ -86,14 +89,35 @@ class TigerGraphAgentGraph:
         """
         Run the agent function generator.
         """
-        step = self.gen_func._run(state['question'],
-                                  state["schema_mapping"].target_vertex_types,
-                                  state["schema_mapping"].target_vertex_attributes,
-                                  state["schema_mapping"].target_vertex_ids,
-                                  state["schema_mapping"].target_edge_types,
-                                  state["schema_mapping"].target_edge_attributes)
-        state["context"] = step
+        try:
+            step = self.gen_func._run(state['question'],
+                                    state["schema_mapping"].target_vertex_types,
+                                    state["schema_mapping"].target_vertex_attributes,
+                                    state["schema_mapping"].target_vertex_ids,
+                                    state["schema_mapping"].target_edge_types,
+                                    state["schema_mapping"].target_edge_attributes)
+            state["context"] = step
+        except Exception as e:
+            state["context"] = {"error": str(e)}
         state["lookup_source"] = "inquiryai"
+        return state
+    
+    def generate_cypher(self, state):
+        """
+        Run the agent cypher generator.
+        """
+        cypher = self.cypher_gen._run(state['question'])
+
+        response = self.db_connection.gsql(cypher)
+        response_lines = response.split('\n')
+        try:
+            json_str = '\n'.join(response_lines[1:])
+            response_json = json.loads(json_str)
+            state["context"] = {"answer": response_json["results"][0], "cypher": cypher}
+        except:
+            state["context"] = {"error": True, "error_message": response, "cypher": cypher}
+
+        state["lookup_source"] = "cypher"
         return state
     
     def hnsw_overlap_search(self, state):
@@ -178,6 +202,15 @@ class TigerGraphAgentGraph:
                 return "grounded"
             else:
                 return "not_useful"
+        
+    def check_state_for_generation_error(self, state):
+        """
+        Check if the state has an error.
+        """
+        if state["context"].get("error") is not None:
+            return "error"
+        else:
+            return "success"
 
     def create_graph(self):
         """
@@ -192,6 +225,26 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("rewrite_question", self.rewrite_question)
         self.workflow.add_node("apologize", self.apologize)
 
+        if self.cypher_gen:
+            self.workflow.add_node("generate_cypher", self.generate_cypher)
+            self.workflow.add_conditional_edges(
+                "generate_function",
+                self.check_state_for_generation_error,
+                {
+                    "error": "generate_cypher",
+                    "success": "generate_answer"
+                }
+            )
+            self.workflow.add_conditional_edges("generate_cypher",
+                                                self.check_state_for_generation_error,
+                                                {
+                                                    "error": "apologize",
+                                                    "success": "generate_answer"
+                                                })
+        else:
+            self.workflow.add_edge("generate_function", "generate_answer")
+
+
         self.workflow.add_conditional_edges(
             "entry",
             self.route_question,
@@ -203,7 +256,6 @@ class TigerGraphAgentGraph:
         )
 
         self.workflow.add_edge("map_question_to_schema", "generate_function")
-        self.workflow.add_edge("generate_function", "generate_answer")
         self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")
         self.workflow.add_edge("apologize", END)
@@ -213,7 +265,7 @@ class TigerGraphAgentGraph:
             {
                 "hallucination": "rewrite_question",
                 "grounded": END,
-                "not_useful": "rewrite_question"
+                "not_useful": "generate_cypher"
             }
         )
 
