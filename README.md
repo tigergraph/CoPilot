@@ -345,11 +345,21 @@ TigerGraph CoPilot is designed to be easily extensible. The service can be confi
 ## Testing
 A family of tests are included under the `tests` directory. If you would like to add more tests please refer to the [guide here](./docs/DeveloperGuide.md#adding-a-new-test-suite). A shell script `run_tests.sh` is also included in the folder which is the driver for running the tests. The easiest way to use this script is to execute it in the Docker Container for testing.
 
+### Testing with Pytest
+You can run testing for each service by going to the top level of the service's directory and running `python -m pytest`
+
+e.g. (from the top level)
+```sh
+cd copilot
+python -m pytest
+cd ..
+```
+
 ### Test in Docker Container
 
 First, make sure that all your LLM service provider configuration files are working properly. The configs will be mounted for the container to access. Also make sure that all the dependencies such as database and Milvus are ready. If not, you can run the included docker compose file to create those services.
 ```sh
-docker compose docker-compose.yml up -d --build
+docker compose up -d --build
 ```
 
 If you want to use Weights And Biases for logging the test results, your WandB API key needs to be set in an environment variable on the host machine.

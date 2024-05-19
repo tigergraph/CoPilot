@@ -8,7 +8,7 @@ from fastapi.security.http import HTTPBase
 
 from common.config import embedding_service, embedding_store, get_llm_service, llm_config
 
-from app.py_schemas.schemas import (
+from common.py_schemas.schemas import (
     CoPilotResponse,
     CreateIngestConfig,
     LoadingInfo,

@@ -1,6 +1,6 @@
 from common.llm_services import LLM_Model
-from app.supportai.extractors.BaseExtractor import BaseExtractor
-from app.py_schemas import KnowledgeGraph
+from common.extractors.BaseExtractor import BaseExtractor
+from common.py_schemas import KnowledgeGraph
 from typing import List
 import json
 

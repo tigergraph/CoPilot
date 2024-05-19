@@ -2,12 +2,12 @@ from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.storage.azure_blob_store import AzureBlobStore
 from common.storage.google_blob_store import GoogleBlobStore
 from common.storage.s3_blob_store import S3BlobStore
-from app.py_schemas import BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
+from common.py_schemas import BatchDocumentIngest, Document, DocumentChunk, KnowledgeGraph
 from typing import List, Union
 import json
 from datetime import datetime
 from common.status import Status, IngestionProgress
-from app.supportai.extractors import LLMEntityRelationshipExtractor
+from common.extractors import LLMEntityRelationshipExtractor
 
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
@@ -32,17 +32,17 @@ class BaseIngestion:
 
     def chunk_document(self, document, chunker, chunker_params):
         if chunker.lower() == "regex":
-            from app.supportai.chunkers.regex_chunker import RegexChunker
+            from common.chunkers.regex_chunker import RegexChunker
 
             chunker = RegexChunker(chunker_params["pattern"])
         elif chunker.lower() == "characters":
-            from app.supportai.chunkers.character_chunker import CharacterChunker
+            from common.chunkers.character_chunker import CharacterChunker
 
             chunker = CharacterChunker(
                 chunker_params["chunk_size"], chunker_params.get("overlap", 0)
             )
         elif chunker.lower() == "semantic":
-            from app.supportai.chunkers.semantic_chunker import SemanticChunker
+            from common.chunkers.semantic_chunker import SemanticChunker
 
             chunker = SemanticChunker(
                 self.embedding_service,

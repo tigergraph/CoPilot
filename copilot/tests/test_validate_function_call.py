@@ -6,7 +6,7 @@ import json
 import app
 import pytest
 from fastapi.testclient import TestClient
-from app.py_schemas.schemas import Document
+from common.py_schemas.schemas import Document
 from app.tools.validation_utils import (
     validate_function_call,
     InvalidFunctionCallException,

@@ -1,4 +1,4 @@
-from app.supportai.chunkers.base_chunker import BaseChunker
+from common.chunkers.base_chunker import BaseChunker
 from common.embeddings.embedding_services import EmbeddingModel
 from langchain_experimental.text_splitter import (
     SemanticChunker as LangChainSemanticChunker,

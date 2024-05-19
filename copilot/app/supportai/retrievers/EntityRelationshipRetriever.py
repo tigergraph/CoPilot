@@ -1,5 +1,5 @@
 from app.supportai.retrievers import BaseRetriever
-from app.supportai.extractors import LLMEntityRelationshipExtractor
+from common.extractors import LLMEntityRelationshipExtractor
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 
 

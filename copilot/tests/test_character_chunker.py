@@ -1,5 +1,5 @@
 import unittest
-from app.supportai.chunkers.character_chunker import CharacterChunker
+from common.chunkers.character_chunker import CharacterChunker
 
 
 class TestCharacterChunker(unittest.TestCase):

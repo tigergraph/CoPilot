@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
+from common.py_schemas import MapQuestionToSchemaResponse, MapAttributeToAttributeResponse
 from typing import List, Dict
 from .validation_utils import validate_schema, MapQuestionToSchemaException
 import re

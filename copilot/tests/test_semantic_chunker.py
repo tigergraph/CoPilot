@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
-from app.supportai.chunkers.semantic_chunker import SemanticChunker
+from common.chunkers.semantic_chunker import SemanticChunker
 
 
 class TestSemanticChunker(unittest.TestCase):

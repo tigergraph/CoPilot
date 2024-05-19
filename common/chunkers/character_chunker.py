@@ -1,4 +1,4 @@
-from app.supportai.chunkers.base_chunker import BaseChunker
+from common.chunkers.base_chunker import BaseChunker
 
 
 class CharacterChunker(BaseChunker):

@@ -14,7 +14,7 @@ from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.py_schemas import GenerateFunctionResponse, MapQuestionToSchemaResponse
+from common.py_schemas import GenerateFunctionResponse, MapQuestionToSchemaResponse
 from common.logs.logwriter import LogWriter
 
 from .validation_utils import (

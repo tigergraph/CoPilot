@@ -20,7 +20,7 @@ from common.llm_services import (
 )
 from common.logs.log import req_id_cv
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from app.py_schemas.schemas import (
+from common.py_schemas.schemas import (
     CoPilotResponse,
     GSQLQueryInfo,
     GSQLQueryList,
