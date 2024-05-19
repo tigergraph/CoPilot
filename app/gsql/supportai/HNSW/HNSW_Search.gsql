@@ -1,0 +1,147 @@
+CREATE QUERY HNSW_Search(
+  STRING input,
+  STRING index_name,
+  UINT k=10,
+  UINT max_level=5,
+  UINT ef_search=0
+) {
+  TYPEDEF TUPLE<VERTEX element, DOUBLE dist> MyTuple;
+  OrAccum @visited;
+  SumAccum<DOUBLE> @distance;
+  HeapAccum<MyTuple>(1, dist ASC) @@min_heap;
+  MaxAccum<DOUBLE> @@max_dist;
+  SetAccum<VERTEX> @@visited_nodes;
+  ListAccum<DOUBLE> @@input_x;
+  DOUBLE prev_max_dist;
+  INT ef = ef_search;
+  INT d;
+
+  @@input_x = split(input, ",");
+
+  // get entry point
+  Nodes = {HNSWEntrypoint.*};
+  Nodes = SELECT e FROM Nodes:e WHERE e.id == index_name 
+          POST-ACCUM 
+            d = e.emb_dimension,
+            IF ef == 0 THEN
+              ef = e.ef_construction
+            END;
+  
+  IF k > ef THEN
+    ef = k;
+  END;
+  
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(ENTRYPOINT_OF:e)- :t
+    POST-ACCUM
+           t.@visited = TRUE,
+           FOREACH i IN RANGE[0, d] DO
+             t.@distance += pow(@@input_x.get(i) - t.embedding.get(i), 2)
+           END,
+           @@min_heap += MyTuple(t, t.@distance),
+           @@visited_nodes += t
+  ;
+  @@max_dist = @@min_heap.top().dist;
+  INT level = max_level;
+
+  // find the closest element at each layer by the greedy search algorithm
+  Ep = Nodes;
+  WHILE level > 1 DO
+    // greedily traverse through the elements until a local minimum is reached
+    Nodes = Ep;
+    WHILE Nodes.size() > 0 DO
+      // evaluate the neighborhood of the closest previously non-evaluated element
+      Nodes =
+        SELECT t
+        FROM   Nodes:s -(LINK_TO:e)- :t
+        WHERE  t.@visited == FALSE 
+               AND level IN e.level_set
+        POST-ACCUM
+               t.@visited = TRUE,
+               FOREACH i IN RANGE[0, d] DO
+                 t.@distance += pow(@@input_x.get(i) - t.embedding.get(i), 2),
+                 IF t.@distance > @@max_dist THEN
+                   BREAK
+                 END
+               END,
+               IF t.@distance < @@max_dist THEN
+                 @@min_heap += MyTuple(t, t.@distance)
+               END,
+               @@visited_nodes += t
+        ORDER BY t.@distance ASC
+        LIMIT  1
+      ;
+      // if a local minimum is reached, go to next level
+      IF @@min_heap.top().dist > @@max_dist - 0.0000001 THEN
+        BREAK;
+      END;
+      // set the maximum distance and the entry point
+      @@max_dist = @@min_heap.top().dist;
+      Ep = Nodes;
+    END;
+    // next level
+    level = level - 1;
+  END;
+
+  // reset @visited
+  VisitedNodes = {@@visited_nodes};
+  VisitedNodes = VisitedNodes MINUS Ep;
+  VisitedNodes =
+    SELECT s
+    FROM   VisitedNodes:s
+    POST-ACCUM
+           s.@visited = FALSE
+  ;
+  @@visited_nodes.clear();
+
+  // find ef nearest elements at the layer 1 by the greedy search algorithm
+  @@min_heap.resize(ef);
+  Nodes = Ep;
+  BOOL is_first = TRUE;
+  WHILE Nodes.size() > 0 DO
+    // evaluate the neighborhood of the previously non-evaluated element
+    Nodes =
+      SELECT t
+      FROM   Nodes:s -(LINK_TO:e)- :t
+      WHERE  t.@visited == FALSE 
+             AND level IN e.level_set
+      POST-ACCUM
+             t.@visited = TRUE,
+             FOREACH i IN RANGE[0, d] DO
+               t.@distance += pow(@@input_x.get(i) - t.embedding.get(i), 2),
+               IF @@min_heap.size() == ef AND t.@distance > @@max_dist THEN
+                 BREAK
+               END
+             END,
+             IF @@min_heap.size() < ef OR t.@distance < @@max_dist THEN
+               @@min_heap += MyTuple(t, t.@distance)
+             END
+    ;
+    // calculate the maximum distance
+    prev_max_dist = @@max_dist;
+    @@max_dist = 0;
+    FOREACH tp IN @@min_heap DO
+      @@max_dist += tp.dist;
+    END;
+    // if a local minimum is reached, go to next level
+    IF @@min_heap.size() == ef THEN
+      IF @@max_dist > prev_max_dist - 0.0000001 AND NOT is_first THEN
+        BREAK;
+      END;
+      IF is_first THEN
+        is_first = FALSE;
+      END;
+    END;
+    // set the entry point
+    Nodes =
+      SELECT s
+      FROM   Nodes:s
+      WHERE  s.@distance < @@max_dist + 0.0000001
+    ;
+  END;
+
+  // print the k nearest neighbors
+  @@min_heap.resize(k);
+  PRINT @@min_heap;
+}

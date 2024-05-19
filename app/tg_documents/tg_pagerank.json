@@ -1,0 +1,11 @@
+{
+    "function_header": "tg_pagerank",
+    "description": "The PageRank algorithm finds the most influential or most important nodes in a network. The query outputs ranks the vertices with a score of importance.",
+    "docstring": "This query finds the influence of each node in the graph.  The scores are defined recursively and depend on the influence of incoming neighboring vertices.\n Run the query with `gds.featurizer().runAlgorithm('tg_pagerank', params={'v_type': 'INSERT_v_type_HERE', 'e_type': 'INSERT_e_type_HERE', 'top_k' : 'INSERT_top_k_HERE' })`, where the parameters are: \n  'v_type': The vertex type to run the algorithm on. \n 'e_type': The edge type to run the algorithm on.\n 'top_k': The number of top scoring vertices to return to the user.",
+    "param_types": {
+        "v_type" : "STRING",
+        "e_type" : "STRING",
+        "top_k" : "INT"
+    },
+    "custom_query": false
+}

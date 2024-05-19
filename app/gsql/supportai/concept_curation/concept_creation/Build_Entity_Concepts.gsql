@@ -1,0 +1,28 @@
+CREATE DISTRIBUTED QUERY Build_Entity_Concepts(/* Parameters here */) { 
+  ListAccum<STRING> @rel_concepts;
+  cpts = {Concept.*};
+  
+  relationship_cpts = SELECT c FROM cpts:c WHERE c.concept_type == "RELATIONSHIP_LEAF";
+  
+  rels = SELECT r FROM relationship_cpts:rc -(DESCRIBES_RELATIONSHIP)-> Relationship:r
+         ACCUM r.@rel_concepts += rc.id
+         POST-ACCUM
+            INSERT INTO Concept VALUES("EntitiesAreHeadOf"+rc.id, _, _, "ENTITY_LEAF", now(), FALSE),
+            INSERT INTO Concept VALUES("EntitiesAreTailOf"+rc.id, _, _, "ENTITY_LEAF", now(), FALSE),
+            INSERT INTO HAS_RELATIONSHIP VALUES("EntitiesAreHeadOf"+rc.id, rc, "IS_HEAD_OF"),
+            INSERT INTO HAS_RELATIONSHIP VALUES(rc, "EntitiesAreTailOf"+rc.id, "HAS_TAIL");
+  
+  head_entities = SELECT he FROM rels:r -(reverse_IS_HEAD_OF)-> Entity:he
+                  ACCUM
+                    FOREACH rel IN r.@rel_concepts DO
+                      INSERT INTO DESCRIBES_ENTITY VALUES("EntitiesAreHeadOf"+rel, he)
+                    END;
+  
+  tail_entities = SELECT t FROM rels:r -(HAS_TAIL)-> Entity:t
+                  ACCUM
+                    FOREACH rel IN r.@rel_concepts DO
+                      INSERT INTO DESCRIBES_ENTITY VALUES("EntitiesAreTailOf"+rel, t)
+                    END;
+
+  PRINT relationship_cpts;
+}

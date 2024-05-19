@@ -1,0 +1,30 @@
+CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING v_type, STRING milvus_host, 
+  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2", INT top_k=5, STRING query_vector_as_string) { 
+  SetAccum<VERTEX> @@start_set;
+  MapAccum<STRING, STRING> @@final_retrieval;
+  INT inc_top_k = top_k * 2;
+  
+  @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+  
+  WHILE @@start_set.size() < top_k LIMIT 5 DO
+    @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
+    inc_top_k = inc_top_k * 2;
+  END;
+    
+  src = {@@start_set};
+    
+  src = SELECT s FROM src:s LIMIT top_k;
+
+  res = SELECT s FROM src:s -(:e)- :tgt
+        ACCUM
+          IF (s.type == "DocumentChunk" OR s.type == "Document") AND tgt.type == "Content" THEN
+            @@final_retrieval += (s.id -> tgt.text)
+          END
+        POST-ACCUM
+          IF s.type == "Relationship" OR s.type == "Entity" OR s.type == "Concept" THEN
+            @@final_retrieval += (s.id -> s.definition)
+          END;
+    
+  PRINT @@final_retrieval;     
+}

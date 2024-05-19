@@ -6,5 +6,6 @@
         "v_type": "str",
         "e_type": "str",
         "top_k": "int"
-    }
+    },
+    "graphname": "OGB_MAG"
 }

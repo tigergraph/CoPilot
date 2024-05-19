@@ -1,0 +1,34 @@
+CREATE DISTRIBUTED QUERY Build_Concept_Tree(INT min_cooccurence=10) { 
+  MapAccum<STRING, SumAccum<INT>> @concept_cooccurence;
+  SetAccum<VERTEX<Concept>> @@unmerged_concepts;
+  SetAccum<STRING> @source_concepts;
+  UINT cooccurences;
+  concepts = {Concept.*};
+  
+  concepts_no_parents = SELECT c FROM concepts:c WHERE c.outdegree("IS_CHILD_OF") == 0 POST-ACCUM @@unmerged_concepts += c;
+  
+  res = SELECT c FROM concepts_no_parents:c
+        POST-ACCUM
+          FOREACH cpt IN @@unmerged_concepts DO
+            IF c.concept_type == cpt.concept_type  AND c != cpt THEN
+              c.@concept_cooccurence += (cpt.id -> getEntityRelationshipConceptCooccurrence(c, cpt))
+            END
+          END;
+  
+  res = SELECT c FROM res:c 
+        POST-ACCUM
+          FOREACH (conc, cnt) IN c.@concept_cooccurence DO
+            IF cnt >= min_cooccurence THEN
+              IF c.id <= conc THEN
+                INSERT INTO Concept VALUES (c.id+"_AND_"+conc, _, _, "AND", now(), FALSE),
+                INSERT INTO IS_CHILD_OF VALUES (c, c.id+"_AND_"+conc),
+                INSERT INTO IS_CHILD_OF VALUES (conc, c.id+"_AND_"+conc)
+              ELSE
+                INSERT INTO Concept VALUES (conc+"_AND_"+c.id, _, _, "AND", now(), FALSE),
+                INSERT INTO IS_CHILD_OF VALUES (c, conc+"_AND_"+c.id),
+                INSERT INTO IS_CHILD_OF VALUES (conc, conc+"_AND_"+c.id)
+              END
+            END
+          END;
+  PRINT res.size();
+}

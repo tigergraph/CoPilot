@@ -1,164 +1,143 @@
-from typing import Union, Annotated, List, Dict
-from fastapi import FastAPI, Header, Depends, HTTPException, status, Request
-import os
-from pyTigerGraph import TigerGraphConnection
 import json
+import logging
 import time
 import uuid
-import logging
+from base64 import b64decode
+from datetime import datetime
 
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.security import HTTPBasicCredentials
+from starlette.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from app.agent import TigerGraphAgent
-from app.llm_services import OpenAI, AzureOpenAI, AWS_SageMaker_Endpoint, GoogleVertexAI
-from app.embedding_utils.embedding_services import AzureOpenAI_Ada002, OpenAI_Embedding, VertexAI_PaLM_Embedding
-from app.embedding_utils.embedding_stores import FAISS_EmbeddingStore
-
-from app.tools import MapQuestionToSchemaException
-from app.schemas.schemas import NaturalLanguageQuery, NaturalLanguageQueryResponse, GSQLQueryInfo
+from app import routers
+from app.config import PATH_PREFIX, PRODUCTION
 from app.log import req_id_cv
+from app.metrics.prometheus_metrics import metrics as pmetrics
+from app.tools.logwriter import LogWriter
+from app.util import get_db_connection_pwd, get_db_connection_id_token
 
-LLM_SERVICE = os.getenv("LLM_CONFIG")
-DB_CONFIG = os.getenv("DB_CONFIG")
+if PRODUCTION:
+    app = FastAPI(
+        title="TigerGraph CoPilot", docs_url=None, redoc_url=None, openapi_url=None
+    )
+else:
+    app = FastAPI(title="TigerGraph CoPilot")
 
-with open(LLM_SERVICE, "r") as f:
-    llm_config = json.load(f)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app = FastAPI()
+app.include_router(routers.root_router, prefix=PATH_PREFIX)
+app.include_router(routers.inquiryai_router, prefix=PATH_PREFIX)
+app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
 
-security = HTTPBasic()
+
+excluded_metrics_paths = ("/docs", "/openapi.json", "/metrics")
 
 logger = logging.getLogger(__name__)
 
-if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai":
-    embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
-elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":
-    embedding_service = AzureOpenAI_Ada002(llm_config["embedding_service"])
-elif llm_config["embedding_service"]["embedding_model_service"].lower() == "vertexai":
-    embedding_service = VertexAI_PaLM_Embedding(llm_config["embedding_service"])
-else:
-    raise Exception("Embedding service not implemented")
 
+async def get_basic_auth_credentials(request: Request):
+    auth_header = request.headers.get("Authorization")
 
-embedding_store = FAISS_EmbeddingStore(embedding_service)
+    if auth_header is None:
+        return ""
+
+    try:
+        auth_type, encoded_credentials = auth_header.split(" ", 1)
+    except ValueError:
+        return ""
+
+    if auth_type.lower() != "basic":
+        return ""
+
+    try:
+        decoded_credentials = b64decode(encoded_credentials).decode("utf-8")
+        username, _ = decoded_credentials.split(":", 1)
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    return username
 
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     req_id = str(uuid.uuid4())
-    logger.info(f"{request.url.path} ENTRY request_id={req_id}")
+    LogWriter.info(f"{request.url.path} ENTRY request_id={req_id}")
     req_id_cv.set(req_id)
     start_time = time.time()
-    
     response = await call_next(request)
-    
-    process_time = (time.time() - start_time) * 1000
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    logger.info(f"{request.url.path} EXIT request_id={req_id} completed_in={formatted_process_time}ms status_code={response.status_code}")
-    
+
+    user_name = await get_basic_auth_credentials(request)
+    client_host = request.client.host
+    user_agent = request.headers.get("user-agent", "Unknown")
+    action_name = request.url.path
+    status = "SUCCESS"
+
+    if response.status_code != 200:
+        status = "FAILURE"
+
+    # set up the audit log entry structure and write it with the LogWriter
+    if not any(request.url.path.endswith(path) for path in excluded_metrics_paths):
+        audit_log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "userName": user_name,
+            "clientHost": f"{client_host}:{request.url.port}",
+            "userAgent": user_agent,
+            "endpoint": request.url.path,
+            "actionName": action_name,
+            "status": status,
+            "requestId": req_id,
+        }
+        LogWriter.audit_log(json.dumps(audit_log_entry), mask_pii=False)
+        update_metrics(start_time=start_time, label=request.url.path)
+
     return response
 
 
-@app.get("/")
-def read_root():
-    return {"config": llm_config["model_name"]}
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    graphname = request.url.components.path.split("/")[1]
+    if (
+        graphname == ""
+        or graphname == "docs"
+        or graphname == "openapi.json"
+        or graphname == "metrics"
+        or graphname == "health"
+    ):
+        return await call_next(request)
+    authorization = request.headers.get("Authorization")
+    if authorization:
+        scheme, credentials = authorization.split()
+        if scheme.lower() == "basic":
+            LogWriter.info("Authenticating with basic auth")
+            username, password = b64decode(credentials).decode().split(":", 1)
+            credentials = HTTPBasicCredentials(username=username, password=password)
+            try:
+                conn = get_db_connection_pwd(graphname, credentials)
+            except HTTPException as e:
+                LogWriter.error("Failed to connect to TigerGraph. Incorrect username or password.")
+                return JSONResponse(status_code=401,
+                                    content={"message": "Failed to connect to TigerGraph. Incorrect username or password."})
+        else:
+            LogWriter.info("Authenticating with id token")
+            try:
+                conn = get_db_connection_id_token(graphname, credentials)
+            except HTTPException as e:
+                LogWriter.error("Failed to connect to TigerGraph. Incorrect ID Token.")
+                return JSONResponse(status_code=401,
+                                    content={"message": "Failed to connect to TigerGraph. Incorrect ID Token."})
+        request.state.conn = conn
+    response = await call_next(request)
+    return response
 
 
-@app.post("/{graphname}/registercustomquery")
-def register_query(graphname, query_info: GSQLQueryInfo, credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    logger.debug(f"/{graphname}/registercustomquery request_id={req_id_cv.get()} registering {query_info.function_header}")
-    vec = embedding_service.embed_query(query_info.docstring)
-    res = embedding_store.add_embeddings([(query_info.docstring, vec)], [{"function_header": query_info.function_header, 
-                                                                          "description": query_info.description,
-                                                                          "param_types": query_info.param_types,
-                                                                          "custom_query": True}])
-    return res
-
-# TODO: RUD of CRUD with custom queries
-
-@app.post("/{graphname}/retrievedocs")
-def retrieve_docs(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)], top_k:int = 3):
-    # TODO: Better polishing of this response
-    logger.debug_pii(f"/{graphname}/retrievedocs request_id={req_id_cv.get()} top_k={top_k} question={query.query}")
-    tmp = str(embedding_store.retrieve_similar(embedding_service.embed_query(query.query), top_k=top_k))
-    return tmp
-
-
-@app.post("/{graphname}/query")
-def retrieve_answer(graphname, query: NaturalLanguageQuery, credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> NaturalLanguageQueryResponse:
-    logger.debug_pii(f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}")
-    with open(DB_CONFIG, "r") as config_file:
-        config = json.load(config_file)
-        
-    conn = TigerGraphConnection(
-        host=config["hostname"],
-        username = credentials.username,
-        password = credentials.password,
-        graphname = graphname,
-    )
-
-    if config["getToken"]:
-        try:
-            apiToken = conn._post(conn.restppUrl+"/requesttoken", authMode="pwd", data=str({"graph": conn.graphname}), resKey="results")["token"]
-        except:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Basic"},
-            )
-
-        conn = TigerGraphConnection(
-            host=config["hostname"],
-            username = credentials.username,
-            password = credentials.password,
-            graphname = graphname,
-            apiToken = apiToken
-        )
-
-    conn.customizeHeader(timeout=config["default_timeout"]*1000, responseSize=5000000)
-    logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} database connection created")
-
-    if llm_config["completion_service"]["llm_service"].lower() == "openai":
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created")
-        agent = TigerGraphAgent(OpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-    elif llm_config["completion_service"]["llm_service"].lower() == "azure":
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=azure agent created")
-        agent = TigerGraphAgent(AzureOpenAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-    elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=sagemaker agent created")
-        agent = TigerGraphAgent(AWS_SageMaker_Endpoint(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created")
-        agent = TigerGraphAgent(GoogleVertexAI(llm_config["completion_service"]), conn, embedding_service, embedding_store)
-    else:
-        logger.error(f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service")
-        raise Exception("LLM Completion Service Not Supported")
-
-    resp = NaturalLanguageQueryResponse
-
-    try:
-        steps = agent.question_for_agent(query.query)
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
-        try:
-            function_call = steps["intermediate_steps"][-1][-1].split("Function ")[1].split(" produced")[0]
-            res = steps["intermediate_steps"][-1][-1].split("the result ")[-1]
-            resp.natural_language_response = steps["output"]
-            resp.query_sources = {"function_call": function_call,
-                                "result": json.loads(res)}
-            resp.answered_question = True
-        except Exception as e:
-            resp.natural_language_response = steps["output"]
-            resp.query_sources = {"agent_history": str(steps)}
-            resp.answered_question = False
-            logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
-    except MapQuestionToSchemaException as e:
-        resp.natural_language_response = ""
-        resp.query_sources = {}
-        resp.answered_question = False
-        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException")
-    except Exception as e:
-        resp.natural_language_response = ""
-        resp.query_sources = {}
-        resp.answered_question = False
-        logger.warning(f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception")
-    return resp
+def update_metrics(start_time, label):
+    duration = time.time() - start_time
+    pmetrics.copilot_endpoint_duration_seconds.labels(label).observe(duration)
+    pmetrics.copilot_endpoint_total.labels(label).inc()

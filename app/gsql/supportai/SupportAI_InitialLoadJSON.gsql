@@ -1,0 +1,7 @@
+CREATE LOADING JOB load_documents_content_json_@uuid@ {
+    DEFINE FILENAME DocumentContent;
+    LOAD DocumentContent TO VERTEX Document VALUES($"doc_id", gsql_current_time_epoch(0), _, _) USING JSON_FILE="true";
+    LOAD DocumentContent TO VERTEX Content VALUES($"doc_id", $"content", gsql_current_time_epoch(0)) USING JSON_FILE="true";
+
+    LOAD DocumentContent TO EDGE HAS_CONTENT VALUES($"doc_id" Document, $"doc_id" Content) USING JSON_FILE="true";
+}

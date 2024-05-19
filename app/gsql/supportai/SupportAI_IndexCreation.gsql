@@ -1,0 +1,11 @@
+CREATE SCHEMA_CHANGE JOB add_supportai_indexes {
+    ALTER VERTEX Document ADD INDEX doc_epoch_added_index ON (epoch_added);
+    ALTER VERTEX Document ADD INDEX doc_epoch_processing_index ON (epoch_processing);
+    ALTER VERTEX Document ADD INDEX doc_epoch_processing_indexepoch_processed_index ON (epoch_processed);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_epoch_added_index ON (epoch_added);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_epoch_processing_index ON (epoch_processing);
+    ALTER VERTEX DocumentChunk ADD INDEX doc_chunk_epoch_processed_index ON (epoch_processed);
+    ALTER VERTEX Concept ADD INDEX concept_epoch_added_index ON (epoch_added);
+    ALTER VERTEX Concept ADD INDEX concept_epoch_processing_index ON (epoch_processing);
+    ALTER VERTEX Concept ADD INDEX concept_epoch_processed_index ON (epoch_processed);
+}

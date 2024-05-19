@@ -1,0 +1,23 @@
+Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+When the question asks for "How many", make sure to select a function that contains "Count" in the description/function call. Make sure never to generate a function that is not listed below. 
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
+Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
+Vertex Types: {vertex_types}
+Vertex Attributes: {vertex_attributes}
+Vertex IDs: {vertex_ids}
+Edge Types: {edge_types}
+Edge Attributes: {edge_attributes}
+Question: {question}
+First Docstring: {doc1}
+Second Docstring: {doc2}
+Third Docstring: {doc3}
+Fourth Docstring: {doc4}
+Fifth Docstring: {doc5}
+Sixth Docstring: {doc6}
+
+If the output of this function answers the user's question, immediately return that answer.
+
+Follow the output directions below on how to structure your response
+Only include valid JSON do not include any other texts which would render the response invalid JSON: 
+{format_instructions} 

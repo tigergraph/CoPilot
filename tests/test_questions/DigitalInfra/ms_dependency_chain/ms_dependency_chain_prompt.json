@@ -2,5 +2,6 @@
   "function_header": "ms_dependency_chain",
   "description": "Finds dependents of a given microservice up to k hops.",
   "docstring": "Finds dependents of a given microservice. Useful for determining effects of downtime for upgrades or bugs. Run the query with `runInstalledQuery('ms_dependency_chain', params={'microservice': 'INSERT_MICROSERVICE_ID_HERE', 'depth': INSERT_DEPTH_HERE})`. Depth defaults to 3.",
-  "param_types": {"microservice": "str", "depth": "int"}
+  "param_types": {"microservice": "str", "depth": "int"},
+  "graphname": "DigitalInfra"
 }
