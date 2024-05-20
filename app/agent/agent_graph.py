@@ -201,7 +201,12 @@ class TigerGraphAgentGraph:
             if useful == "useful":
                 return "grounded"
             else:
-                return "not_useful"
+                if state["lookup_source"] == "supportai":
+                    return "supportai_not_useful"
+                elif state["lookup_source"] == "inquiryai":
+                    return "inquiryai_not_useful"
+                elif state["lookup_source"] == "cypher":
+                    return "cypher_not_useful"
         
     def check_state_for_generation_error(self, state):
         """
@@ -241,8 +246,30 @@ class TigerGraphAgentGraph:
                                                     "error": "apologize",
                                                     "success": "generate_answer"
                                                 })
+            self.workflow.add_conditional_edges(
+                "generate_answer",
+                self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "inquiryai_not_useful": "generate_cypher",
+                        "cypher_not_useful": "hnsw_overlap_search",
+                        "supportai_not_useful": "map_question_to_schema"
+                    }
+                )
         else:
             self.workflow.add_edge("generate_function", "generate_answer")
+            self.workflow.add_conditional_edges(
+                "generate_answer",
+                self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "not_useful": "rewrite_question",
+                        "inquiryai_not_useful": "hnsw_overlap_search",
+                        "supportai_not_useful": "map_question_to_schema"
+                    }
+            )
 
 
         self.workflow.add_conditional_edges(
@@ -259,15 +286,7 @@ class TigerGraphAgentGraph:
         self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")
         self.workflow.add_edge("apologize", END)
-        self.workflow.add_conditional_edges(
-            "generate_answer",
-            self.check_answer_for_usefulness_and_hallucinations,
-            {
-                "hallucination": "rewrite_question",
-                "grounded": END,
-                "not_useful": "generate_cypher"
-            }
-        )
+        
 
         app = self.workflow.compile()
         return app
