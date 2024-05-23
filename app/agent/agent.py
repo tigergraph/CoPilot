@@ -45,7 +45,7 @@ class TigerGraphAgent:
         db_connection: TigerGraphConnectionProxy,
         embedding_model: EmbeddingModel,
         embedding_store: EmbeddingStore,
-        use_cypher: bool = True
+        use_cypher: bool = False
     ):
         self.conn = db_connection
 
