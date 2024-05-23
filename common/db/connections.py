@@ -49,13 +49,24 @@ def get_db_connection_id_token(
 def get_db_connection_pwd(
     graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
 ) -> TigerGraphConnectionProxy:
+    conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname)
+
+    conn.customizeHeader(
+        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
+    )
+    conn = TigerGraphConnectionProxy(conn)
+    LogWriter.info("Connected to TigerGraph with password")
+    return conn
+
+
+def elevate_db_connection_to_token(host, username, password, graphname) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
-        host=db_config["hostname"],
-        username=credentials.username,
-        password=credentials.password,
+        host=host,
+        username=username,
+        password=password,
         graphname=graphname
     )
-
+    
     if db_config["getToken"]:
         try:
             apiToken = conn._post(
@@ -74,15 +85,10 @@ def get_db_connection_pwd(
 
         conn = TigerGraphConnection(
             host=db_config["hostname"],
-            username=credentials.username,
-            password=credentials.password,
+            username=username,
+            password=password,
             graphname=graphname,
             apiToken=apiToken
         )
-
-    conn.customizeHeader(
-        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
-    )
-    conn = TigerGraphConnectionProxy(conn)
-    LogWriter.info("Connected to TigerGraph with password")
+    
     return conn

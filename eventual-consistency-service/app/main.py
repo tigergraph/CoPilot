@@ -1,10 +1,8 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
-from pyTigerGraph import TigerGraphConnection
-from requests import HTTPError
+from fastapi import Depends, FastAPI, Request
+from fastapi.security.http import HTTPBase
 
 from common.config import (
     db_config,
@@ -16,21 +14,36 @@ from common.config import (
     doc_processing_config,
 )
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.logs.logwriter import LogWriter
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.eventual_consistency_checker import EventualConsistencyChecker
-from app.tools.logwriter import LogWriter
+from common.db.connections import elevate_db_connection_to_token
+from eventual_consistency_checker import EventualConsistencyChecker
+import json
+from threading import Thread
 
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
 
+app = FastAPI()
 
-def get_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
+@app.on_event("startup")
+def startup_event():
     if not db_config.get("enable_consistency_checker", True):
-        logger.debug("Eventual consistency checker disabled")
+        LogWriter.info("Eventual consistency checker disabled")
         return
 
-    check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
+    startup_checkers = db_config.get("graph_names", [])
+    for graphname in startup_checkers:
+        conn = elevate_db_connection_to_token(db_config["hostname"], db_config["username"], db_config["password"], graphname)
+        start_ecc_in_thread(graphname, conn)
 
+def start_ecc_in_thread(graphname: str, conn: TigerGraphConnectionProxy):
+    thread = Thread(target=initialize_eventual_consistency_checker, args=(graphname, conn), daemon=True)
+    thread.start()
+    LogWriter.info(f"Eventual consistency checker started for graph {graphname}")
+
+def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
+    check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
     if graphname not in consistency_checkers:
         vector_indices = {}
         if milvus_config.get("enabled") == "true":
@@ -101,6 +114,23 @@ def get_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionP
             chunker,
             extractor,
         )
-        checker.initialize()
         consistency_checkers[graphname] = checker
+        checker.initialize()
     return consistency_checkers[graphname]
+
+@app.get("/{graphname}/consistency_status")
+def consistency_status(graphname: str, credentials: Annotated[HTTPBase, Depends(security)]):
+    if graphname in consistency_checkers:
+        ecc = consistency_checkers[graphname]
+        status = json.dumps(ecc.get_status())
+    else:
+        conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname)
+        start_ecc_in_thread(graphname, conn)
+        status = f"Eventual consistency checker started for graph {graphname}"
+
+    LogWriter.info(f"Returning consistency status for {graphname}: {status}")
+    return status
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

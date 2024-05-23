@@ -1,8 +1,14 @@
+import json
 import logging
 import time
-from typing import List
+from typing import Dict, List
 
 from common.logs.logwriter import LogWriter
+from common.embeddings.embedding_services import EmbeddingModel
+from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.metrics.tg_proxy import TigerGraphConnectionProxy
+from common.chunkers import BaseChunker
+from common.extractors import BaseExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +19,12 @@ class EventualConsistencyChecker:
         interval_seconds,
         graphname,
         vertex_field,
-        embedding_service,
+        embedding_service: EmbeddingModel,
         embedding_indices: List[str],
-        embedding_stores,
-        conn,
-        chunker,
-        extractor,
+        embedding_stores: Dict[str, MilvusEmbeddingStore],
+        conn: TigerGraphConnectionProxy,
+        chunker: BaseChunker,
+        extractor: BaseExtractor,
         batch_size = 10
     ):
         self.interval_seconds = interval_seconds
@@ -49,6 +55,11 @@ class EventualConsistencyChecker:
             + "\n INSTALL QUERY "
             + query_name
         )
+
+        if "error" in str(res).lower():
+            LogWriter.error(res)
+            raise Exception(f"Eventual consistency checker failed to install query {query_name}")
+
         return res
 
     def _check_query_install(self, query_name):
@@ -238,18 +249,16 @@ class EventualConsistencyChecker:
             f"Eventual Consistency Check running for graphname {self.graphname} "
         )
         self.is_initialized = True
-        ok = True
-        while ok:
-            ok = self.fetch_and_process_vertex()
-        LogWriter.info(
-            f"Eventual Consistency Check finished for graphname {self.graphname}. Success={ok}"
-        )
+        while True:
+            self.fetch_and_process_vertex()
+            time.sleep(self.interval_seconds)
 
     def get_status(self):
         statuses = {}
         for v_type in self.embedding_indices:
             status = self.conn.runInstalledQuery(
                 "ECC_Status", {"v_type": v_type}
-            )[0]["results"]
+            )[0]
+            LogWriter.info(f"ECC_Status for graphname {self.graphname}: {status}")
             statuses[v_type] = status
-        return self.is_initialized
+        return statuses

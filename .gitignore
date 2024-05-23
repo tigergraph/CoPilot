@@ -18,3 +18,5 @@ log.WARNING
 logs/*
 tmp
 .idea
+eventual-consistency-service/app/logs/*
+copilot/app/logs/*
