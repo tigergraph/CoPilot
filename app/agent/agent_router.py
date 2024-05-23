@@ -1,5 +1,5 @@
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
+from langchain_core.output_parsers import PydanticOutputParser
 from app.tools.logwriter import LogWriter
 from pyTigerGraph.pyTigerGraph import TigerGraphConnection
 import logging

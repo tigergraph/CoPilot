@@ -17,14 +17,14 @@ class TestWithVertexAI(CommonTests, unittest.TestCase):
         from app.main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = "gcp-text-bison"
+        cls.llm_service = "gemini-1.5-flash-preview-0514"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "GCP-text-bison")
+        self.assertEqual(resp.json()["config"], "gemini-1.5-flash-preview-0514")
 
 
 if __name__ == "__main__":

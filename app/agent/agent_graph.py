@@ -14,6 +14,12 @@ from app.supportai.retrievers import HNSWOverlapRetriever
 
 from app.py_schemas import (MapQuestionToSchemaResponse,
                             CoPilotResponse)
+
+import logging
+from app.log import req_id_cv
+
+logger = logging.getLogger(__name__)
+
 class GraphState(TypedDict):
     """
     Represents the state of the agent graph.
@@ -57,7 +63,9 @@ class TigerGraphAgentGraph:
         elif state["question_retry_count"] > 2:
             return "apologize"
         state["question_retry_count"] += 1
+        logger.debug_pii(f"request_id={req_id_cv.get()} Routing question: {state['question']}")
         source = step.route_question(state['question'])
+        logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
         if source.datasource == "vectorstore":
             return "supportai_lookup"
         elif source.datasource == "functions":
@@ -143,7 +151,9 @@ class TigerGraphAgentGraph:
         Run the agent generator.
         """
         step = TigerGraphAgentGenerator(self.llm_provider)
+        logger.debug_pii(f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}")
         answer = step.generate_answer(state['question'], state["context"])
+        logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer}")
 
         try:
             resp = CoPilotResponse(natural_language_response=answer,
@@ -172,7 +182,7 @@ class TigerGraphAgentGraph:
         Run the agent hallucination check.
         """
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
-        hallucinations = step.check_hallucination(state["answer"], state["context"])
+        hallucinations = step.check_hallucination(state["answer"].natural_language_response, state["context"])
         if hallucinations["score"] == "yes":
             return "grounded"
         else:
@@ -183,7 +193,7 @@ class TigerGraphAgentGraph:
         Run the agent usefulness check.
         """
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
-        usefulness = step.check_usefulness(state["question"], state["answer"])
+        usefulness = step.check_usefulness(state["question"], state["answer"].natural_language_response)
         if usefulness["score"] == "yes":
             return "useful"
         else:

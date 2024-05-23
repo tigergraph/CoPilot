@@ -22,12 +22,10 @@ class TigerGraphAgentGenerator:
         LogWriter.info(f"request_id={req_id_cv.get()} ENTRY generate_answer")
         prompt = PromptTemplate(
             template="""Given the question and the context, generate an answer. \n
-                        Use the context to generate the answer. \n
-                        Make sure to answer the question in a friendly, but concise, and informative way. \n
-                        Return the answer as a string. \n
+                        Make sure to answer the question in a friendly and informative way. \n
                         Question: {question} \n
                         Context: {context}""",
-            input_variables=["generation", "context"]
+            input_variables=["question", "context"]
         )
 
         # Chain
