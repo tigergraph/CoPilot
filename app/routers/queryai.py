@@ -59,7 +59,10 @@ def generate_cypher(
         )
 
     resp = CoPilotResponse(
-        natural_language_response=generated, answered_question=True, response_type="queryai"
+        natural_language_response=generated, 
+        answered_question=True, 
+        response_type="queryai",
+        query_sources={"graphname": graphname, "query": query.query}
     )
 
     return resp
