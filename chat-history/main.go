@@ -2,26 +2,19 @@ package main
 
 import (
 	"chat-history/db"
+	"chat-history/middleware"
 	"chat-history/routes"
+	"fmt"
 	"net/http"
 
-	"fmt"
-
-	"github.com/go-chi/chi/v5/middleware"
+	chiMid "github.com/go-chi/chi/v5/middleware"
 )
 
-type Middleware func(http.Handler) http.Handler
-
-func chainMiddleware(handler http.Handler, middle ...Middleware) http.Handler {
-	for _, m := range middle {
-		handler = m(handler)
-	}
-
-	return handler
-}
-
 func main() {
+	//init
 	db.InitDB()
+
+	// make router
 	router := http.NewServeMux()
 
 	// Health check endpoint
@@ -31,12 +24,16 @@ func main() {
 
 	router.HandleFunc("GET /user/{userId}", routes.GetUserConversations)
 	router.HandleFunc("GET /conversation/{conversationId}", routes.GetConversation)
-	router.HandleFunc("POST /conversation/", routes.UpdateConversation)
+	router.HandleFunc("POST /conversation", routes.UpdateConversation)
 
 	// create server with middleware
 	port := ":8000"
-	//FIXME: auth middleware
-	handler := chainMiddleware(router, middleware.Logger)
+
+	handler := middleware.ChainMiddleware(router,
+		middleware.Logger(),
+		middleware.Auth,
+		chiMid.Recoverer,
+	)
 	s := http.Server{Addr: port, Handler: handler}
 
 	fmt.Printf("Server running on port %s\n", port)
