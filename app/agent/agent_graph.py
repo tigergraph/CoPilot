@@ -129,10 +129,10 @@ class TigerGraphAgentGraph:
         step = TigerGraphAgentGenerator(self.llm_provider)
         logger.debug_pii(f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}")
         answer = step.generate_answer(state['question'], state["context"])
-        logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer}")
+        logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer.generated_answer}")
 
         try:
-            resp = CoPilotResponse(natural_language_response=answer,
+            resp = CoPilotResponse(natural_language_response=answer.generated_answer,
                                 answered_question=True,
                                 response_type=state["lookup_source"],
                                 query_sources=state["context"])
@@ -159,7 +159,7 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
         hallucinations = step.check_hallucination(state["answer"].natural_language_response, state["context"])
-        if hallucinations["score"] == "yes":
+        if hallucinations.score == "yes":
             return "grounded"
         else:
             return "hallucination"
@@ -170,7 +170,7 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
         usefulness = step.check_usefulness(state["question"], state["answer"].natural_language_response)
-        if usefulness["score"] == "yes":
+        if usefulness.score == "yes":
             return "useful"
         else:
             return "not_useful"

@@ -18,8 +18,5 @@ Sixth Docstring: {doc6}
 Seventh Docstring: {doc7}
 Eighth Docstring: {doc8}
 
-If the output of this function answers the user's question, immediately return that answer.
-
-Follow the output directions below on how to structure your response
-Only include valid JSON do not include any other texts which would render the response invalid JSON: 
+Follow the output directions below on how to structure your response: 
 {format_instructions} 
