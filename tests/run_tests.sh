@@ -100,7 +100,15 @@ case "$llm_service" in
         ;;
     "all")
         echo "Executing all services..."
-        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config" "$groq_mixtral_script $groq_mixtral_config" "$aws_bedrock_script $aws_bedrock_config" "$openai_gpt4o_script $openai_gpt4o_config" "$huggingface_llama3_script $huggingface_llama3_config" "$huggingface_phi3_script $huggingface_phi3_config"; do
+        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" \
+                                   "$openai_gpt35_script $openai_gpt35_config" \
+                                   "$openai_gpt4_script $openai_gpt4_config" \
+                                   "$gcp_textbison_script $gcp_textbison_config" \
+                                   "$groq_mixtral_script $groq_mixtral_config" \
+                                   "$aws_bedrock_script $aws_bedrock_config" \
+                                   "$openai_gpt4o_script $openai_gpt4o_config" \
+                                   "$huggingface_llama3_script $huggingface_llama3_config" \
+                                   "$huggingface_phi3_script $huggingface_phi3_config"; do
             execute_service $service_script_pair
         done
         ;;
