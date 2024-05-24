@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security.http import HTTPBase
 
 from common.config import (
@@ -19,10 +19,11 @@ from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.db.connections import elevate_db_connection_to_token
 from app.eventual_consistency_checker import EventualConsistencyChecker
 import json
-from threading import Thread
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
+processes = {}
 
 app = FastAPI()
 
@@ -35,12 +36,15 @@ def startup_event():
     startup_checkers = db_config.get("graph_names", [])
     for graphname in startup_checkers:
         conn = elevate_db_connection_to_token(db_config["hostname"], db_config["username"], db_config["password"], graphname)
-        start_ecc_in_thread(graphname, conn)
+        run_ecc(graphname, conn)
 
-def start_ecc_in_thread(graphname: str, conn: TigerGraphConnectionProxy):
-    thread = Thread(target=initialize_eventual_consistency_checker, args=(graphname, conn), daemon=True)
-    thread.start()
-    LogWriter.info(f"Eventual consistency checker started for graph {graphname}")
+def run_ecc(graphname: str, conn: TigerGraphConnectionProxy):
+    process = multiprocessing.Process(target=initialize_eventual_consistency_checker, args=(graphname, conn), daemon=True)
+    process.start()
+    processes[process.pid] = process
+    status = f"Eventual consistency checker started for graph {graphname} at pid: {process.pid}"
+    LogWriter.info(status)
+    return {"status": status, "pid": process.pid}
 
 def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
     check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
@@ -125,8 +129,18 @@ def consistency_status(graphname: str, credentials: Annotated[HTTPBase, Depends(
         status = json.dumps(ecc.get_status())
     else:
         conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname)
-        start_ecc_in_thread(graphname, conn)
-        status = f"Eventual consistency checker started for graph {graphname}"
+        status = run_ecc(graphname, conn)
 
     LogWriter.info(f"Returning consistency status for {graphname}: {status}")
     return status
+
+@app.post("/stop-checker/{pid}")
+def stop_checker(pid: int):
+    LogWriter.info(f"Stopping process {pid}")
+    process = processes.get(pid)
+    if process is None:
+        raise HTTPException(status_code=404, detail="Process not found")
+    process.terminate()
+    process.join()
+    del processes[pid]
+    return {"status": "checker stopped"}
