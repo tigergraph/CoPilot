@@ -3,7 +3,7 @@ version: '3.8'
 services:
   copilot:
     container_name: copilot
-    image: tigergraphml/copilot:0.5.0
+    build: ./copilot
     ports:
       - 8000:8000
     depends_on:
@@ -16,12 +16,15 @@ services:
       MILVUS_HOST: "milvus-standalone"
     volumes:
       - ./configs/:/code/configs
+      - ./common:/code/common
 
   eventual-consistency-service:
     container_name: eventual-consistency-service
-    build: eventual-consistency-service
+    build: ./eventual-consistency-service
     ports:
       - 8001:8001
+    depends_on:
+      - milvus-standalone
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
@@ -30,8 +33,9 @@ services:
       MILVUS_HOST: "milvus-standalone"
     volumes:
       - ./configs/:/code/configs
+      - ./common:/code/common
 
-  etcd:
+    etcd:
       container_name: milvus-etcd
       image: quay.io/coreos/etcd:v3.5.5
       environment:

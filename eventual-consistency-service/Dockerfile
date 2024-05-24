@@ -11,11 +11,9 @@ RUN pip install -r /code/requirements.txt
  
 COPY ./app /code/app
 
-ENV LLM_CONFIG="/llm_config.json"
-ENV DB_CONFIG="/db_config.json"
-ENV MILVUS_CONFIG="/milvus_config.json"
-
-# INFO, DEBUG, DEBUG_PII
+ENV LLM_CONFIG="/code/configs/llm_config.json"
+ENV DB_CONFIG="/code/configs/db_config.json"
+ENV MILVUS_CONFIG="/code/configs/milvus_config.json"
 ENV LOGLEVEL="INFO"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

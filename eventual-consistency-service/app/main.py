@@ -17,7 +17,7 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.logs.logwriter import LogWriter
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.db.connections import elevate_db_connection_to_token
-from eventual_consistency_checker import EventualConsistencyChecker
+from app.eventual_consistency_checker import EventualConsistencyChecker
 import json
 from threading import Thread
 
@@ -130,7 +130,3 @@ def consistency_status(graphname: str, credentials: Annotated[HTTPBase, Depends(
 
     LogWriter.info(f"Returning consistency status for {graphname}: {status}")
     return status
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
