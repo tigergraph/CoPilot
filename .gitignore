@@ -19,5 +19,6 @@ logs/*
 tmp
 .idea
 eventual-consistency-service/app/logs/*
+eventual-consistency-service/logs/*
 copilot/app/logs/*
 copilot/logs/*
