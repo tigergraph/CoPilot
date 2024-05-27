@@ -25,7 +25,8 @@ class HNSWRetriever(BaseRetriever):
                 "query_vector_as_string": query_embedding,
                 "collection_name": self.conn.graphname + "_" + index,
                 "top_k": top_k,
-            }
+            },
+            usePost=True
         )
         res = self.conn.runInstalledQuery("HNSW_Search_Content", params)
         return res

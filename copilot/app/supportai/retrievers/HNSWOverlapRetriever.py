@@ -29,6 +29,7 @@ class HNSWOverlapRetriever(BaseRetriever):
                     "num_seen_min": num_seen_min,
                 }
             ),
+            usePost=True
         )
         return res
 

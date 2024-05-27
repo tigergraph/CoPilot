@@ -13,7 +13,7 @@ class TestWithClaude3Bedrock(CommonTests, unittest.TestCase):
         from app.main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = ""
+        cls.llm_service = "claude-3-haiku"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 

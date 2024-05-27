@@ -10,21 +10,21 @@ import sys
 
 
 @pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
-class TestWithVertexAI(CommonTests, unittest.TestCase):
+class TestWithOpenAI(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
         from app.main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = "gemini-1.5-flash-preview-0514"
+        cls.llm_service = "gpt-4o-2024-05-13"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "gemini-1.5-flash-preview-0514")
+        self.assertEqual(resp.json()["config"], "GPT-4o")
 
 
 if __name__ == "__main__":

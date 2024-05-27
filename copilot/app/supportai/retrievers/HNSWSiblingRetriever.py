@@ -31,6 +31,7 @@ class HNSWSiblingRetriever(BaseRetriever):
                     "top_k": top_k,
                 }
             ),
+            usePost=True
         )
         return res
 
