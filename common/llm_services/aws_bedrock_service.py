@@ -1,8 +1,8 @@
-from common.llm_services import LLM_Model
+import boto3
 from langchain_community.chat_models import BedrockChat
 import logging
+from common.llm_services import LLM_Model
 from common.logs.log import req_id_cv
-import boto3
 from common.logs.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)

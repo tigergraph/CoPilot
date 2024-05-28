@@ -5,20 +5,14 @@ import logging
 
 from pyTigerGraph import TigerGraphConnection
 
+from app.agent.agent_graph import TigerGraphAgentGraph
 from app.tools import GenerateFunction, MapQuestionToSchema
+
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore
-
-<<<<<<<< HEAD:copilot/app/agent.py
+from common.llm_services.base_llm import LLM_Model
 from common.metrics.prometheus_metrics import metrics
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from common.llm_services.base_llm import LLM_Model
-========
-from app.metrics.prometheus_metrics import metrics
-from app.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.llm_services.base_llm import LLM_Model
-from app.agent.agent_graph import TigerGraphAgentGraph
->>>>>>>> dev:app/agent/agent.py
 
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
