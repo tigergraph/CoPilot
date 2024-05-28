@@ -13,8 +13,8 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(cfg.Hostname) == 0 {
-		t.Fatalf("hostname is blank, %q", cfg.Hostname)
+	if len(cfg.DbHostname) == 0 || cfg.DbHostname != "http://localhost:14240" {
+		t.Fatalf("hostname is blank, %q", cfg.DbHostname)
 	}
 }
 

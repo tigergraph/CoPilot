@@ -10,7 +10,7 @@ type LLMConfig struct {
 }
 
 type DbConfig struct {
-	Hostname string `json:"hostname"`
+	DbHostname string `json:"hostname"`
 	// Username string `json:"username"`
 	// Password string `json:"password"`
 	// GetToken string `json:"getToken"`
