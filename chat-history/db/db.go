@@ -20,13 +20,14 @@ var (
 
 // Initialize the DB
 func InitDB(dbPath string) {
-	//TODO:
-	// read db config from a file
-	// remove create block to init dummy data
+	// TODO:
+	//  log db stuff to file, too (in gorm config)
+
 	chatHistDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
+	db = nil
 	db = chatHistDB
 
 	// Migrate the schema
@@ -42,7 +43,6 @@ func InitDB(dbPath string) {
 	}
 }
 
-// FIXME: log db stuff to file, too
 func GetUserConversations(userId string) []structs.Conversation {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -84,8 +84,6 @@ func populateDB() {
 	defer mu.Unlock()
 	// init convos
 	conv1 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a951")
-	convos := []structs.Conversation{}
-	db.Find(&convos)
 	db.Create(&structs.Conversation{UserId: "rrossmiller", ConversationId: conv1, Name: "conv1"})
 	db.Create(&structs.Conversation{UserId: "rrossmiller", ConversationId: uuid.New(), Name: "conv2"})
 	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: uuid.New(), Name: "conv3"})

@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	// "gorm.io/driver/sqlite"
-	// "gorm.io/gorm"
 )
 
 const DB_NAME = "test.db"
@@ -16,7 +14,6 @@ test all functions
 test all functions with concurrent accesses
 */
 func TestInitDB(t *testing.T) {
-	// setupTest(t)
 	tmp := t.TempDir()
 	pth := fmt.Sprintf("%s/%s", tmp, DB_NAME)
 	InitDB(pth)
@@ -29,6 +26,9 @@ func TestGetUserConversations(t *testing.T) {
 	setupTest(t)
 
 	convos := GetUserConversations("rrossmiller")
+	if l := len(convos); l != 2 {
+		t.Fatalf("len of convos should be 2. It's: %d", l)
+	}
 	for _, c := range convos {
 		if len(c.UserId) == 0 ||
 			uuid.Validate(c.ConversationId.String()) != nil {
@@ -76,7 +76,10 @@ helper functions
 func setupTest(t *testing.T) {
 	tmp := t.TempDir()
 	pth := fmt.Sprintf("%s/%s", tmp, DB_NAME)
-	fmt.Println(pth)
 	InitDB(pth)
 	populateDB()
+
+	t.Cleanup(func() {
+		db=nil
+	})
 }
