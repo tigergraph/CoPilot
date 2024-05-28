@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
-	chiMid "github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
 	//init
-	db.InitDB()
+	// TODO: read path from config
+	db.InitDB("test.db")
 
 	// make router
 	router := http.NewServeMux()
@@ -27,12 +27,11 @@ func main() {
 	router.HandleFunc("POST /conversation", routes.UpdateConversation)
 
 	// create server with middleware
-	port := ":8000"
+	port := "localhost:8000"
 
 	handler := middleware.ChainMiddleware(router,
-		middleware.Logger(),
-		middleware.Auth,
-		chiMid.Recoverer,
+		middleware.Logger(),// recoverer already included from RequestLogger by default
+		// middleware.Auth, // TODO: need auth server. --> go-chi/oauth can make server
 	)
 	s := http.Server{Addr: port, Handler: handler}
 

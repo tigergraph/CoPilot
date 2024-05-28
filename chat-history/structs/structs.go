@@ -15,49 +15,41 @@ type Model struct {
 	DeletedAt gorm.DeletedAt `json:"delete_ts" gorm:"index"`
 }
 
-//	{
-//	    "GET /user/{user_id}/": [ //list of convos
-//	        // order chronologically
-//	        {
-//	            "conversation_id": "uuid",
-//	            "name": "string",
-//	            "updateTS": "unix TS"
-//	        }
-//	    ],
-
 type Conversation struct {
 	Model
-	UserId         string    `json:"user_id"`
+	UserId         string    `json:"user_id" gorm:"not null"`
 	ConversationId uuid.UUID `json:"conversation_id" gorm:"unique;not null"`
 	Name           string    `json:"name"`
 }
 
-//     "GET /conversation/{conversation_id}": [ //list of messages
-//         { // message
-//             "message_id": "uuid",
-//             "parent_id": "uuid",
-//             "model": "string",
-//             "content": "string",
-//             "role": "user/CoPilot",
-//             "timestamp": "unixTimestamp",
-//             "feedback": "thumbs up/down",
-//             "comment": "string"
-//         }
-//     ],
-//     "POST /conversation": { // what follows is the request structure
-//         "conversation_id": "uuid",
-//         "message": { //message
-//             "message_id": "uuid",
-//             "parent_id": "uuid",
-//             "model": "string",
-//             "content": "string",
-//             "role": "user/CoPilot",
-//             "timestamp": "unixTimestamp",
-//             "feedback": "thumbs up/down",
-//             "comment": "string"
-//         }
-//     }
-// }
-// "DELETE /conversation/{conversation_id}": [ //list of convos
-//     //TODO response
-// ]
+type MessagengerRole string
+
+type Feedback uint
+
+const (
+	SystemRole MessagengerRole = "system"
+	UserRole   MessagengerRole = "user"
+)
+const (
+	NoFeedback = iota
+	ThumbsUp
+	ThumbsDown
+)
+
+type Message struct {
+	Model
+	ConversationId uuid.UUID       `json:"conversation_id" gorm:"not null"`
+	MessageId      uuid.UUID       `json:"message_id" gorm:"not null"`
+	ParentId       *uuid.UUID      `json:"parent_id"` // pointer allows nil
+	ModelName      string          `json:"model"`
+	Content        string          `json:"content"`
+	Role           MessagengerRole `json:"role"`
+	Feedback       Feedback        `json:"feedback"`
+	Comment        string          `json:"comment"`
+}
+
+type User struct {
+	Model
+	UserName string `json:"user_name"`
+	Tkn      string `json:"tkn"`
+}
