@@ -6,7 +6,6 @@ import (
 	"chat-history/routes"
 	"fmt"
 	"net/http"
-
 )
 
 func main() {
@@ -30,7 +29,7 @@ func main() {
 	port := "localhost:8000"
 
 	handler := middleware.ChainMiddleware(router,
-		middleware.Logger(),// recoverer already included from RequestLogger by default
+		middleware.Logger(), // recoverer already included from RequestLogger by default
 		// middleware.Auth, // TODO: need auth server. --> go-chi/oauth can make server
 	)
 	s := http.Server{Addr: port, Handler: handler}

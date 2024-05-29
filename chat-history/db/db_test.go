@@ -37,7 +37,7 @@ func TestGetUserConversations(t *testing.T) {
 	}
 }
 
-func testGetUserConversationById(t *testing.T) {
+func TestGetUserConversationById(t *testing.T) {
 	setupTest(t)
 	convoId := "601529eb-4927-4e24-b285-bd6b9519a951"
 	messages := GetUserConversationById("sam_pull", convoId)
@@ -56,19 +56,24 @@ func testGetUserConversationById(t *testing.T) {
 	}
 }
 
-func testUpdateConversationById_NewConvo(t *testing.T) {
+func TestUpdateConversationById_NewConvo(t *testing.T) {
+
+}
+
+// newConvo
+func TestNewConversation(t *testing.T) {
 
 }
 
 // parallel tests
-func atest(t *testing.T) {
-	/*
-	   set up a few goroutines to call the set and get funcs a bunch of times or for a set time
-	   expect no errors
-	   ensure that what was supposed to get written was written
-	*/
+// func atest(t *testing.T) {
+/*
+   set up a few goroutines to call the set and get funcs a bunch of times or for a set time
+   expect no errors
+   ensure that what was supposed to get written was written
+*/
 
-}
+// }
 
 /*
 helper functions

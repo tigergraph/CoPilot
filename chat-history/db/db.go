@@ -53,39 +53,52 @@ func GetUserConversations(userId string) []structs.Conversation {
 	return convos
 }
 
-func GetUserConversationById(userId, conversatonId string) []structs.Message {
+func GetUserConversationById(userId, conversationId string) []structs.Message {
 	messages := []structs.Message{}
-	mu.RLock()
-	defer mu.RUnlock()
+	convos := GetUserConversations(userId)
 
 	// ensure that conversatonId is a convo for this user
-	convos := GetUserConversations(userId)
+	mu.RLock()
+	defer mu.RUnlock()
 	for _, c := range convos {
 		// conversaton belongs to this user. get the messages
-		if c.ConversationId.String() == conversatonId {
-			db.Where("conversation_id = ?", conversatonId).Find(&messages)
+		if c.ConversationId.String() == conversationId {
+			db.Where("conversation_id = ?", conversationId).Find(&messages)
 			break
 		}
 	}
 	return messages
 }
 
-// TODO: doesn't take an ID. takes the request body and updates based on what's in there
-func UpdateConversationById(conversatonId string) []structs.Conversation {
-	mu.RLock()
-	defer mu.RUnlock()
+func NewConversation(userId, name string, message structs.Message) (*structs.Conversation, error) {
+	mu.Lock()
+	defer mu.Unlock()
 
-	convos := []structs.Conversation{}
-	// db.Where("user_id = ?", conversatonId).Find(&convos)
+	convo := &structs.Conversation{UserId: userId, ConversationId: message.ConversationId, Name: name}
+	db.Create(&convo)
+	db.Create(&message)
 
-	return convos
+	return convo, nil
 }
 
-// Delete - delete product
-// db.Delete(&convo, 1)
+func UpdateConversationById(message *structs.Message) (*structs.Conversation, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if result := db.Create(message); result.Error != nil {
+		return nil, result.Error
+
+	}
+	convo := structs.Conversation{}
+	db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
+
+	return &convo, nil
+}
+
 func populateDB() {
 	mu.Lock()
 	defer mu.Unlock()
+
 	// init convos
 	conv1 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a951")
 	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: conv1, Name: "conv1"})

@@ -22,6 +22,12 @@ type Conversation struct {
 	Name           string    `json:"name"`
 }
 
+func (c *Conversation) New(userId, name string, convoId uuid.UUID) {
+	c.UserId = userId
+	c.Name = name
+	c.ConversationId = convoId
+}
+
 type MessagengerRole string
 
 type Feedback uint
@@ -39,7 +45,7 @@ const (
 type Message struct {
 	Model
 	ConversationId uuid.UUID       `json:"conversation_id" gorm:"not null"`
-	MessageId      uuid.UUID       `json:"message_id" gorm:"not null"`
+	MessageId      uuid.UUID       `json:"message_id" gorm:"unique;not null"`
 	ParentId       *uuid.UUID      `json:"parent_id"` // pointer allows nil
 	ModelName      string          `json:"model"`
 	Content        string          `json:"content"`
