@@ -88,9 +88,9 @@ func populateDB() {
 	defer mu.Unlock()
 	// init convos
 	conv1 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a951")
-	db.Create(&structs.Conversation{UserId: "rrossmiller", ConversationId: conv1, Name: "conv1"})
-	db.Create(&structs.Conversation{UserId: "rrossmiller", ConversationId: uuid.New(), Name: "conv2"})
-	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: uuid.New(), Name: "conv3"})
+	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: conv1, Name: "conv1"})
+	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: uuid.New(), Name: "conv2"})
+	db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: uuid.New(), Name: "conv3"})
 
 	// add message to convos
 	message := structs.Message{

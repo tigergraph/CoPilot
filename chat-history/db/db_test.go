@@ -25,7 +25,7 @@ func TestInitDB(t *testing.T) {
 func TestGetUserConversations(t *testing.T) {
 	setupTest(t)
 
-	convos := GetUserConversations("rrossmiller")
+	convos := GetUserConversations("sam_pull")
 	if l := len(convos); l != 2 {
 		t.Fatalf("len of convos should be 2. It's: %d", l)
 	}
@@ -40,7 +40,7 @@ func TestGetUserConversations(t *testing.T) {
 func testGetUserConversationById(t *testing.T) {
 	setupTest(t)
 	convoId := "601529eb-4927-4e24-b285-bd6b9519a951"
-	messages := GetUserConversationById("rrossmiller", convoId)
+	messages := GetUserConversationById("sam_pull", convoId)
 	for _, m := range messages {
 		if uuid.Validate(m.ConversationId.String()) != nil || // not a valid conversation id
 			uuid.Validate(m.MessageId.String()) != nil || // not a valid message id
@@ -50,7 +50,7 @@ func testGetUserConversationById(t *testing.T) {
 		}
 	}
 	convoId = "24176445-9b3a-4883-962d-b763485f2889"
-	messages = GetUserConversationById("rrossmiller", convoId)
+	messages = GetUserConversationById("sam_pull", convoId)
 	if l := len(messages); l > 0 {
 		t.Fatalf("Messages should be empty. Found %d messages", l)
 	}
@@ -80,6 +80,6 @@ func setupTest(t *testing.T) {
 	populateDB()
 
 	t.Cleanup(func() {
-		db=nil
+		db = nil
 	})
 }
