@@ -54,15 +54,19 @@ func GetUserConversations(userId string) []structs.Conversation {
 }
 
 func GetUserConversationById(userId, conversatonId string) []structs.Message {
+	messages := []structs.Message{}
 	mu.RLock()
 	defer mu.RUnlock()
-	// ensure that this is the user's conversation
-	// check conversatonId with resulting convo_ids
-	// GetUserConversations(userId)
 
-	messages := []structs.Message{}
-	db.Where("conversation_id = ?", conversatonId).Find(&messages)
-
+	// ensure that conversatonId is a convo for this user
+	convos := GetUserConversations(userId)
+	for _, c := range convos {
+		// conversaton belongs to this user. get the messages
+		if c.ConversationId.String() == conversatonId {
+			db.Where("conversation_id = ?", conversatonId).Find(&messages)
+			break
+		}
+	}
 	return messages
 }
 

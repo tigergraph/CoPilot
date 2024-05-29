@@ -11,8 +11,12 @@ import (
 // "GET /user/{userId}"
 func GetUserConversations(w http.ResponseWriter, r *http.Request) {
 	userId := r.PathValue("userId")
-	//TODO:
-	// double check that this and auth header match
+	if code, reason, ok := auth(userId, r); !ok {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(code)
+		w.Write(reason)
+		return
+	}
 
 	conversations := db.GetUserConversations(userId)
 	if out, err := json.MarshalIndent(conversations, "", "  "); err == nil {
@@ -27,16 +31,19 @@ func GetUserConversations(w http.ResponseWriter, r *http.Request) {
 func GetConversation(w http.ResponseWriter, r *http.Request) {
 	conversationId := r.PathValue("conversationId")
 	userId, _, ok := r.BasicAuth()
-	fmt.Println(userId)
 	if ok {
 		conversations := db.GetUserConversationById(userId, conversationId)
 		if out, err := json.MarshalIndent(conversations, "", "  "); err == nil {
+			w.Header().Add("Content-Type", "application/json")
 			w.Write([]byte(out))
 		} else {
 			panic(err)
 		}
 	} else {
-		panic("idk") //TODO:
+		reason := []byte(`{"reason":"user is not authorized"}`)
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(401)
+		w.Write(reason)
 	}
 }
 
@@ -51,4 +58,16 @@ func UpdateConversation(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		w.Write([]byte(""))
 	}
+}
+
+func auth(userId string, r *http.Request) (int, []byte, bool) {
+	if usr, _, ok := r.BasicAuth(); !ok {
+		reason := []byte(`{"reason":"user is not authorized"}`)
+		return 401, reason, false
+	} else if userId != usr {
+		reason := []byte(fmt.Sprintf(`{"reason":"Not authorized to retrieve conversations for user %s"}`, userId))
+		return 403, reason, false
+	}
+
+	return 0, nil, true
 }
