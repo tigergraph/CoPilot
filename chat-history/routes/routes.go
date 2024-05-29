@@ -13,7 +13,7 @@ import (
 // "GET /user/{userId}"
 func GetUserConversations(w http.ResponseWriter, r *http.Request) {
 	userId := r.PathValue("userId")
-	if code, reason, ok := auth(userId, r); !ok {
+	if _, code, reason, ok := auth(userId, r); !ok {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(code)
 		w.Write(reason)
@@ -33,7 +33,7 @@ func GetUserConversations(w http.ResponseWriter, r *http.Request) {
 // "GET /conversation/{conversationId}"
 func GetConversation(w http.ResponseWriter, r *http.Request) {
 	conversationId := r.PathValue("conversationId")
-	if userId, _, ok := r.BasicAuth(); ok {
+	if userId, code, reason, ok := auth("", r); ok {
 		conversations := db.GetUserConversationById(userId, conversationId)
 		if out, err := json.MarshalIndent(conversations, "", "  "); err == nil {
 			w.Header().Add("Content-Type", "application/json")
@@ -42,9 +42,8 @@ func GetConversation(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	} else {
-		reason := []byte(`{"reason":"user is not authorized"}`)
 		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(401)
+		w.WriteHeader(code)
 		w.Write(reason)
 	}
 }
@@ -64,7 +63,7 @@ func UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if the conversation trying to be written to belongs to the user
-	if user, _, ok := r.BasicAuth(); ok {
+	if user, code, reason, ok := auth("", r); ok {
 		userConvos := db.GetUserConversations(user)
 		var conversation *structs.Conversation
 		for _, c := range userConvos {
@@ -98,21 +97,21 @@ func UpdateConversation(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(401)
-		reason := []byte(`{"reason":"missing Authorization header"}`)
+		w.WriteHeader(code)
 		w.Write(reason)
 	}
 }
 
 // Basic auth helper
-func auth(userId string, r *http.Request) (int, []byte, bool) {
-	if usr, _, ok := r.BasicAuth(); !ok {
+func auth(userId string, r *http.Request) (string, int, []byte, bool) {
+	usr, _, ok := r.BasicAuth()
+	if !ok {
 		reason := []byte(`{"reason":"missing Authorization header"}`)
-		return 401, reason, false
-	} else if userId != usr {
+		return usr, 401, reason, false
+	} else if userId != "" && userId != usr {
 		reason := []byte(fmt.Sprintf(`{"reason":"%s is noot authorized to retrieve conversations for user %s"}`, usr, userId))
-		return 403, reason, false
+		return usr, 403, reason, false
 	}
 
-	return 0, nil, true
+	return usr, 0, nil, true
 }

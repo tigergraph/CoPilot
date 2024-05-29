@@ -140,6 +140,32 @@ func TestGetConversation_401(t *testing.T) {
 
 }
 
+func TestGetConversation_SplitMessageHistory(t *testing.T) {
+	t.Fatal("todo")
+	// setup
+	setupDB(t, true)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /conversation/{conversationId}", GetConversation)
+
+	// setup request
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/conversation/%s", CONVO_ID), nil)
+	resp := httptest.NewRecorder()
+	auth := basicAuthSetup(USER, PASS)
+	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", auth))
+
+	// call
+	mux.ServeHTTP(resp, req)
+
+	// assert results
+	// body, _ := io.ReadAll(resp.Body)
+	// fmt.Println(string(body))
+	if resp.Code != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Println(string(body))
+		t.Fatalf("Response code should be 200. It is: %v", resp.Code)
+	}
+}
+
 // UpdateConversation
 func TestUpdateConversation_FirstMessage(t *testing.T) {
 	// setup
@@ -285,32 +311,6 @@ func messageEquals(m, msg structs.Message) bool {
 	}
 	return false
 }
-
-// func TestUpdateConversation_SplitConvo(t *testing.T) {
-// 	// setup
-// 	setupDB(t, true)
-// 	mux := http.NewServeMux()
-// 	mux.HandleFunc("POST /conversation/", UpdateConversation)
-//
-// 	// setup request
-// 	// msg:=structs.Message{}
-// 	req := httptest.NewRequest(http.MethodPost, "/conversation/%s", nil)
-// 	resp := httptest.NewRecorder()
-// 	auth := basicAuthSetup(USER, PASS)
-// 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", auth))
-//
-// 	// call
-// 	mux.ServeHTTP(resp, req)
-//
-// 	// assert results
-// 	// body, _ := io.ReadAll(resp.Body)
-// 	// fmt.Println(string(body))
-// 	if resp.Code != 200 {
-// 		body, _ := io.ReadAll(resp.Body)
-// 		fmt.Println(string(body))
-// 		t.Fatalf("Response code should be 200. It is: %v", resp.Code)
-// 	}
-// }
 
 // helpers
 func basicAuthSetup(user, pass string) string {

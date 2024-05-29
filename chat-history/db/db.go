@@ -2,7 +2,6 @@ package db
 
 import (
 	"chat-history/structs"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -38,7 +37,6 @@ func InitDB(dbPath string) {
 	// Create -- for testing only
 	dev := strings.ToLower(os.Getenv("DEV"))
 	if dev == "true" {
-		fmt.Print("\nRUNNING IN DEV MODE\n\n")
 		populateDB()
 	}
 }
