@@ -244,6 +244,9 @@ This line can be changed to support different logging levels. The levels are des
 * **DEBUG_PII**: Finer-grained information that could potentially include PII, such as a user's question, the complete function call (with parameters), and the LLM's natural language response.
 * **NOTSET**: All messages are processed
 
+##### Enable openCypher Query Generation in InquiryAI
+If you would like to enable openCypher query generation in InquiryAI, you can set the `USE_CYPHER` environment variable to `"true"` in the CoPilot service in the docker compose file. By default, this is set to `"false"`. **Note**: openCypher query generation is still in beta and may not work as expected, as well as increases the potential of hallucinated answers due to bad code generation. Use with caution, and only in non-production environments.
+
 ## Using TigerGraph CoPilot
 
 ### TigerGraph Cloud

@@ -1,4 +1,5 @@
 import json
+import os
 import logging
 import traceback
 from typing import List, Union, Annotated
@@ -51,7 +52,7 @@ def retrieve_answer(
     logger.debug(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
-
+    use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 
     # TODO: This needs to be refactored just to use config.py
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
@@ -63,6 +64,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         logger.debug(
@@ -73,6 +75,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
         logger.debug(
@@ -83,6 +86,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         logger.debug(
@@ -93,6 +97,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
         logger.debug(
@@ -103,6 +108,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "groq":
         logger.debug(
@@ -113,6 +119,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
         logger.debug(
@@ -123,6 +130,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
         logger.debug(
@@ -133,6 +141,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     else:
         LogWriter.error(

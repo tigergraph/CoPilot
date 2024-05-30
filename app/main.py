@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(routers.root_router, prefix=PATH_PREFIX)
 app.include_router(routers.inquiryai_router, prefix=PATH_PREFIX)
 app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
+app.include_router(routers.queryai_router, prefix=PATH_PREFIX)
 
 
 excluded_metrics_paths = ("/docs", "/openapi.json", "/metrics")

@@ -5,7 +5,7 @@ import logging
 
 from pyTigerGraph import TigerGraphConnection
 
-from app.tools import GenerateFunction, MapQuestionToSchema
+from app.tools import GenerateFunction, MapQuestionToSchema, GenerateCypher
 from app.embeddings.embedding_services import EmbeddingModel
 from app.embeddings.base_embedding_store import EmbeddingStore
 
@@ -45,6 +45,7 @@ class TigerGraphAgent:
         db_connection: TigerGraphConnectionProxy,
         embedding_model: EmbeddingModel,
         embedding_store: EmbeddingStore,
+        use_cypher: bool = False
     ):
         self.conn = db_connection
 
@@ -64,9 +65,15 @@ class TigerGraphAgent:
             embedding_store,
         )
 
-        self.agent = TigerGraphAgentGraph(
-            self.llm, self.conn, self.embedding_model, self.embedding_store, self.mq2s, self.gen_func
-        ).create_graph()
+        if use_cypher:
+            self.cypher_tool = GenerateCypher(self.conn, self.llm)
+            self.agent = TigerGraphAgentGraph(
+                self.llm, self.conn, self.embedding_model, self.embedding_store, self.mq2s, self.gen_func, self.cypher_tool
+            ).create_graph()
+        else:
+            self.agent = TigerGraphAgentGraph(
+                self.llm, self.conn, self.embedding_model, self.embedding_store, self.mq2s, self.gen_func
+            ).create_graph()
 
         
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
