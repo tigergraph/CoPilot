@@ -152,7 +152,12 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentGenerator(self.llm_provider)
         logger.debug_pii(f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}")
-        answer = step.generate_answer(state['question'], state["context"])
+        if state["lookup_source"] == "supportai":
+            answer = step.generate_answer(state['question'], state["context"])
+        elif state["lookup_source"] == "inquiryai":
+            answer = step.generate_answer(state['question'], state["context"]["result"])
+        elif state["lookup_source"] == "cypher":
+            answer = step.generate_answer(state['question'], state["context"]["answer"])
         logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer.generated_answer}")
 
         try:
