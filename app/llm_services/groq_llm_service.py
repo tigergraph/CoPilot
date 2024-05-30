@@ -1,4 +1,5 @@
 from app.llm_services import LLM_Model
+import os
 import logging
 from app.log import req_id_cv
 from app.tools.logwriter import LogWriter
@@ -6,19 +7,20 @@ from app.tools.logwriter import LogWriter
 logger = logging.getLogger(__name__)
 
 
-class GoogleVertexAI(LLM_Model):
+class Groq(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
-        from langchain_community.llms import VertexAI
+        for auth_detail in config["authentication_configuration"].keys():
+            os.environ[auth_detail] = config["authentication_configuration"][
+                auth_detail
+            ]
+        from langchain_groq import ChatGroq
 
         model_name = config["llm_model"]
-        self.llm = VertexAI(
-            model_name=model_name, max_output_tokens=1000, **config["model_kwargs"]
-        )
-
+        self.llm = ChatGroq(temperature=0, model_name=model_name)
         self.prompt_path = config["prompt_path"]
         LogWriter.info(
-            f"request_id={req_id_cv.get()} instantiated GoogleVertexAI model_name={model_name}"
+            f"request_id={req_id_cv.get()} instantiated OpenAI model_name={model_name}"
         )
 
     @property

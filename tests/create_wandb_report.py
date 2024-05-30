@@ -42,6 +42,24 @@ acc_llm_service_bar_plot = wr.PanelGrid(
     ],
 )
 
+rt_llm_service_bar_plot = wr.PanelGrid(
+    runsets=[
+        wr.Runset(
+            project="CoPilot", name="LLM Service Grouping", groupby=["llm_service"]
+        ).set_filters_with_python_expr(python_filter)
+    ],
+    panels=[
+        wr.BarPlot(
+            title="Average Response Time by LLM Service",
+            metrics=["Average Response Time (seconds)"],
+            groupby="llm_service",
+            groupby_aggfunc="mean",
+            groupby_rangefunc="stddev",
+            layout={"w": 24, "h": 16},  # change the layout!
+        )
+    ],
+)
+
 acc_question_type_bar_plot = wr.PanelGrid(
     runsets=[
         wr.Runset(
@@ -60,6 +78,24 @@ acc_question_type_bar_plot = wr.PanelGrid(
     ],
 )
 
+rt_question_type_bar_plot = wr.PanelGrid(
+    runsets=[
+        wr.Runset(
+            project="CoPilot", name="Question Type Grouping", groupby=["question_type"]
+        ).set_filters_with_python_expr(python_filter)
+    ],
+    panels=[
+        wr.BarPlot(
+            title="Average Response Time by Question Type",
+            metrics=["Average Response Time (seconds)"],
+            groupby="question_type",
+            groupby_aggfunc="mean",
+            groupby_rangefunc="stddev",
+            layout={"w": 24, "h": 16},  # change the layout!
+        )
+    ],
+)
+
 
 acc_parallel_cords = wr.PanelGrid(
     runsets=[wr.Runset(project="CoPilot").set_filters_with_python_expr(python_filter)],
@@ -70,6 +106,21 @@ acc_parallel_cords = wr.PanelGrid(
                 wr.PCColumn(metric="c::dataset"),
                 wr.PCColumn(metric="c::question_type"),
                 wr.PCColumn(metric="Accuracy"),
+            ],
+            layout={"w": 24, "h": 16},  # change the layout!
+        )
+    ],
+)
+
+rt_parallel_cords = wr.PanelGrid(
+    runsets=[wr.Runset(project="CoPilot").set_filters_with_python_expr(python_filter)],
+    panels=[
+        wr.ParallelCoordinatesPlot(
+            columns=[
+                wr.PCColumn(metric="c::llm_service"),
+                wr.PCColumn(metric="c::dataset"),
+                wr.PCColumn(metric="c::question_type"),
+                wr.PCColumn(metric="Average Response Time (seconds)"),
             ],
             layout={"w": 24, "h": 16},  # change the layout!
         )
@@ -140,8 +191,11 @@ table = wr.PanelGrid(
 
 report.blocks = [
     acc_llm_service_bar_plot,
+    rt_llm_service_bar_plot,
     acc_question_type_bar_plot,
+    rt_question_type_bar_plot,
     acc_parallel_cords,
+    rt_parallel_cords,
     table,
     nrp_llm_service_bar_plot,
     nrp_question_type_bar_plot,
