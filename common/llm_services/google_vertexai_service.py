@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class GoogleVertexAI(LLM_Model):
     def __init__(self, config):
         super().__init__(config)
-        from langchain.llms import VertexAI
+        from langchain_community.llms import VertexAI
 
         model_name = config["llm_model"]
         self.llm = VertexAI(

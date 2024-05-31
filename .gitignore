@@ -24,3 +24,4 @@ eventual-consistency-service/tests/logs/*
 copilot/app/logs/*
 copilot/logs/*
 copilot/tests/logs/*
+volumes
