@@ -140,15 +140,89 @@ func TestGetConversation_401(t *testing.T) {
 
 }
 
-func TestGetConversation_SplitMessageHistory(t *testing.T) {
-	t.Fatal("todo")
+func TestMergeMessageHistory(t *testing.T) {
 	// setup
-	setupDB(t, true)
+	splitConvo := createSplitConvo()
+	setupDB(t, false)
+	db.NewConversation(USER, "split convo", splitConvo[0])
+	for _, m := range splitConvo[1:] {
+		_, err := db.UpdateConversationById(&m)
+		if err != nil {
+			panic(err)
+		}
+	}
+	splitConvo = db.GetUserConversationById("sam_pull", CONVO_ID)
+	merged := mergeConversationHistory(splitConvo)
+	slices.SortFunc(merged, func(a, b structs.Message) int {
+		if a.ID < b.ID {
+			return -1
+		} else if a.ID > b.ID {
+			return 1
+		}
+		return 0
+	})
+
+	// assert that merged history is same as known convo path
+	correctConvoIDs := []uint{1, 2, 4, 7}
+	for i, m := range merged {
+		if correctConvoIDs[i] != m.ID {
+			t.Fatalf("The merged conversation is not correct. ID:%v != ID:%v", correctConvoIDs[i], m.ID)
+		}
+	}
+}
+
+func TestGetConversation_SplitMessageHistory(t *testing.T) {
+	// setup
+	splitConvo := createSplitConvo()
+	setupDB(t, false)
+	db.NewConversation(USER, "split convo", splitConvo[0])
+	for _, m := range splitConvo[1:] {
+		_, err := db.UpdateConversationById(&m)
+		if err != nil {
+			panic(err)
+		}
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /conversation/{conversationId}", GetConversation)
 
 	// setup request
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/conversation/%s", CONVO_ID), nil)
+	resp := httptest.NewRecorder()
+	auth := basicAuthSetup(USER, PASS)
+	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", auth))
+
+	// call
+	mux.ServeHTTP(resp, req)
+
+	// assert results
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
+	if resp.Code != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Println(string(body))
+		t.Fatalf("Response code should be 200. It is: %v", resp.Code)
+	}
+}
+
+func TestGetConversation_SplitMessageHistory_Merged(t *testing.T) {
+	// setup
+	splitConvo := createSplitConvo()
+	setupDB(t, false)
+	db.NewConversation(USER, "split convo", splitConvo[0])
+	for _, m := range splitConvo[1:] {
+		_, err := db.UpdateConversationById(&m)
+		if err != nil {
+			panic(err)
+		}
+	}
+	splitConvo = db.GetUserConversationById("sam_pull", CONVO_ID)
+	merged := mergeConversationHistory(splitConvo)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /conversation/{conversationId}", GetConversation)
+
+	// setup request
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/conversation/%s?merge=true", CONVO_ID), nil)
 	resp := httptest.NewRecorder()
 	auth := basicAuthSetup(USER, PASS)
 	req.Header.Add("Authorization", fmt.Sprintf("Basic %s", auth))
@@ -163,6 +237,13 @@ func TestGetConversation_SplitMessageHistory(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		fmt.Println(string(body))
 		t.Fatalf("Response code should be 200. It is: %v", resp.Code)
+	}
+	// assert that merged history is same as known convo path
+	correctConvoIDs := []uint{1, 2, 4, 7}
+	for i, m := range merged {
+		if correctConvoIDs[i] != m.ID {
+			t.Fatalf("The merged conversation is not correct. ID:%v != ID:%v", correctConvoIDs[i], m.ID)
+		}
 	}
 }
 
@@ -228,7 +309,6 @@ func TestUpdateConversation_nthMessage(t *testing.T) {
 	// get last message in convo
 	messages := db.GetUserConversationById("sam_pull", CONVO_ID)
 	slices.SortFunc(messages, func(a, b structs.Message) int {
-		// cmp(a, b) return a negative number when a < b, a positive number when a > b and zero when a == b.
 		if a.UpdatedAt.UnixMilli() < b.UpdatedAt.UnixMilli() {
 			return -1
 		} else if a.UpdatedAt.UnixMilli() > b.UpdatedAt.UnixMilli() {
@@ -240,7 +320,7 @@ func TestUpdateConversation_nthMessage(t *testing.T) {
 	msg := structs.Message{
 		ConversationId: uuid.MustParse(CONVO_ID),
 		MessageId:      uuid.New(),
-		ParentId:       &messages[len(messages)-1].MessageId,
+		ParentId:       &messages[len(messages)-1].MessageId, // set the latest message as this message's parent
 		ModelName:      "GPT-4o",
 		Content:        "Hello, how may I help you?",
 		Role:           structs.UserRole,
@@ -325,4 +405,114 @@ func setupDB(t *testing.T, populateDB bool) {
 		os.Setenv("DEV", "")
 	}
 	db.InitDB(pth)
+}
+
+func createSplitConvo() []structs.Message {
+	/*
+					 3
+			   - 1 2 3
+		x - 0 ↕︎
+			   - 1 2
+	*/
+	msg := structs.Message{
+		ConversationId: uuid.MustParse(CONVO_ID),
+		MessageId:      uuid.New(),
+		ParentId:       nil,
+		ModelName:      "GPT-4o",
+		Content:        "message 0",
+		Role:           structs.UserRole,
+		Feedback:       structs.NoFeedback,
+		Comment:        "",
+	}
+	msg.ID = 0
+	convo := []structs.Message{msg}
+	tmp := msg.MessageId.String()
+	// branch 1
+	for i := 1; i < 4; i++ {
+		parent := uuid.MustParse(tmp)
+		msg = structs.Message{
+			ConversationId: uuid.MustParse(CONVO_ID),
+			MessageId:      uuid.New(),
+			ParentId:       &parent,
+			ModelName:      "GPT-4o",
+			Content:        fmt.Sprintf("message %d", i),
+			Role:           structs.UserRole,
+			Feedback:       structs.NoFeedback,
+			Comment:        "branch 1",
+		}
+		msg.ID = uint(i)
+		convo = append(convo, msg)
+		tmp = msg.MessageId.String()
+	}
+
+	// branch 3 (off of branch 1)
+	parent := uuid.MustParse(convo[len(convo)-2].MessageId.String())
+	msg = structs.Message{
+		ConversationId: uuid.MustParse(CONVO_ID),
+		MessageId:      uuid.New(),
+		ParentId:       &parent,
+		ModelName:      "GPT-4o",
+		Content:        fmt.Sprintf("message %d", 3),
+		Role:           structs.UserRole,
+		Feedback:       structs.NoFeedback,
+		Comment:        "branch 3 latest message",
+	}
+	msg.ID = uint(4)
+	convo = append(convo, msg)
+
+	// branch 2
+	tmp = convo[0].MessageId.String()
+	for i := 1; i < 3; i++ {
+		parent := uuid.MustParse(tmp)
+		msg = structs.Message{
+			ConversationId: uuid.MustParse(CONVO_ID),
+			MessageId:      uuid.New(),
+			ParentId:       &parent,
+			ModelName:      "GPT-4o",
+			Content:        fmt.Sprintf("message %d", i),
+			Role:           structs.UserRole,
+			Feedback:       structs.NoFeedback,
+			Comment:        "branch 2",
+		}
+		msg.ID = uint(i)
+		convo = append(convo, msg)
+		tmp = msg.MessageId.String()
+	}
+
+	slices.SortFunc(convo, func(a, b structs.Message) int {
+		if a.ID < b.ID {
+			return -1
+		} else if a.ID > b.ID {
+			return 1
+		}
+		return 0
+	})
+
+	for i, m := range convo {
+		m.Model = structs.Model{} // reset db metadata info
+		convo[i] = m
+	}
+	return convo
+}
+
+func PrintMsgTree(convo []structs.Message) {
+	adjList := map[string][]string{}
+	for _, c := range convo {
+		if c.ParentId == nil {
+			continue
+		}
+		parent := c.ParentId.String()
+
+		// if the parent exists in the map, append c, else create
+		if v, prs := adjList[parent]; prs {
+			adjList[parent] = append(v, c.MessageId.String())
+		} else {
+			adjList[parent] = []string{c.MessageId.String()}
+		}
+	}
+
+	for k, v := range adjList {
+		fmt.Println(k, v)
+	}
+
 }

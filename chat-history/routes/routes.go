@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 // Get all of the conversations for a user
@@ -30,12 +32,16 @@ func GetUserConversations(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get the contents of a conversation (list of messages)
-// "GET /conversation/{conversationId}"
+// "GET /conversation/{conversationId}?merge=bool"
 func GetConversation(w http.ResponseWriter, r *http.Request) {
 	conversationId := r.PathValue("conversationId")
+	merge := strings.ToLower(r.URL.Query().Get("merge")) == "true"
 	if userId, code, reason, ok := auth("", r); ok {
-		conversations := db.GetUserConversationById(userId, conversationId)
-		if out, err := json.MarshalIndent(conversations, "", "  "); err == nil {
+		conversation := db.GetUserConversationById(userId, conversationId)
+		if merge {
+			conversation = mergeConversationHistory(conversation)
+		}
+		if out, err := json.MarshalIndent(conversation, "", "  "); err == nil {
 			w.Header().Add("Content-Type", "application/json")
 			w.Write([]byte(out))
 		} else {
@@ -46,6 +52,39 @@ func GetConversation(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(code)
 		w.Write(reason)
 	}
+}
+
+// Returns a single branch of a conversation's history. The branch with the most recent message is always returned
+func mergeConversationHistory(convo []structs.Message) []structs.Message {
+	// TODO: report broken history (multiple nils) & cycle detection
+	lookup := map[string]*structs.Message{} // store the parent of any given message, or nil if it's the first message
+	var latest *structs.Message
+	for _, m := range convo {
+		lookup[m.MessageId.String()] = &m
+		// if m is more recent than latest
+		if latest == nil || latest.UpdatedAt.UnixMilli() < m.UpdatedAt.UnixMilli() {
+			latest = &m
+		}
+	}
+
+	merged := []structs.Message{}
+	for latest != nil {
+		merged = append(merged, *latest)
+		if latest.ParentId == nil {
+			break
+		}
+		latest = lookup[latest.ParentId.String()]
+	}
+
+	slices.SortFunc(merged, func(a, b structs.Message) int {
+		if a.ID < b.ID {
+			return -1
+		} else if a.ID > b.ID {
+			return 1
+		}
+		return 0
+	})
+	return merged
 }
 
 // Update the contents of a conversation (i.e., add a message, or update it's feedback)

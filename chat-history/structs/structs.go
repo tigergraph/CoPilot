@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,6 +53,28 @@ type Message struct {
 	Role           MessagengerRole `json:"role"`
 	Feedback       Feedback        `json:"feedback"`
 	Comment        string          `json:"comment"`
+}
+
+func (m Message) String() string {
+	// return fmt.Sprintf("ID-%v", m.ID)
+	return fmt.Sprintf(`
+	ID             %v
+	UpdateTS       %v
+	ConversationId %v
+	MessageId      %v
+	ParentId       %v
+		`,
+		m.ID,m.UpdatedAt, m.ConversationId, m.MessageId, m.ParentId,)
+	return fmt.Sprintf(`
+	ID             %v
+	ConversationId %v
+	MessageId      %v
+	ParentId       %v
+	ModelName      %v
+	Content        %v
+	Role           %v
+	Feedback       %v
+	Comment        %v`, m.ID, m.ConversationId, m.MessageId, m.ParentId, m.ModelName, m.Content, m.Role, m.Feedback, m.Comment)
 }
 
 type User struct {
