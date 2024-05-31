@@ -1,9 +1,9 @@
 from langchain.prompts import PromptTemplate
 from langchain import hub
 from langchain_core.output_parsers import JsonOutputParser
-from app.tools.logwriter import LogWriter
+from common.logs.logwriter import LogWriter
 import logging
-from app.log import req_id_cv
+from common.logs.log import req_id_cv
 
 logger = logging.getLogger(__name__)
 

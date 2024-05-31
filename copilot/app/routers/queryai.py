@@ -8,8 +8,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.security.http import HTTPBase
 
 from app.agent import TigerGraphAgent
-from app.config import embedding_service, embedding_store, llm_config, session_handler
-from app.llm_services import (
+from common.config import embedding_service, embedding_store, llm_config, session_handler
+from common.llm_services import (
     AWS_SageMaker_Endpoint,
     AWSBedrock,
     AzureOpenAI,
@@ -19,9 +19,9 @@ from app.llm_services import (
     Ollama,
     HuggingFaceEndpoint
 )
-from app.log import req_id_cv
-from app.metrics.prometheus_metrics import metrics as pmetrics
-from app.py_schemas.schemas import (
+from common.logs.log import req_id_cv
+from common.metrics.prometheus_metrics import metrics as pmetrics
+from common.py_schemas.schemas import (
     CoPilotResponse,
     GSQLQueryInfo,
     GSQLQueryList,
@@ -29,7 +29,7 @@ from app.py_schemas.schemas import (
     QueryDeleteRequest,
     QueryUpsertRequest,
 )
-from app.tools.logwriter import LogWriter
+from common.logs.logwriter import LogWriter
 from app.tools.validation_utils import MapQuestionToSchemaException
 
 logger = logging.getLogger(__name__)

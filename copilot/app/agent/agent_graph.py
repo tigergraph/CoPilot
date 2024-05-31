@@ -11,11 +11,11 @@ from app.agent.agent_rewrite import TigerGraphAgentRewriter
 from app.tools import MapQuestionToSchemaException
 from app.supportai.retrievers import HNSWOverlapRetriever
 
-from app.py_schemas import (MapQuestionToSchemaResponse,
+from common.py_schemas import (MapQuestionToSchemaResponse,
                             CoPilotResponse)
 
 import logging
-from app.log import req_id_cv
+from common.logs.log import req_id_cv
 
 logger = logging.getLogger(__name__)
 
