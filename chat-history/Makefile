@@ -4,12 +4,13 @@ build:
 test:
 	go test ./... 
 
-t-merged:
-	go clean -testcache
-	go test ./routes -v -run ".*_Merged.*"
+# t:
+# 	go clean -testcache
+# 	# go test ./routes -v -run ".*_Merged.*"
+# 	go test ./db -v -run ".*Parallel.*"
 
 clean:
-	-rm test.db chat-history
+	-rm chats.db chat-history logs.jsonl db.log
 
 run: clean test build
 	clear

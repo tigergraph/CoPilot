@@ -146,7 +146,7 @@ func TestMergeMessageHistory(t *testing.T) {
 	setupDB(t, false)
 	db.NewConversation(USER, "split convo", splitConvo[0])
 	for _, m := range splitConvo[1:] {
-		_, err := db.UpdateConversationById(&m)
+		_, err := db.UpdateConversationById(m)
 		if err != nil {
 			panic(err)
 		}
@@ -177,7 +177,7 @@ func TestGetConversation_SplitMessageHistory(t *testing.T) {
 	setupDB(t, false)
 	db.NewConversation(USER, "split convo", splitConvo[0])
 	for _, m := range splitConvo[1:] {
-		_, err := db.UpdateConversationById(&m)
+		_, err := db.UpdateConversationById(m)
 		if err != nil {
 			panic(err)
 		}
@@ -210,7 +210,7 @@ func TestGetConversation_SplitMessageHistory_Merged(t *testing.T) {
 	setupDB(t, false)
 	db.NewConversation(USER, "split convo", splitConvo[0])
 	for _, m := range splitConvo[1:] {
-		_, err := db.UpdateConversationById(&m)
+		_, err := db.UpdateConversationById(m)
 		if err != nil {
 			panic(err)
 		}
@@ -238,9 +238,9 @@ func TestGetConversation_SplitMessageHistory_Merged(t *testing.T) {
 	}
 	// assert that merged history is same as known convo path
 	var merged []structs.Message
-	err  := json.Unmarshal(body, &merged)
+	err := json.Unmarshal(body, &merged)
 	if err != nil {
-			panic(err)
+		panic(err)
 	}
 	correctConvoIDs := []uint{1, 2, 4, 7}
 	for i, m := range merged {
@@ -407,12 +407,13 @@ func setupDB(t *testing.T, populateDB bool) {
 	} else {
 		os.Setenv("DEV", "")
 	}
-	db.InitDB(pth)
+	log := fmt.Sprintf("%s/test.log", tmp)
+	db.InitDB(pth, log)
 }
 
 func createSplitConvo() []structs.Message {
 	/*
-					 3
+			       - 3
 			   - 1 2 3
 		x - 0 ↕︎
 			   - 1 2

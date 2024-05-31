@@ -21,21 +21,21 @@ func ChainMiddleware(handler http.Handler, middle ...Middleware) http.Handler {
 }
 
 // logger
-type logger struct {
+type FileLogger struct {
 	f *os.File
 }
 
 // logger init
-func initLogger(fname string) logger {
+func InitLogger(fname string) FileLogger {
 	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		panic(err)
 	}
-	return logger{f}
+	return FileLogger{f}
 }
 
 // impl io.Writer interface
-func (l logger) Write(b []byte) (int, error) {
+func (l FileLogger) Write(b []byte) (int, error) {
 	n, err := l.f.Write(b)
 	fmt.Println(string(b))
 	return n, err
@@ -44,15 +44,7 @@ func (l logger) Write(b []byte) (int, error) {
 // init logger middleware
 func Logger() func(http.Handler) http.Handler {
 	fname := "logs.jsonl"
-	// TODO: don't use after dev
-	if _, e := os.Stat(fname); e == nil {
-		err := os.Remove(fname)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	l := initLogger(fname)
+	l := InitLogger(fname)
 
 	logger := httplog.NewLogger("httplog", httplog.Options{
 		JSON:             true,

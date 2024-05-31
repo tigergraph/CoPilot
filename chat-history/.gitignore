@@ -1,3 +1,4 @@
 chat-history
 *.db
+*.log
 *.json*

@@ -10,8 +10,8 @@ import (
 
 func main() {
 	//init
-	// TODO: read path from config
-	db.InitDB("test.db")
+	// config := config.LoadConfig()
+	db.InitDB("chats.db", "db.log")
 
 	// make router
 	router := http.NewServeMux()

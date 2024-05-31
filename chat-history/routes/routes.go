@@ -39,7 +39,6 @@ func GetConversation(w http.ResponseWriter, r *http.Request) {
 	if userId, code, reason, ok := auth("", r); ok {
 		conversation := db.GetUserConversationById(userId, conversationId)
 		if merge {
-			fmt.Println(">>",conversation)
 			conversation = mergeConversationHistory(conversation)
 		}
 		if out, err := json.MarshalIndent(conversation, "", "  "); err == nil {
@@ -109,7 +108,7 @@ func UpdateConversation(w http.ResponseWriter, r *http.Request) {
 		for _, c := range userConvos {
 			if c.ConversationId == message.ConversationId {
 				// write message to conversation
-				conversation, err = db.UpdateConversationById(&message)
+				conversation, err = db.UpdateConversationById(message)
 				if err != nil {
 					panic(err)
 				}
@@ -149,7 +148,7 @@ func auth(userId string, r *http.Request) (string, int, []byte, bool) {
 		reason := []byte(`{"reason":"missing Authorization header"}`)
 		return usr, 401, reason, false
 	} else if userId != "" && userId != usr {
-		reason := []byte(fmt.Sprintf(`{"reason":"%s is noot authorized to retrieve conversations for user %s"}`, usr, userId))
+		reason := []byte(fmt.Sprintf(`{"reason":"%s is not authorized to retrieve conversations for user %s"}`, usr, userId))
 		return usr, 403, reason, false
 	}
 

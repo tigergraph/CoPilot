@@ -1,7 +1,9 @@
 package db
 
 import (
+	"chat-history/middleware"
 	"chat-history/structs"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -10,6 +12,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
@@ -17,16 +20,28 @@ var (
 	mu = sync.RWMutex{}
 )
 
-// Initialize the DB
-func InitDB(dbPath string) {
-	// TODO:
-	//  log db stuff to file, too (in gorm config)
+func createLogger(logPath string) logger.Interface {
+	fLogger := middleware.InitLogger(logPath)
+	return logger.New(
+		log.New(fLogger, "\n", log.LstdFlags),
+		logger.Config{Colorful: false, LogLevel: logger.Info},
+	)
+}
 
-	chatHistDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+// Initialize the DB
+func InitDB(dbPath, logPath string) {
+	dev := strings.ToLower(os.Getenv("DEV")) == "true"
+	var chatHistDB *gorm.DB
+	var err error
+	if dev {
+		chatHistDB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: createLogger(logPath)})
+
+	} else {
+		chatHistDB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	}
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db = nil
 	db = chatHistDB
 
 	// Migrate the schema
@@ -34,9 +49,9 @@ func InitDB(dbPath string) {
 	if err != nil {
 		panic(err)
 	}
+
 	// Create -- for testing only
-	dev := strings.ToLower(os.Getenv("DEV"))
-	if dev == "true" {
+	if dev {
 		populateDB()
 	}
 }
@@ -72,24 +87,32 @@ func NewConversation(userId, name string, message structs.Message) (*structs.Con
 	mu.Lock()
 	defer mu.Unlock()
 
-	convo := &structs.Conversation{UserId: userId, ConversationId: message.ConversationId, Name: name}
-	db.Create(&convo)
-	db.Create(&message)
+	convo := structs.Conversation{UserId: userId, ConversationId: message.ConversationId, Name: name}
+	tx := db.Create(&convo)
+	if err := tx.Error; err != nil {
+		return nil, err
+	}
+	tx = db.Create(&message)
+	if err := tx.Error; err != nil {
+		return nil, err
+	}
 
-	return convo, nil
+	return &convo, nil
 }
 
-func UpdateConversationById(message *structs.Message) (*structs.Conversation, error) {
+func UpdateConversationById(message structs.Message) (*structs.Conversation, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if result := db.Create(message); result.Error != nil {
+	if result := db.Create(&message); result.Error != nil {
 		return nil, result.Error
-
 	}
 	convo := structs.Conversation{}
-	db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
+	tx := db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
 
+	if err := tx.Error; err != nil {
+		return nil, err
+	}
 	return &convo, nil
 }
 

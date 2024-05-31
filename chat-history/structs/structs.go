@@ -56,7 +56,7 @@ type Message struct {
 }
 
 func (m Message) String() string {
-	return fmt.Sprintf("ID-%v", m.ID)
+	// return fmt.Sprintf("ID-%v", m.ID)
 	return fmt.Sprintf(`
 	ID             %v
 	UpdateTS       %v
