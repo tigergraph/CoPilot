@@ -39,6 +39,7 @@ func GetConversation(w http.ResponseWriter, r *http.Request) {
 	if userId, code, reason, ok := auth("", r); ok {
 		conversation := db.GetUserConversationById(userId, conversationId)
 		if merge {
+			fmt.Println(">>",conversation)
 			conversation = mergeConversationHistory(conversation)
 		}
 		if out, err := json.MarshalIndent(conversation, "", "  "); err == nil {

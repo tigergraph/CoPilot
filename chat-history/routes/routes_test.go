@@ -215,8 +215,6 @@ func TestGetConversation_SplitMessageHistory_Merged(t *testing.T) {
 			panic(err)
 		}
 	}
-	splitConvo = db.GetUserConversationById("sam_pull", CONVO_ID)
-	merged := mergeConversationHistory(splitConvo)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /conversation/{conversationId}", GetConversation)
@@ -231,14 +229,19 @@ func TestGetConversation_SplitMessageHistory_Merged(t *testing.T) {
 	mux.ServeHTTP(resp, req)
 
 	// assert results
-	// body, _ := io.ReadAll(resp.Body)
-	// fmt.Println(string(body))
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(body))
 	if resp.Code != 200 {
 		body, _ := io.ReadAll(resp.Body)
 		fmt.Println(string(body))
 		t.Fatalf("Response code should be 200. It is: %v", resp.Code)
 	}
 	// assert that merged history is same as known convo path
+	var merged []structs.Message
+	err  := json.Unmarshal(body, &merged)
+	if err != nil {
+			panic(err)
+	}
 	correctConvoIDs := []uint{1, 2, 4, 7}
 	for i, m := range merged {
 		if correctConvoIDs[i] != m.ID {
