@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chat-history/config"
 	"chat-history/db"
 	"chat-history/middleware"
 	"chat-history/routes"
@@ -11,9 +12,11 @@ import (
 )
 
 func main() {
-	//init
-	// config := config.LoadConfig()
-	db.InitDB("chats.db", "db.log")
+	config, err := config.LoadConfig("config.json")
+	if err != nil {
+		panic(err)
+	}
+	db.InitDB(config.DbPath, config.DbLogPath)
 
 	// make router
 	router := http.NewServeMux()

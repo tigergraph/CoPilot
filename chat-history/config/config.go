@@ -11,6 +11,9 @@ type LLMConfig struct {
 
 type DbConfig struct {
 	DbHostname string `json:"hostname"`
+	DbPath string `json:"dbPath"`
+	DbLogPath string `json:"dbLogPath"`
+	LogPath string `json:"logPath"`
 	// Username string `json:"username"`
 	// Password string `json:"password"`
 	// GetToken string `json:"getToken"`

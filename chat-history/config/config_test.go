@@ -13,7 +13,11 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(cfg.DbHostname) == 0 || cfg.DbHostname != "http://localhost:14240" {
+	if len(cfg.DbHostname) == 0 ||
+		cfg.DbHostname != "http://localhost:14240" ||
+		cfg.DbPath != "chats.db" ||
+		cfg.DbLogPath != "db.log" ||
+		cfg.LogPath != "requestLogs.jsonl" {
 		t.Fatalf("hostname is blank, %q", cfg.DbHostname)
 	}
 }
@@ -22,8 +26,12 @@ func setup(t *testing.T) string {
 	tmp := t.TempDir()
 	pth := fmt.Sprintf("%s/%s", tmp, "config.json")
 	dat := `
+
 {
-	"hostname": "http://localhost:14240",
+    "hostname": "http://localhost:14240",
+    "dbPath": "chats.db",
+    "dbLogPath": "db.log",
+    "logPath": "requestLogs.jsonl",
     "username": "tigergraph",
     "password": "tigergraph",
     "getToken": false,
