@@ -198,9 +198,11 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 If you are running TigerGraph outside of docker compose, change the hostname to match its address (`http://localhost`, `https://your-TgCloud-hostname`). Once authentication is enabled in TigerGraph, set getToken to `true`.
 
 You can also disable the consistency_checker, which reconciles Milvus and TigerGraph data, within this config.  It is true by default
-```json
+```jsonc
 {
     "hostname": "http://tigergraph",
+    "restppPort": "9000", 
+    "gsPort": "14240",
     "getToken": false,
     "default_timeout": 300,
     "default_mem_threshold": 5000,

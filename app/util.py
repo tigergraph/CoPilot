@@ -2,19 +2,12 @@ import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from requests import HTTPError
 
-from app.config import (
-    db_config,
-    embedding_service,
-    get_llm_service,
-    llm_config,
-    milvus_config,
-    security,
-    doc_processing_config,
-)
+from app.config import (db_config, doc_processing_config, embedding_service,
+                        get_llm_service, llm_config, milvus_config, security)
 from app.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from app.metrics.tg_proxy import TigerGraphConnectionProxy
 from app.sync.eventual_consistency_checker import EventualConsistencyChecker
@@ -30,10 +23,12 @@ def get_db_connection_id_token(
 ) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
+        restppPort=db_config.get("restppPort", "9000"),
+        gsPort=db_config.get("gsPort", "14240"),
         graphname=graphname,
         apiToken=credentials,
         tgCloud=True,
-        sslPort=14240,
+        sslPort=db_config.get("gsPort", "14240"),
     )
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
@@ -58,9 +53,11 @@ def get_db_connection_pwd(
 ) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=db_config["hostname"],
+        restppPort=db_config.get("restppPort", "9000"),
+        gsPort=db_config.get("gsPort", "14240"),
         username=credentials.username,
         password=credentials.password,
-        graphname=graphname
+        graphname=graphname,
     )
 
     if db_config["getToken"]:
@@ -81,10 +78,12 @@ def get_db_connection_pwd(
 
         conn = TigerGraphConnection(
             host=db_config["hostname"],
+            restppPort=db_config.get("restppPort", "9000"),
+            gsPort=db_config.get("gsPort", "14240"),
             username=credentials.username,
             password=credentials.password,
             graphname=graphname,
-            apiToken=apiToken
+            apiToken=apiToken,
         )
 
     conn.customizeHeader(
@@ -141,7 +140,8 @@ def get_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionP
                 )
             )
         elif doc_processing_config.get("chunker") == "character":
-            from app.supportai.chunkers.character_chunker import CharacterChunker
+            from app.supportai.chunkers.character_chunker import \
+                CharacterChunker
 
             chunker = CharacterChunker(
                 chunk_size=doc_processing_config["chunker_config"].get(
