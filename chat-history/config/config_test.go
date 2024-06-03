@@ -13,12 +13,11 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(cfg.DbHostname) == 0 ||
-		cfg.DbHostname != "http://localhost:14240" ||
+	if cfg.Port != "8000" ||
 		cfg.DbPath != "chats.db" ||
 		cfg.DbLogPath != "db.log" ||
 		cfg.LogPath != "requestLogs.jsonl" {
-		t.Fatalf("hostname is blank, %q", cfg.DbHostname)
+		t.Fatalf("config is wrong, %v", cfg)
 	}
 }
 
@@ -28,6 +27,7 @@ func setup(t *testing.T) string {
 	dat := `
 
 {
+    "apiPort":"8000",
     "hostname": "http://localhost:14240",
     "dbPath": "chats.db",
     "dbLogPath": "db.log",

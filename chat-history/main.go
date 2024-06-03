@@ -34,9 +34,9 @@ func main() {
 	dev := strings.ToLower(os.Getenv("DEV")) == "true"
 	var port string
 	if dev {
-		port = "localhost:8000"
+		port = fmt.Sprintf("localhost:%s", config.Port)
 	} else {
-		port = ":8000"
+		port = fmt.Sprintf(":%s", config.Port)
 	}
 
 	handler := middleware.ChainMiddleware(router,
