@@ -43,7 +43,7 @@ def retrieve_answer(
     graphname,
     query: NaturalLanguageQuery,
     conn: Request,
-    credentials: Annotated[HTTPBase, Depends(security)]
+    # credentials: Annotated[HTTPBase, Depends(security)]
 ) -> CoPilotResponse:
     conn = conn.state.conn
     logger.debug_pii(
@@ -496,7 +496,8 @@ def chat(request: Request):
 
 
 @router.websocket("/{graphname}/ws")
-async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
+async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str):
+                            #  , credentials: Annotated[HTTPBase, Depends(security)]):
     session = session_handler.get_session(session_id)
     await websocket.accept()
     while True:
