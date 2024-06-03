@@ -31,14 +31,8 @@ func createLogger(logPath string) logger.Interface {
 // Initialize the DB
 func InitDB(dbPath, logPath string) {
 	dev := strings.ToLower(os.Getenv("DEV")) == "true"
-	var chatHistDB *gorm.DB
-	var err error
-	if dev {
-		chatHistDB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: createLogger(logPath)})
 
-	} else {
-		chatHistDB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
-	}
+	chatHistDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: createLogger(logPath)})
 	if err != nil {
 		panic("failed to connect database")
 	}

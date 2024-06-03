@@ -6,6 +6,8 @@ import (
 	"chat-history/routes"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 )
 
 func main() {
@@ -26,7 +28,13 @@ func main() {
 	router.HandleFunc("POST /conversation", routes.UpdateConversation)
 
 	// create server with middleware
-	port := "localhost:8000"
+	dev := strings.ToLower(os.Getenv("DEV")) == "true"
+	var port string
+	if dev {
+		port = "localhost:8000"
+	} else {
+		port = ":8000"
+	}
 
 	handler := middleware.ChainMiddleware(router,
 		middleware.Logger(), // recoverer already included from RequestLogger by default
