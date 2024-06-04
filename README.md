@@ -201,6 +201,8 @@ You can also disable the consistency_checker, which reconciles Milvus and TigerG
 ```json
 {
     "hostname": "http://tigergraph",
+    "restppPort": "9000", 
+    "gsPort": "14240",
     "getToken": false,
     "default_timeout": 300,
     "default_mem_threshold": 5000,
