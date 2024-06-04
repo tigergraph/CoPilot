@@ -15,6 +15,8 @@ from app.supportai.retrievers import HNSWOverlapRetriever
 from app.py_schemas import (MapQuestionToSchemaResponse,
                             CoPilotResponse)
 
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
 import logging
 from app.log import req_id_cv
 
@@ -54,8 +56,11 @@ class TigerGraphAgentGraph:
         self.enable_human_in_loop = enable_human_in_loop
 
         self.supportai_enabled = True
-        if "'The query: HNSW_Overlap does not exists in graph" in self.db_connection.getQueryMetadata("HNSW_Overlap"):
-            self.supportai_enabled = True
+        try:
+            self.db_connection.getQueryMetadata("HNSW_Overlap")
+        except TigerGraphException as e:
+            logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
+            self.supportai_enabled = False
 
     def route_question(self, state):
         """
@@ -70,7 +75,7 @@ class TigerGraphAgentGraph:
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question: {state['question']}")
         source = step.route_question(state['question'])
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
-        if source.datasource == "vectorstore":
+        if source.datasource == "vectorstore" and self.supportai_enabled:
             return "supportai_lookup"
         elif source.datasource == "functions":
             return "inquiryai_lookup"
@@ -327,7 +332,14 @@ class TigerGraphAgentGraph:
                 }
             )
         else:
-            self.workflow.add_edge("entry", "map_question_to_schema")
+            self.workflow.add_conditional_edges(
+                "entry",
+                self.route_question,
+                {
+                    "inquiryai_lookup": "map_question_to_schema",
+                    "apologize": "apologize"
+                }
+            )
 
         self.workflow.add_edge("map_question_to_schema", "generate_function")
         if self.supportai_enabled:
