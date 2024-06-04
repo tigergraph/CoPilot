@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
 from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from requests import HTTPError
 
 from app.config import (
@@ -49,6 +50,12 @@ def get_db_connection_id_token(
             detail="Incorrect token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    except TigerGraphException as e:
+            LogWriter.error(f"Failed to get token: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Failed to get token - is the database running?"
+            )
     LogWriter.info("Connected to TigerGraph with ID Token")
     return conn
 
@@ -77,6 +84,12 @@ def get_db_connection_pwd(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
                 headers={"WWW-Authenticate": "Basic"},
+            )
+        except TigerGraphException as e:
+            LogWriter.error(f"Failed to get token: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Failed to get token - is the database running?"
             )
 
         conn = TigerGraphConnection(
