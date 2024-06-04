@@ -5,8 +5,8 @@ import logging
 
 from pyTigerGraph import TigerGraphConnection
 
-from app.agent.agent_graph import TigerGraphAgentGraph
-from app.tools import GenerateFunction, MapQuestionToSchema
+from agent.agent_graph import TigerGraphAgentGraph
+from tools import GenerateFunction, MapQuestionToSchema
 
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore

@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, BackgroundTasks
 from fastapi.security.http import HTTPBase
 
 from common.config import (
@@ -17,7 +17,7 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.logs.logwriter import LogWriter
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.db.connections import elevate_db_connection_to_token
-from app.eventual_consistency_checker import EventualConsistencyChecker
+from eventual_consistency_checker import EventualConsistencyChecker
 import json
 from threading import Thread
 
@@ -117,6 +117,11 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
         consistency_checkers[graphname] = checker
         checker.initialize()
     return consistency_checkers[graphname]
+
+@app.get("/")
+def root():
+    LogWriter.info(f"Healthcheck")
+    return {"status": "ok"}
 
 @app.get("/{graphname}/consistency_status")
 def consistency_status(graphname: str, credentials: Annotated[HTTPBase, Depends(security)]):

@@ -10,7 +10,7 @@ from fastapi.security import HTTPBasicCredentials
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app import routers
+import routers
 from common.config import PATH_PREFIX, PRODUCTION
 from common.logs.log import req_id_cv
 from common.metrics.prometheus_metrics import metrics as pmetrics

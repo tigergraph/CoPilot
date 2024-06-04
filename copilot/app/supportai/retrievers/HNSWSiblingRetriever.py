@@ -1,5 +1,5 @@
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from app.supportai.retrievers import BaseRetriever
+from supportai.retrievers import BaseRetriever
 
 
 class HNSWSiblingRetriever(BaseRetriever):

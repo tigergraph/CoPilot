@@ -36,7 +36,7 @@ class FAISS_EmbeddingStore(EmbeddingStore):
             return metadata
 
         loader = DirectoryLoader(
-            "./app/pytg_documents/",
+            "./pytg_documents/",
             glob="*.json",
             loader_cls=JSONLoader,
             loader_kwargs={
