@@ -209,7 +209,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 raise Exception(error_message)
 
         except Exception as e:
-            error_message = f"An error occurred while registerin document: {str(e)}"
+            error_message = f"An error occurred while registering document: {str(e)}"
             LogWriter.error(error_message)
 
     def get_pks(
