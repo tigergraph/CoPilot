@@ -29,7 +29,7 @@ jobs:
     - name: Get Image tag
       id: get-image
       run: |
-        IMAGE=tginternal/copilot:${SHA::6}
+        IMAGE=tigergraphml/copilot:${SHA::6}
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
         echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT${{ needs.setup.outputs.image }} 
  
@@ -41,4 +41,4 @@ jobs:
         push: true
         tags: |
            ${{ env.IMAGE }}
-           tginternal/copilot:dev
+           tigergraphml/copilot:dev
