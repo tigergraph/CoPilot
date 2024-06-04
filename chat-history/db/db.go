@@ -30,7 +30,6 @@ func createLogger(logPath string) logger.Interface {
 
 // Initialize the DB
 func InitDB(dbPath, logPath string) {
-	dev := strings.ToLower(os.Getenv("DEV")) == "true"
 
 	chatHistDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: createLogger(logPath)})
 	if err != nil {
@@ -45,6 +44,7 @@ func InitDB(dbPath, logPath string) {
 	}
 
 	// Create -- for testing only
+	dev := strings.ToLower(os.Getenv("DEV")) == "true"
 	if dev {
 		populateDB()
 	}

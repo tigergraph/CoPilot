@@ -70,8 +70,6 @@ func Logger() func(http.Handler) http.Handler {
 
 func Auth(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		// fmt.Println(r.Header["Authorization"])
-		// fmt.Println("hellllllo")
 		next.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
