@@ -23,8 +23,8 @@ jobs:
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
-        username: ${{ vars.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        username: ${{ secrets.PUBLIC_DOCKERHUB_USERNAME }}
+        password: ${{ secrets.PUBLIC_DOCKERHUB_TOKEN }}
     
     - name: Get Image tag
       id: get-image
