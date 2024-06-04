@@ -73,11 +73,14 @@ class TigerGraphAgentGraph:
             return "apologize"
         state["question_retry_count"] += 1
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question: {state['question']}")
-        source = step.route_question(state['question'])
-        logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
-        if source.datasource == "vectorstore" and self.supportai_enabled:
-            return "supportai_lookup"
-        elif source.datasource == "functions":
+        if self.supportai_enabled:
+            source = step.route_question(state['question'])
+            logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
+            if source.datasource == "vectorstore":
+                return "supportai_lookup"
+            elif source.datasource == "functions":
+                return "inquiryai_lookup"
+        else:
             return "inquiryai_lookup"
         
     def apologize(self, state):
