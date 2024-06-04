@@ -14,10 +14,10 @@ class AzureOpenAI(LLM_Model):
             os.environ[auth_detail] = config["authentication_configuration"][
                 auth_detail
             ]
-        from langchain.llms import AzureOpenAI
+        from langchain.chat_models.azure_openai import AzureChatOpenAI
 
         model_name = config["llm_model"]
-        self.llm = AzureOpenAI(
+        self.llm = AzureChatOpenAI(
             azure_deployment=config["azure_deployment"],
             openai_api_version=config["openai_api_version"],
             model_name=config["llm_model"],

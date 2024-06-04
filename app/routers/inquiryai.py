@@ -1,4 +1,5 @@
 import json
+import os
 import logging
 import traceback
 from typing import List, Union, Annotated
@@ -15,6 +16,9 @@ from app.llm_services import (
     AzureOpenAI,
     GoogleVertexAI,
     OpenAI,
+    Groq,
+    Ollama,
+    HuggingFaceEndpoint
 )
 from app.log import req_id_cv
 from app.metrics.prometheus_metrics import metrics as pmetrics
@@ -48,7 +52,9 @@ def retrieve_answer(
     logger.debug(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
+    use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 
+    # TODO: This needs to be refactored just to use config.py
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         logger.debug(
             f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"
@@ -58,6 +64,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         logger.debug(
@@ -68,6 +75,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
         logger.debug(
@@ -78,6 +86,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         logger.debug(
@@ -88,6 +97,7 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
         logger.debug(
@@ -98,6 +108,40 @@ def retrieve_answer(
             conn,
             embedding_service,
             embedding_store,
+            use_cypher=use_cypher
+        )
+    elif llm_config["completion_service"]["llm_service"].lower() == "groq":
+        logger.debug(
+            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=groq agent created"
+        )
+        agent = TigerGraphAgent(
+            Groq(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+            use_cypher=use_cypher
+        )
+    elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
+        logger.debug(
+            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=ollama agent created"
+        )
+        agent = TigerGraphAgent(
+            Ollama(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+            use_cypher=use_cypher
+        )
+    elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
+        logger.debug(
+            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=huggingface agent created"
+        )
+        agent = TigerGraphAgent(
+            HuggingFaceEndpoint(llm_config["completion_service"]),
+            conn,
+            embedding_service,
+            embedding_store,
+            use_cypher=use_cypher
         )
     else:
         LogWriter.error(
@@ -108,14 +152,15 @@ def retrieve_answer(
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
-    steps = ""
     try:
-        steps = agent.question_for_agent(query.query)
+        resp = agent.question_for_agent(query.query)
+        '''
         # try again if there were no steps taken
         if len(steps["intermediate_steps"]) == 0:
             steps = agent.question_for_agent(query.query)
 
         logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
+        
         generate_func_output = steps["intermediate_steps"][-1][-1]
         resp.natural_language_response = steps["output"]
         resp.query_sources = {
@@ -124,6 +169,7 @@ def retrieve_answer(
             "reasoning": generate_func_output["reasoning"],
         }
         resp.answered_question = True
+        '''
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -142,16 +188,16 @@ def retrieve_answer(
     except Exception:
         try:
             # if the output is json, it's intermediate agent output
-            json.loads(str(steps["output"]))  # TODO: don't use errors as control flow
+            #json.loads(str(steps))  # TODO: don't use errors as control flow
             resp.natural_language_response = (
                 # "An error occurred while processing the response. Please try again."
                 "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
             )
         except:
             # the output wasn't json. It was likely a message from the agent to the user
-            resp.natural_language_response = str(steps["output"])
+            resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
-        resp.query_sources = {} if len(steps) == 0 else {"agent_history": str(steps)}
+        resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
             f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
@@ -168,7 +214,6 @@ def retrieve_answer(
 @router.get("/{graphname}/list_registered_queries")
 def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
     conn = conn.state.conn
-    '''
     if conn.getVer().split(".")[0] <= "3":
         query_descs = embedding_store.list_registered_documents(
             graphname=graphname,
@@ -176,13 +221,12 @@ def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTT
             output_fields=["function_header", "text"],
         )
     else:
-    '''
-    queries = embedding_store.list_registered_documents(
-        graphname=graphname, only_custom=True, output_fields=["function_header"]
-    )
-    if not queries:
-        return {"queries": []}
-    query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
+        queries = embedding_store.list_registered_documents(
+            graphname=graphname, only_custom=True, output_fields=["function_header"]
+        )
+        if not queries:
+            return {"queries": []}
+        query_descs = conn.getQueryDescription([x["function_header"] for x in queries])
 
     return query_descs
 

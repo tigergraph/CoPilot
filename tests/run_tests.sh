@@ -1,5 +1,6 @@
 #!/bin/sh
 export DB_CONFIG=../configs/db_config.json
+export MILVUS_CONFIG=../configs/milvus_config.json
 export LOGLEVEL=INFO
 
 # Set default values
@@ -32,11 +33,23 @@ openai_gpt35_config="../configs/openai_gpt3.5-turbo_config.json"
 openai_gpt4_script="test_openai_gpt4.py"
 openai_gpt4_config="../configs/openai_gpt4_config.json"
 
+huggingface_phi3_script="test_huggingface_phi3.py"
+huggingface_phi3_config="../configs/huggingface_severless_endpoint_phi3_config.json"
+
+openai_gpt4o_script="test_openai_gpt4o.py"
+openai_gpt4o_config="../configs/openai_gpt4o_config.json"
+
 gcp_textbison_script="test_gcp_text-bison.py"
 gcp_textbison_config="../configs/gcp_text-bison_config.json"
 
+groq_mixtral_script="test_groq_mixtral8x7b.py"
+groq_mixtral_config="../configs/groq_mixtral_config.json"
+
 aws_bedrock_script="test_bedrock.py"
 aws_bedrock_config="../configs/bedrock_config.json"
+
+huggingface_llama3_script="test_huggingface_llama70b.py"
+huggingface_llama3_config="../configs/huggingface_llama70b_config.json"
 
 # Function to execute a service
 execute_service() {
@@ -67,15 +80,35 @@ case "$llm_service" in
     "openai_gpt4")
         execute_service "$openai_gpt4_script" "$openai_gpt4_config"
         ;;
+    "openai_gpt4o")
+        execute_service "$openai_gpt4o_script" "$openai_gpt4o_config"
+        ;;
     "gcp_textbison")
         execute_service "$gcp_textbison_script" "$gcp_textbison_config"
+        ;;
+    "huggingface_phi3")
+        execute_service "$huggingface_phi3_script" "$huggingface_phi3_config"
+        ;;
+    "groq_mixtral")
+        execute_service "$groq_mixtral_script" "$groq_mixtral_config"
         ;;
     "aws_bedrock")
         execute_service "$aws_bedrock_script" "$aws_bedrock_config"
         ;;
+    "huggingface_llama3")
+        execute_service "$huggingface_llama3_script" "$huggingface_llama3_config"
+        ;;
     "all")
         echo "Executing all services..."
-        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" "$openai_gpt35_script $openai_gpt35_config" "$openai_gpt4_script $openai_gpt4_config" "$gcp_textbison_script $gcp_textbison_config" "$aws_bedrock_script $aws_bedrock_config"; do
+        for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" \
+                                   "$openai_gpt35_script $openai_gpt35_config" \
+                                   "$openai_gpt4_script $openai_gpt4_config" \
+                                   "$gcp_textbison_script $gcp_textbison_config" \
+                                   "$groq_mixtral_script $groq_mixtral_config" \
+                                   "$aws_bedrock_script $aws_bedrock_config" \
+                                   "$openai_gpt4o_script $openai_gpt4o_config" \
+                                   "$huggingface_llama3_script $huggingface_llama3_config" \
+                                   "$huggingface_phi3_script $huggingface_phi3_config"; do
             execute_service $service_script_pair
         done
         ;;

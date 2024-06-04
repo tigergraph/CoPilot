@@ -17,3 +17,5 @@ log.AUDIT-COPILOT
 log.WARNING
 logs/*
 tmp
+.idea
+volumes
