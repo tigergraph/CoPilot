@@ -1,4 +1,4 @@
-name: CoPilot Build Cloud
+name: CoPilot Build On-Prem
 
 on:
   push:
