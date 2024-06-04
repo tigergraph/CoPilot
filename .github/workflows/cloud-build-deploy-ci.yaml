@@ -1,8 +1,8 @@
-name: CoPilot Build Nightly
+name: CoPilot Build Cloud
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "cloud-main" ]
   workflow_dispatch:
 
 env:
@@ -41,4 +41,4 @@ jobs:
         push: true
         tags: |
            ${{ env.IMAGE }}
-           tginternal/copilot:dev
+           tginternal/copilot:cloud-latest
