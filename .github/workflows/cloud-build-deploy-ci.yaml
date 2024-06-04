@@ -1,8 +1,8 @@
-name: CoPilot Build Nightly
+name: CoPilot Build Cloud
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "cloud-main" ]
   workflow_dispatch:
 
 env:
@@ -37,8 +37,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./copilot/Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
-           tginternal/copilot:dev
+           tginternal/copilot:cloud-latest

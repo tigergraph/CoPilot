@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+      - dev
+      - cloud-main
+      - cloud-dev
 
 jobs:
   test:

@@ -1,8 +1,8 @@
-name: CoPilot Build and Deploy
+name: CoPilot Build Cloud Nightly
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "cloud-dev" ]
   workflow_dispatch:
 
 env:
@@ -37,21 +37,8 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./copilot/Dockerfile
+        file: ./Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
-           tginternal/copilot:latest
-
-  deploy:
-    needs: [build-image]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to k8s
-        uses: tale/kubectl-action@v1
-        with:
-          base64-kube-config: ${{ secrets.KUBE_CONFIG }}
-
-      - name: Deploy in k8s
-        run: |
-          kubectl patch tigergraph/tg-47f94070-fa64-4191-b952-983dafabd8fb -n 22a77be0-fb48-479d-b517-b6868326edd6 --type=json -p='[{"op":"replace","path":"/spec/sidecarContainers/1/image","value":"${{ needs.build-image.outputs.image }}"}]'
+           tginternal/copilot:cloud-dev
