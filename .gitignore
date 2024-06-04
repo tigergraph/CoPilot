@@ -25,3 +25,4 @@ copilot/app/logs/*
 copilot/logs/*
 copilot/tests/logs/*
 volumes
+build/

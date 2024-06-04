@@ -5,35 +5,29 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.security.http import HTTPBase
+from supportai.concept_management.create_concepts import (
+    CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
+    RelationshipConceptCreator)
+from supportai.retrievers import (EntityRelationshipRetriever,
+                                  HNSWOverlapRetriever, HNSWRetriever,
+                                  HNSWSiblingRetriever)
 
-from common.config import embedding_service, embedding_store, get_llm_service, llm_config
-
-from common.py_schemas.schemas import (
-    CoPilotResponse,
-    CreateIngestConfig,
-    LoadingInfo,
-    SupportAIQuestion,
-)
-from app.supportai.concept_management.create_concepts import (
-    CommunityConceptCreator,
-    EntityConceptCreator,
-    HigherLevelConceptCreator,
-    RelationshipConceptCreator,
-)
-from app.supportai.retrievers import (
-    EntityRelationshipRetriever,
-    HNSWOverlapRetriever,
-    HNSWRetriever,
-    HNSWSiblingRetriever,
-)
+from common.config import (db_config, embedding_service, embedding_store,
+                           get_llm_service, llm_config)
+from common.logs.logwriter import LogWriter
+from common.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
+                                       LoadingInfo, SupportAIQuestion)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
 security = HTTPBase(scheme="basic", auto_error=False)
 
+
 @router.post("/{graphname}/supportai/initialize")
-def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def initialize(
+    graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
+):
     conn = conn.state.conn
     # need to open the file using the absolute path
     file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
@@ -84,7 +78,12 @@ def initialize(graphname, conn: Request, credentials: Annotated[HTTPBase, Depend
 
 
 @router.post("/{graphname}/supportai/create_ingest")
-def create_ingest(graphname, ingest_config: CreateIngestConfig, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def create_ingest(
+    graphname,
+    ingest_config: CreateIngestConfig,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     conn = conn.state.conn
 
     if ingest_config.file_format.lower() == "json":
@@ -214,7 +213,7 @@ def ingest(
     graphname,
     loader_info: LoadingInfo,
     conn: Request,
-    credentials: Annotated[HTTPBase, Depends(security)]
+    credentials: Annotated[HTTPBase, Depends(security)],
 ):
     conn = conn.state.conn
     if loader_info.file_path is None:
@@ -257,7 +256,12 @@ def ingest(
 
 
 @router.post("/{graphname}/supportai/search")
-def search(graphname, query: SupportAIQuestion, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def search(
+    graphname,
+    query: SupportAIQuestion,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     conn = conn.state.conn
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
@@ -306,7 +310,12 @@ def search(graphname, query: SupportAIQuestion, conn: Request, credentials: Anno
 
 
 @router.post("/{graphname}/supportai/answerquestion")
-def answer_question(graphname, query: SupportAIQuestion, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def answer_question(
+    graphname,
+    query: SupportAIQuestion,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
@@ -363,9 +372,7 @@ def answer_question(graphname, query: SupportAIQuestion, conn: Request, credenti
 
 @router.get("/{graphname}/supportai/buildconcepts")
 def build_concepts(
-    graphname,
-    conn: Request,
-    credentials: Annotated[HTTPBase, Depends(security)]
+    graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
 ):
     conn = conn.state.conn
     rels_concepts = RelationshipConceptCreator(conn, llm_config, embedding_service)
@@ -378,3 +385,23 @@ def build_concepts(
     high_level_concepts.create_concepts()
 
     return {"status": "success"}
+
+
+@router.get("/{graphname}/supportai/consistency_status")
+def ecc(
+    graphname,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+    bg_tasks: BackgroundTasks,
+):
+    from httpx import get as http_get
+
+    ecc = (
+        db_config.get("ecc", "http://localhost:8001")
+        + f"/{graphname}/consistency_status"
+    )
+    LogWriter.info(f"Sending ECC request to: {ecc}")
+    bg_tasks.add_task(
+        http_get, ecc, headers={"Authorization": conn.headers["authorization"]}
+    )
+    return {"status": "submitted"}

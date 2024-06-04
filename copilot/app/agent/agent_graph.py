@@ -3,14 +3,14 @@ import json
 from typing import Optional
 from langgraph.graph import END, StateGraph
 
-from app.agent.agent_generation import TigerGraphAgentGenerator
-from app.agent.agent_router import TigerGraphAgentRouter
-from app.agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
-from app.agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
-from app.agent.agent_rewrite import TigerGraphAgentRewriter
+from agent.agent_generation import TigerGraphAgentGenerator
+from agent.agent_router import TigerGraphAgentRouter
+from agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
+from agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
+from agent.agent_rewrite import TigerGraphAgentRewriter
 
-from app.tools import MapQuestionToSchemaException
-from app.supportai.retrievers import HNSWOverlapRetriever
+from tools import MapQuestionToSchemaException
+from supportai.retrievers import HNSWOverlapRetriever
 
 from common.py_schemas import (MapQuestionToSchemaResponse,
                             CoPilotResponse)

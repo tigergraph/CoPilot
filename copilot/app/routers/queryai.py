@@ -11,7 +11,7 @@ from common.py_schemas.schemas import (
     CoPilotResponse,
     NaturalLanguageQuery
 )
-from app.tools import GenerateCypher
+from tools import GenerateCypher
 from common.logs.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)

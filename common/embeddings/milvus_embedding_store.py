@@ -119,7 +119,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             LogWriter.info("Milvus add initial load documents init()")
             loader = DirectoryLoader(
-                "./app/tg_documents/",
+                "./tg_documents/",
                 glob="*.json",
                 loader_cls=JSONLoader,
                 loader_kwargs={

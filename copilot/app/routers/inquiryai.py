@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket, status, Depend
 from fastapi.responses import HTMLResponse
 from fastapi.security.http import HTTPBase
 
-from app.agent import TigerGraphAgent
+from agent import TigerGraphAgent
 from common.config import embedding_service, embedding_store, llm_config, session_handler
 from common.llm_services import (
     AWS_SageMaker_Endpoint,
@@ -31,7 +31,7 @@ from common.py_schemas.schemas import (
     QueryUpsertRequest,
 )
 from common.logs.logwriter import LogWriter
-from app.tools.validation_utils import MapQuestionToSchemaException
+from tools.validation_utils import MapQuestionToSchemaException
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["InquiryAI"])
@@ -492,7 +492,7 @@ def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(
 
 @router.get("/{graphname}/chat")
 def chat(request: Request):
-    return HTMLResponse(open("app/static/chat.html").read())
+    return HTMLResponse(open("static/chat.html").read())
 
 
 @router.websocket("/{graphname}/ws")
