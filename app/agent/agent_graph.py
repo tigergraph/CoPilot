@@ -298,7 +298,14 @@ class TigerGraphAgentGraph:
                         }
                     )
         else:
-            self.workflow.add_edge("generate_function", "generate_answer")
+            self.workflow.add_conditional_edges(
+                "generate_function",
+                self.check_state_for_generation_error,
+                {
+                    "error": "rewrite_question",
+                    "success": "generate_answer"
+                }
+            )
             if self.supportai_enabled:
                 self.workflow.add_conditional_edges(
                     "generate_answer",
