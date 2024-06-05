@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    runs-on: [ubuntu-20.04, self-hosted, dind ]
+    runs-on: [ self-hosted, dind ]
 
     services:
       milvus:
