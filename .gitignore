@@ -26,5 +26,3 @@ copilot/logs/*
 copilot/tests/logs/*
 volumes
 build/
-*.egg*
-venv

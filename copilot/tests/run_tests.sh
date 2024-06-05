@@ -6,7 +6,7 @@ export LOGLEVEL=INFO
 # Set default values
 llm_service="all"
 schema="all"
-use_wandb="false"
+use_wandb="true"
 
 # Check if llm_service argument is provided
 if [ "$#" -ge 1 ]; then
@@ -25,31 +25,31 @@ fi
 
 # Define the m.ing of Python script names to JSON config file names
 azure_gpt35_script="test_azure_gpt35_turbo_instruct.py"
-azure_gpt35_config="../configs/azure_llm_config.json"
+azure_gpt35_config="./configs/azure_llm_config.json"
 
 openai_gpt35_script="test_openai_gpt35-turbo.py"
-openai_gpt35_config="../configs/openai_gpt3.5-turbo_config.json"
+openai_gpt35_config="./configs/openai_gpt3.5-turbo_config.json"
 
 openai_gpt4_script="test_openai_gpt4.py"
 openai_gpt4_config="./configs/openai_gpt4_config.json"
 
 huggingface_phi3_script="test_huggingface_phi3.py"
-huggingface_phi3_config="../configs/huggingface_severless_endpoint_phi3_config.json"
+huggingface_phi3_config="./configs/huggingface_severless_endpoint_phi3_config.json"
 
 openai_gpt4o_script="test_openai_gpt4o.py"
-openai_gpt4o_config="../configs/openai_gpt4o_config.json"
+openai_gpt4o_config="./configs/openai_gpt4o_config.json"
 
 gcp_textbison_script="test_gcp_text-bison.py"
-gcp_textbison_config="../configs/gcp_text-bison_config.json"
+gcp_textbison_config="./configs/gcp_text-bison_config.json"
 
 groq_mixtral_script="test_groq_mixtral8x7b.py"
-groq_mixtral_config="../configs/groq_mixtral_config.json"
+groq_mixtral_config="./configs/groq_mixtral_config.json"
 
 aws_bedrock_script="test_bedrock.py"
-aws_bedrock_config="../configs/bedrock_config.json"
+aws_bedrock_config="./configs/bedrock_config.json"
 
 huggingface_llama3_script="test_huggingface_llama70b.py"
-huggingface_llama3_config="../configs/huggingface_llama70b_config.json"
+huggingface_llama3_config="./configs/huggingface_llama70b_config.json"
 
 # Function to execute a service
 execute_service() {
@@ -111,7 +111,6 @@ case "$llm_service" in
 		"$openai_gpt4o_script $openai_gpt4o_config" \
 		"$huggingface_llama3_script $huggingface_llama3_config" \
 		"$huggingface_phi3_script $huggingface_phi3_config"; do
-
 		execute_service $service_script_pair
 	done
 	;;
