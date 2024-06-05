@@ -65,7 +65,8 @@ jobs:
         run: |
           source venv/bin/activate
           cp -r copilot/tests/*test* copilot/tests/create_wandb_report.py copilot/app/ 
-          pytest copilot/app --disable-warnings
+          cd copilot/app
+          python -m pytest --disable-warnings
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
           LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
