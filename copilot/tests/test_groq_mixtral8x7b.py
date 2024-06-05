@@ -3,28 +3,28 @@ import unittest
 
 import pytest
 from fastapi.testclient import TestClient
-from tests.test_service import CommonTests
+from test_service import CommonTests
 import wandb
-from tests import parse_test_config
+import parse_test_config
 import sys
 
 
 @pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
-class TestWithOpenAI(CommonTests, unittest.TestCase):
+class TestWithGroq(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
         from main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = "gpt-4o-2024-05-13"
+        cls.llm_service = "mixtral-8x7b-32768"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "GPT-4o")
+        self.assertEqual(resp.json()["config"], "mixtral-8x7b-32768")
 
 
 if __name__ == "__main__":

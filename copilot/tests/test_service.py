@@ -28,7 +28,7 @@ class CommonTests:
             question_type = row["Question Type"]
 
             test_name = (
-                "tests/test_question_"
+                "test_question_"
                 + dataset
                 + "_"
                 + str(row.name)
@@ -183,7 +183,7 @@ class CommonTests:
 
         def get_query_and_prompt(suite, query):
             with open(
-                "./tests/test_questions/" + suite + "/" + query + "/" + query + "_prompt.json"
+                "./test_questions/" + suite + "/" + query + "/" + query + "_prompt.json"
             ) as f:
                 query_desc = f.read()
             return query_desc
@@ -191,8 +191,8 @@ class CommonTests:
         if schema == "all":
             schemas = [
                 x
-                for x in os.listdir("./tests/test_questions/")
-                if not (os.path.isfile("./tests/test_questions/" + x))
+                for x in os.listdir("./test_questions/")
+                if not (os.path.isfile("./test_questions/" + x))
             ]
         else:
             schemas = [schema]
@@ -200,8 +200,8 @@ class CommonTests:
         for suite in schemas:
             queries = [
                 x
-                for x in os.listdir("./tests/test_questions/" + suite + "/")
-                if not (os.path.isfile("./tests/test_questions/" + suite + "/" + x))
+                for x in os.listdir("./test_questions/" + suite + "/")
+                if not (os.path.isfile("./test_questions/" + suite + "/" + x))
                 and not (x == "tmp")
                 and not (x == "gsql")
             ]
@@ -218,7 +218,7 @@ class CommonTests:
             for rt in registration_tests:
                 setattr(cls, rt[0], rt[1])
 
-            questions = "./tests/test_questions/" + suite + "/" + suite + "Questions.tsv"
+            questions = "./test_questions/" + suite + "/" + suite + "Questions.tsv"
             questions = pd.read_csv(questions, delimiter="\t")
 
             tests = list(

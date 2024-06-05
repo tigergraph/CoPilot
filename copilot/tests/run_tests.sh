@@ -3,11 +3,12 @@ export DB_CONFIG=./configs/db_config.json
 export MILVUS_CONFIG=./configs/milvus_config.json
 export LOGLEVEL=INFO
 
-cd ..
+# cd ..
 # Set default values
-llm_service="openai_gpt4"
+llm_service="all"
+# llm_service="openai_gpt4"
 schema="all"
-use_wandb="true"
+use_wandb="false"
 
 # Check if llm_service argument is provided
 if [ "$#" -ge 1 ]; then
@@ -56,7 +57,7 @@ huggingface_llama3_config="./configs/huggingface_llama70b_config.json"
 execute_service() {
 	local service="$1"
 	local config_file="$2"
-	cp tests/$service .
+	# cp tests/$service .
 
 	# Export the path to the config file as an environment variable
 	export LLM_CONFIG="$config_file"
@@ -69,7 +70,7 @@ execute_service() {
 
 	# Unset the environment variable after the Python script execution
 	unset CONFIG_FILE_PATH
-	rm $service
+	# rm $service
 }
 
 # Check the value of llm_service and execute the corresponding Python script(s)
@@ -123,4 +124,4 @@ case "$llm_service" in
 	;;
 esac
 
-python create_wandb_report.py
+# python create_wandb_report.py
