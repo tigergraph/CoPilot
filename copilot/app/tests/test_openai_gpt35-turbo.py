@@ -3,28 +3,28 @@ import unittest
 
 import pytest
 from fastapi.testclient import TestClient
-from test_service import CommonTests
+from tests.test_service import CommonTests
 import wandb
-import parse_test_config
+from tests import parse_test_config
 import sys
 
 
 @pytest.mark.skip(reason="All tests in this class are currently skipped by the pipeline, but used by the LLM regression tests.")
-class TestWithHuggingFace(CommonTests, unittest.TestCase):
+class TestWithOpenAI(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
-        cls.llm_service = "Llama3-70b"
+        cls.llm_service = "openai_gpt-3.5-turbo-1106"
         if USE_WANDB:
             cls.table = wandb.Table(columns=columns)
 
     
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "Llama3-70b")
+        self.assertEqual(resp.json()["config"], "OpenAI-GPT3.5-Turbo")
 
 
 if __name__ == "__main__":

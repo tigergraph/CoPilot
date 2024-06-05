@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 from fastapi.testclient import TestClient
-from test_service import CommonTests
+from tests.test_service import CommonTests
 import wandb
 
 USE_WANDB = True
@@ -31,7 +31,7 @@ class TestWithLlama(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "llama7B"
