@@ -38,7 +38,6 @@ jobs:
 
       - name: Create db config
         run: |
-          source venv/bin/activate
           mkdir configs
           echo "$DB_CONFIG" > configs/db_config.json
           echo "$LLM_CONFIG_OPENAI_GPT4" > configs/llm_config.json
@@ -65,8 +64,7 @@ jobs:
       - name: Run pytest
         run: |
           source venv/bin/activate
-          cd copilot
-          cp tests/* app/ 
+          cp copilot/tests/* copilot/app/ 
           pytest --disable-warnings
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
