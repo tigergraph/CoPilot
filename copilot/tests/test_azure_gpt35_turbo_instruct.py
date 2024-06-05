@@ -13,7 +13,7 @@ class TestWithAzure(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "azure_gpt3.5_turbo_instruct"

@@ -11,7 +11,7 @@ from unittest.mock import patch
 class TestInquiryAI(unittest.TestCase):
 
     def setUp(self):
-        from app.main import app
+        from main import app
 
         self.client = TestClient(app)
         db_config = os.getenv("DB_CONFIG")

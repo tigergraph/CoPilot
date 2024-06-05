@@ -12,7 +12,6 @@ services:
       DB_CONFIG: "/code/configs/db_config.json"
       MILVUS_CONFIG: "/code/configs/milvus_config.json"
       LOGLEVEL: "INFO"
-      # MILVUS_HOST: "milvus-standalone"
       USE_CYPHER: "false"
     volumes:
       - ./configs/:/code/configs
@@ -28,7 +27,6 @@ services:
       DB_CONFIG: "/code/configs/db_config.json"
       MILVUS_CONFIG: "/code/configs/milvus_config.json"
       LOGLEVEL: "INFO"
-      # MILVUS_HOST: "milvus-standalone"
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common

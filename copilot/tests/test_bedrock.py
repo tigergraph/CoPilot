@@ -10,7 +10,7 @@ import sys
 class TestWithClaude3Bedrock(CommonTests, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "claude-3-haiku"

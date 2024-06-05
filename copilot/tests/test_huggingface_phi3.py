@@ -14,7 +14,7 @@ class TestWithHuggingFace(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "microsoft/Phi-3-mini-4k-instruct"

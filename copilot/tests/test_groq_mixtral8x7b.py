@@ -14,7 +14,7 @@ class TestWithGroq(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "mixtral-8x7b-32768"

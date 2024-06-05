@@ -14,7 +14,7 @@ class TestWithOpenAI(CommonTests, unittest.TestCase):
     
     @classmethod
     def setUpClass(cls) -> None:
-        from app.main import app
+        from main import app
 
         cls.client = TestClient(app)
         cls.llm_service = "openai_gpt-3.5-turbo-1106"
