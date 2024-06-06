@@ -36,7 +36,7 @@ jobs:
     - name: Build and push Docker image CoPilot
       uses: docker/build-push-action@v5
       with:
-        context: ./copilot
+        context: .
         file: ./copilot/Dockerfile
         push: true
         tags: |
@@ -46,7 +46,7 @@ jobs:
     - name: Build and push Docker image ECC
       uses: docker/build-push-action@v5
       with:
-        context: ./eventual-consistency-service
+        context: .
         file: ./eventual-consistency-service/Dockerfile
         push: true
         tags: |
