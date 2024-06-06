@@ -297,6 +297,8 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
     query_info_list = []
     for query_desc in query_descs:
         logger.debug("processing query description: "+str(query_desc))
+        if query_desc.get("description", None) is None:
+            logger.warning(f"Query may not perform well {query_desc['queryName']} because it has no description")
         params = query_desc["parameters"]
         if params == []:
             params = {}
@@ -310,8 +312,8 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
         param_types = conn.getQueryMetadata(query_desc["queryName"])["input"]
         q_info = GSQLQueryInfo(
             function_header=query_desc["queryName"],
-            description=query_desc["description"],
-            docstring=query_desc["description"]
+            description=query_desc.get("description", ""),
+            docstring=query_desc.get("description", "")
             + ".\nRun with runInstalledQuery('"
             + query_desc["queryName"]
             + "', params={})".format(json.dumps(params)),
