@@ -99,7 +99,7 @@ python-iso639==2023.6.15
 python-magic==0.4.27
 pytest==8.2.0
 pyTigerDriver==1.0.15
-pyTigerGraph @ git+https://github.com/TigerGraph/pyTigerGraph@featurizer-request-timeout
+pyTigerGraph==1.6.2
 pytz==2023.3.post1
 PyYAML==6.0.1
 rapidfuzz==3.4.0
