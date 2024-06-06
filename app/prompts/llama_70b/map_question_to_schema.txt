@@ -7,9 +7,5 @@ If there are words that are synonyms with the entities or relationships above, m
 Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same. 
 Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
 
-Follow the output directions below on how to structure your response
-Only include valid JSON do not include any other texts which would render the response invalid JSON: 
-
-Respond in JSON (and only JSON). Follow the format instructions below:
 {format_instructions}
 QUESTION: {question}
