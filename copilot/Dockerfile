@@ -7,6 +7,7 @@ RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt
  
 COPY ./app /code/
+COPY ../common /code/app/common
 
 ENV LLM_CONFIG="/llm_config.json"
 ENV DB_CONFIG="/db_config.json"
