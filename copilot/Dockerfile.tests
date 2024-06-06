@@ -11,8 +11,8 @@ RUN pip install -r /code/requirements.txt
 WORKDIR /code
 
 # 
-COPY ./app /code/app
-COPY ./tests /code/tests
+COPY ./copilot/app /code/app
+COPY ./copilot/tests /code/tests
 
 COPY ./.git /code/.git
 

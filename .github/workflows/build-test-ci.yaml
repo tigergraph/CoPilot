@@ -24,7 +24,7 @@ jobs:
     - name: Build Docker.tests image
       uses: docker/build-push-action@v5
       with:
-        context: copilot
+        context: . 
         file: copilot/Dockerfile.tests
         push: false
         load: true
