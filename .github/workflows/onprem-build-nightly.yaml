@@ -1,9 +1,9 @@
 name: CoPilot Build Nightly
 
 on:
-  push:
-    branches: [ "dev" ]
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - dev
 
 env:
   SHA: ${{ github.sha }}
@@ -33,12 +33,22 @@ jobs:
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
         echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT${{ needs.setup.outputs.image }} 
  
-    - name: Build and push Docker image
+    - name: Build and push Docker image CoPilot
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./copilot/Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
            tigergraphml/copilot:dev
+ 
+    - name: Build and push Docker image ECC
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./eventual-consistency-service/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/ecc:dev

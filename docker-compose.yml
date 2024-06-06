@@ -30,9 +30,3 @@ services:
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
-
-networks:
-  default:
-    name: milvus
-volumes:
-  tg-data: {}
