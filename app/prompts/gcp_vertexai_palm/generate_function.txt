@@ -23,9 +23,9 @@ Sixth Docstring: {doc6}
 Seventh Docstring: {doc7}
 Eighth Docstring: {doc8}
 
-
 Make sure to carefully read the question and the docstrings to determine the correct function to call. 
 Choose the simplest function that will answer the question.
 Only choose one function to call, and do not change the syntax of the function call.
+
 Follow the output directions below on how to structure your response: 
 {format_instructions} 

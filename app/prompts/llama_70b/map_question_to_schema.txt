@@ -6,5 +6,6 @@ When certain entities are mapped to vertex attributes, may consider to generate 
 If there are words that are synonyms with the entities or relationships above, make sure to output the cannonical form found in the choices above.
 Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same. 
 Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
+
 {format_instructions}
 QUESTION: {question}

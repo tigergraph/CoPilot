@@ -49,5 +49,6 @@ class TigerGraphAgentRouter:
         )
 
         question_router = prompt | self.llm.model | router_parser
+        res = question_router.invoke({"question": question, "v_types": v_types, "e_types": e_types})
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question")
-        return question_router.invoke({"question": question, "v_types": v_types, "e_types": e_types})
+        return res

@@ -34,7 +34,7 @@ class AgentOutput(BaseModel):
 
 
 class MapAttributeToAttributeResponse(BaseModel):
-    attr_map: Dict[str, str] = Field(
+    attr_map: Optional[Dict[str, str]] = Field(
         description="The dictionary of the form {'source_attribute': 'output_attribute'}"
     )
 

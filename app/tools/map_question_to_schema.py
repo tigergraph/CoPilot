@@ -133,7 +133,7 @@ class MapQuestionToSchema(BaseTool):
             )[0]["text"]
             parsed_map = attr_parser.invoke(map_attr).attr_map
             parsed_q.target_vertex_attributes[vertex] = [
-                parsed_map[x] for x in list(parsed_q.target_vertex_attributes[vertex])
+                parsed_map.get(x) for x in list(parsed_q.target_vertex_attributes[vertex])
             ]
 
         logger.debug(f"request_id={req_id_cv.get()} MapVertexAttributes applied")
