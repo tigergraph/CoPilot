@@ -1,18 +1,16 @@
 FROM python:3.11.8
 WORKDIR /code
 
- 
-COPY requirements.txt requirements.txt
-
+COPY ./eventual-consistency-service/requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt
 
 COPY ./eventual-consistency-service/app /code
 
-ENV LLM_CONFIG="/code/configs/llm_config.json"
-ENV DB_CONFIG="/code/configs/db_config.json"
-ENV MILVUS_CONFIG="/code/configs/milvus_config.json"
+ENV LLM_CONFIG="/llm_config.json"
+ENV DB_CONFIG="/db_config.json"
+ENV MILVUS_CONFIG="/milvus_config.json"
 ENV LOGLEVEL="INFO"
 
 EXPOSE 8001
