@@ -1,9 +1,9 @@
 name: CoPilot Build On-Prem
 
 on:
-  pull_request:
-    branches:
-      - dev
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 env:
   SHA: ${{ github.sha }}
