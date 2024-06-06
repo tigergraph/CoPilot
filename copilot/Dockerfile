@@ -4,9 +4,9 @@ WORKDIR /code
 COPY requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
-RUN pip install -r /code/requirements.txt
+RUN pip install -r requirements.txt
  
-COPY ./app /code/
+COPY ./app /code/app
 
 ENV LLM_CONFIG="/code/configs/llm_config.json"
 ENV DB_CONFIG="/code/configs/db_config.json"
