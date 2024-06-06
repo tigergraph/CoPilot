@@ -169,7 +169,7 @@ class CommonTests:
             def test(self):
                 resp = self.client.post(
                     "/" + dataset + "/upsert_docs",
-                    json=json.loads({"id": "", "query_info": query_json}),
+                    json={"id": "", "query_info": query_json},
                     auth=(username, password),
                 )
                 self.assertEqual(resp.status_code, 200)

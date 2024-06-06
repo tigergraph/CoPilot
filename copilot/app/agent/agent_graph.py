@@ -15,6 +15,8 @@ from supportai.retrievers import HNSWOverlapRetriever
 from common.py_schemas import (MapQuestionToSchemaResponse,
                             CoPilotResponse)
 
+from pyTigerGraph.pyTigerGraphException import TigerGraphException
+
 import logging
 from common.logs.log import req_id_cv
 
@@ -53,6 +55,13 @@ class TigerGraphAgentGraph:
         self.cypher_gen = cypher_gen_tool
         self.enable_human_in_loop = enable_human_in_loop
 
+        self.supportai_enabled = True
+        try:
+            self.db_connection.getQueryMetadata("HNSW_Overlap")
+        except TigerGraphException as e:
+            logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
+            self.supportai_enabled = False
+
     def route_question(self, state):
         """
         Run the agent router.
@@ -64,11 +73,14 @@ class TigerGraphAgentGraph:
             return "apologize"
         state["question_retry_count"] += 1
         logger.debug_pii(f"request_id={req_id_cv.get()} Routing question: {state['question']}")
-        source = step.route_question(state['question'])
-        logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
-        if source.datasource == "vectorstore":
-            return "supportai_lookup"
-        elif source.datasource == "functions":
+        if self.supportai_enabled:
+            source = step.route_question(state['question'])
+            logger.debug_pii(f"request_id={req_id_cv.get()} Routing question to: {source}")
+            if source.datasource == "vectorstore":
+                return "supportai_lookup"
+            elif source.datasource == "functions":
+                return "inquiryai_lookup"
+        else:
             return "inquiryai_lookup"
         
     def apologize(self, state):
@@ -152,11 +164,16 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentGenerator(self.llm_provider)
         logger.debug_pii(f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}")
-        answer = step.generate_answer(state['question'], state["context"])
-        logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer}")
+        if state["lookup_source"] == "supportai":
+            answer = step.generate_answer(state['question'], state["context"])
+        elif state["lookup_source"] == "inquiryai":
+            answer = step.generate_answer(state['question'], state["context"]["result"])
+        elif state["lookup_source"] == "cypher":
+            answer = step.generate_answer(state['question'], state["context"]["answer"])
+        logger.debug_pii(f"request_id={req_id_cv.get()} Generated answer: {answer.generated_answer}")
 
         try:
-            resp = CoPilotResponse(natural_language_response=answer,
+            resp = CoPilotResponse(natural_language_response=answer.generated_answer,
                                 answered_question=True,
                                 response_type=state["lookup_source"],
                                 query_sources=state["context"])
@@ -183,7 +200,7 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
         hallucinations = step.check_hallucination(state["answer"].natural_language_response, state["context"])
-        if hallucinations["score"] == "yes":
+        if hallucinations.score == "yes":
             return "grounded"
         else:
             return "hallucination"
@@ -194,7 +211,7 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
         usefulness = step.check_usefulness(state["question"], state["answer"].natural_language_response)
-        if usefulness["score"] == "yes":
+        if usefulness.score == "yes":
             return "useful"
         else:
             return "not_useful"
@@ -236,7 +253,8 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("generate_answer", self.generate_answer)
         self.workflow.add_node("map_question_to_schema", self.map_question_to_schema)
         self.workflow.add_node("generate_function", self.generate_function)
-        self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
+        if self.supportai_enabled:
+            self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
         self.workflow.add_node("rewrite_question", self.rewrite_question)
         self.workflow.add_node("apologize", self.apologize)
 
@@ -256,44 +274,86 @@ class TigerGraphAgentGraph:
                                                     "error": "apologize",
                                                     "success": "generate_answer"
                                                 })
-            self.workflow.add_conditional_edges(
-                "generate_answer",
-                self.check_answer_for_usefulness_and_hallucinations,
-                    {
-                        "hallucination": "rewrite_question",
-                        "grounded": END,
-                        "inquiryai_not_useful": "generate_cypher",
-                        "cypher_not_useful": "hnsw_overlap_search",
-                        "supportai_not_useful": "map_question_to_schema"
-                    }
-                )
+            if self.supportai_enabled:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                        {
+                            "hallucination": "rewrite_question",
+                            "grounded": END,
+                            "inquiryai_not_useful": "generate_cypher",
+                            "cypher_not_useful": "hnsw_overlap_search",
+                            "supportai_not_useful": "map_question_to_schema"
+                        }
+                    )
+            else:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                        {
+                            "hallucination": "rewrite_question",
+                            "grounded": END,
+                            "inquiryai_not_useful": "generate_cypher",
+                            "cypher_not_useful": "apologize"
+                        }
+                    )
         else:
-            self.workflow.add_edge("generate_function", "generate_answer")
             self.workflow.add_conditional_edges(
-                "generate_answer",
-                self.check_answer_for_usefulness_and_hallucinations,
-                    {
-                        "hallucination": "rewrite_question",
-                        "grounded": END,
-                        "not_useful": "rewrite_question",
-                        "inquiryai_not_useful": "hnsw_overlap_search",
-                        "supportai_not_useful": "map_question_to_schema"
-                    }
+                "generate_function",
+                self.check_state_for_generation_error,
+                {
+                    "error": "rewrite_question",
+                    "success": "generate_answer"
+                }
+            )
+            if self.supportai_enabled:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                        {
+                            "hallucination": "rewrite_question",
+                            "grounded": END,
+                            "not_useful": "rewrite_question",
+                            "inquiryai_not_useful": "hnsw_overlap_search",
+                            "supportai_not_useful": "map_question_to_schema"
+                        }
+                )
+            else:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                        {
+                            "hallucination": "rewrite_question",
+                            "grounded": END,
+                            "not_useful": "rewrite_question",
+                            "inquiryai_not_useful": "apologize",
+                            "supportai_not_useful": "map_question_to_schema"
+                        }
+                )
+
+        if self.supportai_enabled:
+            self.workflow.add_conditional_edges(
+                "entry",
+                self.route_question,
+                {
+                    "supportai_lookup": "hnsw_overlap_search",
+                    "inquiryai_lookup": "map_question_to_schema",
+                    "apologize": "apologize"
+                }
+            )
+        else:
+            self.workflow.add_conditional_edges(
+                "entry",
+                self.route_question,
+                {
+                    "inquiryai_lookup": "map_question_to_schema",
+                    "apologize": "apologize"
+                }
             )
 
-
-        self.workflow.add_conditional_edges(
-            "entry",
-            self.route_question,
-            {
-                "supportai_lookup": "hnsw_overlap_search",
-                "inquiryai_lookup": "map_question_to_schema",
-                "apologize": "apologize"
-            }
-        )
-
         self.workflow.add_edge("map_question_to_schema", "generate_function")
-        self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
+        if self.supportai_enabled:
+            self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")
         self.workflow.add_edge("apologize", END)
         

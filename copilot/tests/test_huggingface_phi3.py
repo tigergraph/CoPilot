@@ -24,7 +24,7 @@ class TestWithHuggingFace(CommonTests, unittest.TestCase):
     
     def test_config_read(self):
         resp = self.client.get("/")
-        self.assertEqual(resp.json()["config"], "microsoft/Phi-3-mini-4k-instruct")
+        self.assertEqual(resp.json()["config"], "phi3")
 
 
 if __name__ == "__main__":
