@@ -1,12 +1,12 @@
 FROM python:3.11.8
 WORKDIR /code
 
-COPY ./copilot/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt
  
-COPY ./copilot /code
+COPY ./app /code/
 
 ENV LLM_CONFIG="/llm_config.json"
 ENV DB_CONFIG="/db_config.json"

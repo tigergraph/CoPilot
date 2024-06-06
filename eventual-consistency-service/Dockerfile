@@ -1,12 +1,12 @@
 FROM python:3.11.8
 WORKDIR /code
 
-COPY ./eventual-consistency-service/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt
 
-COPY ./eventual-consistency-service/app /code
+COPY ./app /code/
 
 ENV LLM_CONFIG="/llm_config.json"
 ENV DB_CONFIG="/db_config.json"
