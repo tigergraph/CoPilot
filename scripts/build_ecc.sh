@@ -7,7 +7,7 @@ mkdir build
 
 # copy assets into build
 cp -R eventual-consistency-service $buildPath
-rm $buildPath/app/configs
+rm $buildPath/app/configs $buildPath/app/common
 cp -R configs $buildPath/app
 
 # docker build
