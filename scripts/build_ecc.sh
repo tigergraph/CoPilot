@@ -6,13 +6,10 @@ rm -rf build
 mkdir build
 
 # copy assets into build
-cp -R eventual-consistency-service build/ecc
-rm $buildPath/app/configs $buildPath/app/common
+cp -R eventual-consistency-service $buildPath
+rm $buildPath/app/configs
 cp -R configs $buildPath/app
-cp -R common $buildPath/app
 
 # docker build
-cd $buildPath
-docker build -t ecc .
-cd $rootPath
+docker build -t ecc -f eventual-consistency-service/Dockerfile .
 rm -rf build

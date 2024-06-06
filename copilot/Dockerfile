@@ -1,13 +1,13 @@
 FROM python:3.11.8
 WORKDIR /code
 
-COPY requirements.txt requirements.txt
+COPY copilot/requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt
  
-COPY ./app /code/
-COPY ../common /code/app/common
+COPY copilot/app /code
+COPY common /code/common
 
 ENV LLM_CONFIG="/llm_config.json"
 ENV DB_CONFIG="/db_config.json"
