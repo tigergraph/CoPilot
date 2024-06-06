@@ -8,10 +8,11 @@ RUN pip install -r requirements.txt
 
 COPY eventual-consistency-service/app /code
 COPY common /code/common
+COPY configs /code/configs
 
-ENV LLM_CONFIG="/llm_config.json"
-ENV DB_CONFIG="/db_config.json"
-ENV MILVUS_CONFIG="/milvus_config.json"
+ENV LLM_CONFIG="/code/configs/llm_config.json"
+ENV DB_CONFIG="/code/configs/db_config.json"
+ENV MILVUS_CONFIG="/code/configs/milvus_config.json"
 ENV LOGLEVEL="INFO"
 
 EXPOSE 8001
