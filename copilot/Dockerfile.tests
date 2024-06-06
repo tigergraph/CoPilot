@@ -10,6 +10,8 @@ RUN pip install -r /code/requirements.txt
 
  
 COPY ./copilot/app /code/app
+COPY ./common /code/app/common
+COPY ./configs /code/app/configs
 COPY ./copilot/tests /code/tests
 
 COPY ./.git /code/.git

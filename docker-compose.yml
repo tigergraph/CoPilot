@@ -1,7 +1,6 @@
-
 services:
   copilot:
-    image: copilot
+    image: tigergraphml/copilot
     container_name: copilot
     ports:
       - 8000:8000
@@ -18,7 +17,7 @@ services:
       - ./common:/code/common
 
   eventual-consistency-service:
-    image: ecc
+    image: tigergraphml/ecc
     container_name: eventual-consistency-service
     ports:
       - 8001:8001
