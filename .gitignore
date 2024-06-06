@@ -18,4 +18,11 @@ log.WARNING
 logs/*
 tmp
 .idea
+eventual-consistency-service/app/logs/*
+eventual-consistency-service/logs/*
+eventual-consistency-service/tests/logs/*
+copilot/app/logs/*
+copilot/logs/*
+copilot/tests/logs/*
 volumes
+build/
