@@ -26,3 +26,4 @@ copilot/logs/*
 copilot/tests/logs/*
 volumes
 build/
+run.sh
