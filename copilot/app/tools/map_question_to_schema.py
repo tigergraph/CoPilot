@@ -97,6 +97,8 @@ class MapQuestionToSchema(BaseTool):
             ]
         )[0]["text"]
 
+        logger.info (f"restate_question: {restate_q}")
+
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
 
         parsed_q = parser.invoke(restate_q)
@@ -153,6 +155,8 @@ class MapQuestionToSchema(BaseTool):
             ]
 
         logger.debug(f"request_id={req_id_cv.get()} MapEdgeAttributes applied")
+
+        logger.info (f"parsed_question: {parsed_q}")
 
         try:
             validate_schema(
