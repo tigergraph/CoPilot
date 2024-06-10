@@ -81,7 +81,7 @@ class TigerGraphAgent:
     def question_for_agent(self, question: str, conversation: List[Dict[str, str]] = None):
         """Question for Agent.
 
-        Ask the agent a question to be answered by the database. Returns the agent resoposne or raises an exception.
+        Ask the agent a question to be answered by the database. Returns the agent response or raises an exception.
 
         Args:
             question (str):
