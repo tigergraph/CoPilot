@@ -491,10 +491,10 @@ def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(
     session_handler.delete_session(session_id)
     return {"status": "success"}
 
-
-@router.get("/{graphname}/chat")
-def chat(request: Request):
-    return HTMLResponse(open("static/chat.html").read())
+#
+# @router.get("/{graphname}/chat")
+# def chat(request: Request):
+#     return HTMLResponse(open("static/chat.html").read())
 
 
 @router.websocket("/{graphname}/ws")
