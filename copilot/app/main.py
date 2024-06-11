@@ -5,17 +5,18 @@ import uuid
 from base64 import b64decode
 from datetime import datetime
 
+import routers
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasicCredentials
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
-import routers
 from common.config import PATH_PREFIX, PRODUCTION
+from common.db.connections import (get_db_connection_id_token,
+                                   get_db_connection_pwd)
 from common.logs.log import req_id_cv
-from common.metrics.prometheus_metrics import metrics as pmetrics
 from common.logs.logwriter import LogWriter
-from common.db.connections import get_db_connection_pwd, get_db_connection_id_token
+from common.metrics.prometheus_metrics import metrics as pmetrics
 
 if PRODUCTION:
     app = FastAPI(
@@ -36,6 +37,7 @@ app.include_router(routers.root_router, prefix=PATH_PREFIX)
 app.include_router(routers.inquiryai_router, prefix=PATH_PREFIX)
 app.include_router(routers.supportai_router, prefix=PATH_PREFIX)
 app.include_router(routers.queryai_router, prefix=PATH_PREFIX)
+app.include_router(routers.ui_router, prefix=PATH_PREFIX)
 
 
 excluded_metrics_paths = ("/docs", "/openapi.json", "/metrics")
@@ -110,8 +112,11 @@ async def auth_middleware(request: Request, call_next):
         or graphname == "openapi.json"
         or graphname == "metrics"
         or graphname == "health"
+        # allow the UI endpoints to authenticate without knowing graph name
+        or graphname == "ui"
     ):
         return await call_next(request)
+
     authorization = request.headers.get("Authorization")
     if authorization:
         scheme, credentials = authorization.split()
@@ -122,17 +127,27 @@ async def auth_middleware(request: Request, call_next):
             try:
                 conn = get_db_connection_pwd(graphname, credentials)
             except HTTPException as e:
-                LogWriter.error("Failed to connect to TigerGraph. Incorrect username or password.")
-                return JSONResponse(status_code=401,
-                                    content={"message": "Failed to connect to TigerGraph. Incorrect username or password."})
+                LogWriter.error(
+                    "Failed to connect to TigerGraph. Incorrect username or password."
+                )
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "message": "Failed to connect to TigerGraph. Incorrect username or password."
+                    },
+                )
         else:
             LogWriter.info("Authenticating with id token")
             try:
                 conn = get_db_connection_id_token(graphname, credentials)
             except HTTPException as e:
                 LogWriter.error("Failed to connect to TigerGraph. Incorrect ID Token.")
-                return JSONResponse(status_code=401,
-                                    content={"message": "Failed to connect to TigerGraph. Incorrect ID Token."})
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "message": "Failed to connect to TigerGraph. Incorrect ID Token."
+                    },
+                )
         request.state.conn = conn
     response = await call_next(request)
     return response
