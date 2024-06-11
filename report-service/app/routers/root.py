@@ -1,12 +1,16 @@
 import logging
 
-from fastapi import APIRouter, Response
 from fastapi.responses import FileResponse
+from fastapi.security.http import HTTPBase
+from fastapi import APIRouter, Request, Depends, Response
+from typing import Annotated
 
 from common.config import llm_config
+from common.py_schemas import ReportCreationRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+security = HTTPBase(scheme="basic", auto_error=False)
 
 
 @router.get("/")
@@ -23,6 +27,12 @@ async def health():
             "embedding_model_service"
         ],
     }
+
+@router.post("/{graphname}/create_report")
+def create_report(graphname: str,
+                  create_report_request: ReportCreationRequest, 
+                  conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+    return create_report_request.model_dump_json()
 
 
 @router.get("/metrics")

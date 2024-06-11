@@ -122,3 +122,27 @@ class QueryDeleteRequest(BaseModel):
 class QueryUpsertRequest(BaseModel):
     id: Optional[str]
     query_info: Optional[GSQLQueryInfo]
+
+class MessageContext(BaseModel):
+    # TODO: fix this to contain proper message context
+    context: str
+    value: str
+
+class ReportQuestions(BaseModel):
+    question: str
+    reasoning: str
+
+class ReportSection(BaseModel):
+    section_name: str
+    description: str
+    questions: Optional[List[ReportQuestions]] = None
+    copilot_fortify: bool = True
+    actions: Optional[List[str]] = None
+
+class ReportCreationRequest(BaseModel):
+    topic: str
+    sections: Union[List[ReportSection], str] = None
+    draft_iterations: int = 1
+    persona: Optional[str] = None
+    conversation_id: Optional[str] = None
+    message_context: Optional[List[MessageContext]] = None
