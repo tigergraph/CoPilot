@@ -115,7 +115,6 @@ async def auth_middleware(request: Request, call_next):
         # allow the UI endpoints to authenticate without knowing graph name
         or graphname == "ui"
     ):
-        print(graphname)
         return await call_next(request)
 
     authorization = request.headers.get("Authorization")

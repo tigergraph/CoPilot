@@ -1,10 +1,11 @@
 import logging
 import re
+from sys import prefix
 from typing import Annotated
 
 import requests
-from fastapi import (APIRouter, Cookie, Depends, HTTPException, Request,
-                     WebSocket, status)
+from fastapi import (APIRouter, Cookie, Depends, HTTPException, WebSocket,
+                     status)
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
@@ -12,13 +13,14 @@ from pyTigerGraph import TigerGraphConnection
 from common.config import db_config
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/ui")
+route_prefix = '/ui' # APIRouter's prefix doesn't work with the websocket, so it has to be done here
+router = APIRouter()
 
 
 security = HTTPBasic()
 
 
-GRAPH_NAME_RE = re.compile("- Graph (.*)\(")
+GRAPH_NAME_RE = re.compile(r"- Graph (.*)\(")
 
 
 def ui_basic_auth(
@@ -51,14 +53,15 @@ def ui_basic_auth(
         raise e
 
 
-@router.post("/ui-login")
+@router.post(f"{route_prefix}/ui-login")
 def login(graphs: Annotated[HTTPBasicCredentials, Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
 
-@router.websocket("/chat")
+@router.websocket(f"{route_prefix}/chat")
 async def websocket_endpoint(
-    websocket: WebSocket, cookie: Annotated[str | None, Cookie()]
+    websocket: WebSocket,
+    # cookie: Annotated[str | None, Cookie()],
 ):
     # TODO: cookie auth
     await websocket.accept()
@@ -77,7 +80,7 @@ async def websocket_endpoint(
 #             graphname, NaturalLanguageQuery(query=data), session.db_conn
 #         )
 #         await websocket.send_text(f"{res.natural_language_response}")
-@router.get("/home")
+@router.get(f"{route_prefix}/home")
 async def get():
     html = """
 <!DOCTYPE html>
