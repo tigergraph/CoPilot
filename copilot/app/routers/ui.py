@@ -51,7 +51,7 @@ def ui_basic_auth(
         raise e
 
 
-@router.get("/login")
+@router.post("/ui-login")
 def login(graphs: Annotated[HTTPBasicCredentials, Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
