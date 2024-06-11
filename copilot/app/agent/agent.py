@@ -1,6 +1,6 @@
 import time
 from langchain.agents import AgentType, initialize_agent
-from typing import List, Union
+from typing import Dict, List, Union
 import logging
 
 from pyTigerGraph import TigerGraphConnection
@@ -78,7 +78,7 @@ class TigerGraphAgent:
         
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
 
-    def question_for_agent(self, question: str):
+    def question_for_agent(self, question: str, conversation: List[Dict[str, str]] = None):
         """Question for Agent.
 
         Ask the agent a question to be answered by the database. Returns the agent response or raises an exception.
@@ -96,7 +96,19 @@ class TigerGraphAgent:
                 f"request_id={req_id_cv.get()} question_for_agent question={question}"
             )
             
-            for output in self.agent.stream({"question": question}):
+            input_data = {}
+            input_data["input"] = question
+            logger.info(f"conversation: {conversation}")
+
+            if conversation:
+                input_data["conversation"] = [{"query": chat["query"], "response": chat["response"]} for chat in conversation]
+            else:
+                # Handle the case where conversation is None or empty
+                input_data["conversation"] = []
+
+            logger.info(f"input_data: {input_data}")
+
+            for output in self.agent.stream({"question": str(input_data)}):
                 for key, value in output.items():
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
@@ -116,3 +128,4 @@ class TigerGraphAgent:
             metrics.llm_request_duration_seconds.labels(self.model_name).observe(
                 duration
             )
+
