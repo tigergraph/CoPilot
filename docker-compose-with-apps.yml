@@ -42,6 +42,23 @@ services:
       - ./configs/:/code/configs
       - ./common:/code/common
 
+  report-service:
+    image: tigergraphml/report-service:latest
+    container_name: report-service
+    build:
+      context: .
+      dockerfile: report-service/Dockerfile
+    ports:
+      - 8002:8002
+    environment:
+      LLM_CONFIG: "/code/configs/llm_config.json"
+      DB_CONFIG: "/code/configs/db_config.json"
+      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      LOGLEVEL: "INFO"
+    volumes:
+      - ./configs/:/code/configs
+      - ./common:/code/common
+
   etcd:
     container_name: milvus-etcd
     image: quay.io/coreos/etcd:v3.5.5
