@@ -213,6 +213,7 @@ def retrieve_answer(
 
 conversation_history = []
 
+# TODO: This could be merged with /{graphname}/query endpoints, all agents can be refactored in seperated function or file
 @router.post("/{graphname}/query_with_history")
 def retrieve_answer_with_chathistory(
     graphname,
@@ -224,17 +225,17 @@ def retrieve_answer_with_chathistory(
 
     conn = conn.state.conn
     logger.debug_pii(
-        f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}"
+        f"/{graphname}/query_with_history request_id={req_id_cv.get()} question={query.query}"
     )
     logger.debug(
-        f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
+        f"/{graphname}/query_with_history request_id={req_id_cv.get()} database connection created"
     )
     use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 
     # TODO: This needs to be refactored just to use config.py
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=openai agent created"
         )
         agent = TigerGraphAgent(
             OpenAI(llm_config["completion_service"]),
@@ -245,7 +246,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=azure agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=azure agent created"
         )
         agent = TigerGraphAgent(
             AzureOpenAI(llm_config["completion_service"]),
@@ -256,7 +257,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=sagemaker agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=sagemaker agent created"
         )
         agent = TigerGraphAgent(
             AWS_SageMaker_Endpoint(llm_config["completion_service"]),
@@ -267,7 +268,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=vertexai agent created"
         )
         agent = TigerGraphAgent(
             GoogleVertexAI(llm_config["completion_service"]),
@@ -278,7 +279,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=bedrock agent created"
         )
         agent = TigerGraphAgent(
             AWSBedrock(llm_config["completion_service"]),
@@ -289,7 +290,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "groq":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=groq agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=groq agent created"
         )
         agent = TigerGraphAgent(
             Groq(llm_config["completion_service"]),
@@ -300,7 +301,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=ollama agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=ollama agent created"
         )
         agent = TigerGraphAgent(
             Ollama(llm_config["completion_service"]),
@@ -311,7 +312,7 @@ def retrieve_answer_with_chathistory(
         )
     elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
         logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=huggingface agent created"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service=huggingface agent created"
         )
         agent = TigerGraphAgent(
             HuggingFaceEndpoint(llm_config["completion_service"]),
@@ -322,7 +323,7 @@ def retrieve_answer_with_chathistory(
         )
     else:
         LogWriter.error(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"
         )
         raise Exception("LLM Completion Service Not Supported")
 
@@ -367,12 +368,12 @@ def retrieve_answer_with_chathistory(
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
         )
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
         exc = traceback.format_exc()
         logger.debug_pii(
-            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
     except Exception:
         try:
@@ -389,11 +390,11 @@ def retrieve_answer_with_chathistory(
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent execution failed due to unknown exception"
         )
         exc = traceback.format_exc()
         logger.debug_pii(
-            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
 

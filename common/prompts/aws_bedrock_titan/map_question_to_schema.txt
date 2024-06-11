@@ -1,4 +1,5 @@
-Replace the entites mentioned in the question to one of these choices: {vertices}.
+Input question and conversation history is provided.
+Replace the entites mentioned in the question to one of these choices: {vertices}. always use the conversation history to do coreference resolution if there is unclear info in the question.
 Choose a better mapping between vertex type or its attributes: {verticesAttrs}.
 Replace the relationships mentioned in the question to one of these choices: {edges}.
 Make sure the entities are either the source vertices or target vertices of the relationships: {edgesInfo}.
