@@ -686,13 +686,13 @@ def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(
 #     return HTMLResponse(open("static/chat.html").read())
 
 
-@router.websocket("/{graphname}/ws")
-async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
-    session = session_handler.get_session(session_id)
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        res = retrieve_answer(
-            graphname, NaturalLanguageQuery(query=data), session.db_conn
-        )
-        await websocket.send_text(f"{res.natural_language_response}")
+# @router.websocket("/{graphname}/ws")
+# async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
+#     session = session_handler.get_session(session_id)
+#     await websocket.accept()
+#     while True:
+#         data = await websocket.receive_text()
+#         res = retrieve_answer(
+#             graphname, NaturalLanguageQuery(query=data), session.db_conn
+#         )
+#         await websocket.send_text(f"{res.natural_language_response}")
