@@ -117,7 +117,6 @@ class TigerGraphAgent:
             else:
                 # Handle the case where conversation is None or empty
                 input_data["conversation"] = []
-
             logger.info(f"input_data: {input_data}")
 
             for output in self.agent.stream({"question": str(input_data)}):
@@ -145,6 +144,7 @@ class TigerGraphAgent:
 def make_agent(graphname, conn, use_cypher) -> TigerGraphAgent:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         llm_service_name = "openai"
+        print(llm_config["completion_service"])
         llm_provider = OpenAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         llm_service_name = "azure"

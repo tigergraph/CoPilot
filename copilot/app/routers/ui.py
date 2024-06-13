@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 import re
+import traceback
 from typing import Annotated
 
 import requests
@@ -10,10 +11,16 @@ from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
                      WebSocket, status)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
+from tools.validation_utils import MapQuestionToSchemaException
 
 from common.config import db_config, embedding_service
 from common.db.connections import get_db_connection_pwd_manual
+from common.logs.log import req_id_cv
+from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
+from common.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
+                                       GSQLQueryList, NaturalLanguageQuery,
+                                       QueryDeleteRequest, QueryUpsertRequest)
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +82,45 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
 
-def a(agent: TigerGraphAgent, data):
-    pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
-    return agent.question_for_agent(data)
+def run_agent(
+    agent: TigerGraphAgent, data: str, conversation_history: list[str], graphname
+):
+    resp = CoPilotResponse(
+        natural_language_response="", answered_question=False, response_type="inquiryai"
+    )
+    try:
+        resp = agent.question_for_agent(data, conversation_history)
+        pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
+
+    except MapQuestionToSchemaException:
+        resp.natural_language_response = (
+            "A schema mapping error occurred. Please try rephrasing your question."
+        )
+        resp.query_sources = {}
+        resp.answered_question = False
+        LogWriter.warning(
+            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
+        )
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+    except Exception:
+        resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
+
+        resp.query_sources = {}
+        resp.answered_question = False
+        LogWriter.warning(
+            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+        )
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+
+    return resp
 
 
 def write_message_to_history():
@@ -99,6 +142,7 @@ async def chat(
     # this will error if auth does not pass. FastAPI will correctly respond depending on error
     msg = await websocket.receive_text()
     _, conn = ws_basic_auth(msg, graphname)
+    print(f"***{conn.graphname}*****")
 
     # continuous convo setup
     conversation_history = []
@@ -110,8 +154,11 @@ async def chat(
         conversation_history.append(data)
         # TODO: send message to chat history
         # bg_tasks.add_task(write_message_to_history)
-        # message = a(agent, data)
-        await websocket.send_text(f"Message text was: {data}")
-        # await websocket.send_text(str(message))
+
+        # message = run_agent(agent, data, conversation_history, graphname)
+        # print(message.model_dump_json())
+        # await websocket.send_text(message.model_dump_json())
+
+        await websocket.send_text(f"message text was: {data}")
         # TODO: send response to chat history
         # bg_tasks.add_task(write_message_to_history)

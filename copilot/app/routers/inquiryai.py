@@ -5,7 +5,7 @@ import traceback
 from typing import Annotated, List, Union
 
 from agent.agent import make_agent
-from fastapi import (APIRouter, Depends, HTTPException, Request, WebSocket,
+from fastapi import (APIRouter, Depends, HTTPException, Request, 
                      status)
 from fastapi.security.http import HTTPBase
 from tools.validation_utils import MapQuestionToSchemaException
