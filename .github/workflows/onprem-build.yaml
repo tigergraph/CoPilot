@@ -42,3 +42,17 @@ jobs:
         tags: |
            ${{ env.IMAGE }}
            tigergraphml/copilot:latest
+
+    - name: Set SSH key
+      run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRIVATE_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+    - name: Update on-prem staging environment
+      run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEV_USERNAME }}@${{ secrets.STAGE_ADDRESS }} << 'ENDSSH'
+          cd CoPilot
+          docker compose pull
+          docker compose up -d
+          ENDSSH
