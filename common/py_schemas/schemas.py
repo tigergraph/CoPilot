@@ -127,5 +127,5 @@ class QueryUpsertRequest(BaseModel):
 class Message(BaseModel):
     conversation_id: str
     message_id: str
-    feedback: Optional[str]
+    feedback: Optional[str] = None
     comment: Optional[str] = None

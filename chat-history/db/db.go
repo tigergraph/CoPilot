@@ -111,14 +111,12 @@ func UpdateConversationById(message structs.Message) (*structs.Conversation, err
 			return nil, tx.Error
 		}
 	} else {
-		// Update only the feedback and comments fields if message exists
-		existingMessage.Feedback = message.Feedback
-		existingMessage.Comment = message.Comment
-
-		if result := db.Model(&existingMessage).Updates(map[string]any{
-			"feedback": message.Feedback,
-			"comment":  message.Comment,
-		}); result.Error != nil {
+		// Update only the feedback and comments fields if the message exists
+		if result := db.Model(&existingMessage).Select("Feedback", "Comment").Updates(
+			structs.Message{
+				Feedback: message.Feedback,
+				Comment:  message.Comment,
+			}); result.Error != nil {
 			return nil, result.Error
 		}
 	}

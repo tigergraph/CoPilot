@@ -63,6 +63,51 @@ func TestGetUserConversationById(t *testing.T) {
 	}
 }
 
+func TestUpdateUserConversationById(t *testing.T) {
+	setupTest(t, true)
+	convoId := "601529eb-4927-4e24-b285-bd6b9519a951"
+	messages := GetUserConversationById(USER, convoId)
+
+	if len(messages) == 0 {
+		t.Fatalf("Messages should not be empty for conversation ID: %s", convoId)
+	}
+
+	originalMessage := messages[0]
+	updatedComment := "Updated comment"
+
+	// Prepare the updated message
+	updatedMessage := structs.Message{
+		ConversationId: originalMessage.ConversationId,
+		MessageId:      originalMessage.MessageId,
+		Feedback:       structs.ThumbsUp,
+		Comment:        updatedComment,
+	}
+
+	// Call the UpdateConversationById function
+	_, err := UpdateConversationById(updatedMessage)
+	if err != nil {
+		t.Fatalf("Failed to update conversation: %v", err)
+	}
+
+	// Retrieve the updated messages
+	updatedMessages := GetUserConversationById(USER, convoId)
+	if len(updatedMessages) == 0 {
+		t.Fatalf("Updated messages should not be empty for conversation ID: %s", convoId)
+	}
+
+	// Validate the updated message fields
+	for _, m := range updatedMessages {
+		if m.MessageId == originalMessage.MessageId {
+			if m.Feedback != structs.ThumbsUp {
+				t.Fatalf("Expected feedback to be %d, got %d", structs.ThumbsUp, m.Feedback)
+			}
+			if m.Comment != updatedComment {
+				t.Fatalf("Expected comment to be '%s', got '%s'", updatedComment, m.Comment)
+			}
+		}
+	}
+}
+
 // parallel tests
 func TestParallelWrites(t *testing.T) {
 	/*
