@@ -18,15 +18,13 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
-                                       GSQLQueryList, NaturalLanguageQuery,
-                                       QueryDeleteRequest, QueryUpsertRequest)
+from common.py_schemas.schemas import CoPilotResponse
 
 logger = logging.getLogger(__name__)
 
 use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 route_prefix = "/ui"  # APIRouter's prefix doesn't work with the websocket, so it has to be done here
-router = APIRouter()
+router = APIRouter(tags=["UI"])
 security = HTTPBasic()
 GRAPH_NAME_RE = re.compile(r"- Graph (.*)\(")
 
