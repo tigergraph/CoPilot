@@ -10,6 +10,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 
 from common.config import db_config
+from common.py_schemas.schemas import Message
 
 logger = logging.getLogger(__name__)
 route_prefix = "/ui"  # APIRouter's prefix doesn't work with the websocket, so it has to be done here
@@ -65,8 +66,19 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
 
+@router.post(f"{route_prefix}/feedback")
+def add_feedback(message: Message):
+    try:
+        res = requests.post(f"{db_config['chat_history_api']}/conversation", json=message.model_dump())        
+        if res in None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"status": "success", "conversation": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
 @router.websocket(f"{route_prefix}/chat")
-async def websocket_endpoint( websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     # this will error if auth does not pass. FastAPI will correctly respond depending on error

@@ -3,6 +3,7 @@ package db
 import (
 	"chat-history/middleware"
 	"chat-history/structs"
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -98,11 +99,33 @@ func UpdateConversationById(message structs.Message) (*structs.Conversation, err
 	mu.Lock()
 	defer mu.Unlock()
 
-	if result := db.Create(&message); result.Error != nil {
-		return nil, result.Error
+	// Find the existing message by conversation ID and message ID
+	var existingMessage structs.Message
+	tx := db.Where("conversation_id = ? AND message_id = ? ", message.ConversationId, message.MessageId).First(&existingMessage)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			if result := db.Create(&message); result.Error != nil {
+				return nil, result.Error
+			}
+		} else {
+			return nil, tx.Error
+		}
+	} else {
+		// Update only the feedback and comments fields if message exists
+		existingMessage.Feedback = message.Feedback
+		existingMessage.Comment = message.Comment
+
+		if result := db.Model(&existingMessage).Updates(map[string]any{
+			"feedback": message.Feedback,
+			"comment":  message.Comment,
+		}); result.Error != nil {
+			return nil, result.Error
+		}
 	}
+
+	// Retrieve the updated conversation
 	convo := structs.Conversation{}
-	tx := db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
+	tx = db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
 
 	if err := tx.Error; err != nil {
 		return nil, err
