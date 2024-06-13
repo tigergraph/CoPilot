@@ -45,8 +45,6 @@ def auth(usr: str, password: str, conn=None) -> tuple[list[str], TigerGraphConne
             groups = m.groups()
             graphs.extend(groups)
 
-        return graphs, conn
-
     except requests.exceptions.HTTPError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -54,6 +52,7 @@ def auth(usr: str, password: str, conn=None) -> tuple[list[str], TigerGraphConne
         )
     except Exception as e:
         raise e
+    return graphs, conn
 
 
 def ws_basic_auth(auth_info: str, graphname=None):
@@ -72,7 +71,6 @@ def ui_basic_auth(
     1) Try authenticating with DB.
     2) Get list of graphs user has access to
     """
-    print(creds.username, creds.password)
     graphs = auth(creds.username, creds.password)[0]
     return graphs
 
@@ -83,13 +81,17 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
 
 
 def run_agent(
-    agent: TigerGraphAgent, data: str, conversation_history: list[str], graphname
-):
+    agent: TigerGraphAgent,
+    data: str,
+    conversation_history: list[dict[str, str]],
+    graphname,
+) -> CoPilotResponse:
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
     try:
-        resp = agent.question_for_agent(data, conversation_history)
+        # TODO: make num mesages in history configureable
+        resp = agent.question_for_agent(data, conversation_history[-3:])
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
 
     except MapQuestionToSchemaException:
@@ -142,23 +144,25 @@ async def chat(
     # this will error if auth does not pass. FastAPI will correctly respond depending on error
     msg = await websocket.receive_text()
     _, conn = ws_basic_auth(msg, graphname)
-    print(f"***{conn.graphname}*****")
 
     # continuous convo setup
-    conversation_history = []
+    # create convo_id
+    conversation_history = []  # TODO: go get history
     agent = make_agent(graphname, conn, use_cypher)
 
     while True:
         data = await websocket.receive_text()
-        print(data)
-        conversation_history.append(data)
         # TODO: send message to chat history
         # bg_tasks.add_task(write_message_to_history)
 
-        # message = run_agent(agent, data, conversation_history, graphname)
-        # print(message.model_dump_json())
-        # await websocket.send_text(message.model_dump_json())
+        message = run_agent(agent, data, conversation_history, graphname)
+        await websocket.send_text(message.model_dump_json())
 
-        await websocket.send_text(f"message text was: {data}")
+        # don't include CoPilot appologies for not being able to answer in the agent's known history
+        # if message.answered_question:
+        conversation_history.append(
+            {"query": data, "response": message.natural_language_response}
+        )
+
         # TODO: send response to chat history
         # bg_tasks.add_task(write_message_to_history)
