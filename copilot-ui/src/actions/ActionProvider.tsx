@@ -4,7 +4,7 @@ import useWebSocket, { ReadyState } from 'react-use-websocket';
 import Loader from '../components/Loader';
 
 const API_QUERY = 'https://copilot-tg-26bfd0cd-6582-414e-937e-e2c83ecb5a79.us-east-1.i.tgcloud.io/Transaction_Fraud/query'
-const WS_URL = 'ws://0.0.0.0:8000/ui/chat';
+const WS_URL = 'ws://0.0.0.0:8000/ui/Demo_Graph1/chat';
 
 interface ActionProviderProps {
   createChatBotMessage: any,
@@ -13,6 +13,7 @@ interface ActionProviderProps {
 }
 
 const ActionProvider: React.FC<ActionProviderProps> = ({ createChatBotMessage, setState, children }) => {
+
   const [socketUrl, setSocketUrl] = useState(WS_URL);
   const [messageHistory, setMessageHistory] = useState<MessageEvent<any>[]>([]);
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl);
@@ -51,14 +52,14 @@ const ActionProvider: React.FC<ActionProviderProps> = ({ createChatBotMessage, s
         ...prev,
         messages: [...prev.messages, loading]
       }));
-      setMessageHistory((prev) => prev.concat(lastMessage));
+      // setMessageHistory((prev) => prev.concat(lastMessage));
       setTimeout(() => {
-        const botMessage = createChatBotMessage(lastMessage.data);
+        const botMessage = createChatBotMessage(JSON.parse(lastMessage.data));
         setState((prev) => {
           const newPrevMsg = prev.messages.slice(0, -1)
           return { ...prev, messages: [...newPrevMsg, botMessage], }
         })
-      }, 300);
+      }, 0);
     }
   }, [lastMessage]);
 

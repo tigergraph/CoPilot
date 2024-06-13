@@ -39,24 +39,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
   //   }
   // }
 
-  // const convertString = (str: any) => {
-  //   if(str.indexOf('{') > -1) {
-  //     const jsonStr = str.replace(/(\w+:)|(\w+ :)/g, function(matchedStr) {
-  //       return '"' + matchedStr.substring(0, matchedStr.length - 1) + '":';
-  //     });
-  //     str = JSON.parse(jsonStr);
-  //     return str.action_input;
-  //   } else {
-  //     return str;
-  //   }
-  // }
-
   return (
     <>
-      {/* {JSON.stringify(message)} */}
       {message ? (
         <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          <p className="type-writer">{message}</p>
+          <p className="type-writer">{message.natural_language_response}</p>
           <div className="flex mt-3">
 
             <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Like!!')}>
@@ -79,6 +66,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
           </div>
         </div>
       ) : <div>The chatbot is currently down for maintenance.</div>}
+      {/* OLD */}
       {/* {message ? (
         <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">{message.natural_language_response ? (
           <>
