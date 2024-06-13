@@ -109,7 +109,7 @@ class TigerGraphAgent:
             input_data["input"] = question
             logger.info(f"conversation: {conversation}")
 
-            if conversation:
+            if conversation is not None:
                 input_data["conversation"] = [
                     {"query": chat["query"], "response": chat["response"]}
                     for chat in conversation

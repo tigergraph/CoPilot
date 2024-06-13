@@ -1,15 +1,17 @@
 import base64
+import os
 import logging
 import re
 from typing import Annotated
 
 import requests
-from agent.agent import make_agent
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from agent.agent import TigerGraphAgent, make_agent
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
+                     WebSocket, status)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 
-from common.config import embedding_service
+from common.config import db_config, embedding_service
 from common.db.connections import get_db_connection_pwd_manual
 from common.metrics.prometheus_metrics import metrics as pmetrics
 
@@ -71,30 +73,43 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
 
-def a(agent, data):
+def a(agent: TigerGraphAgent, data):
     pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
-    agent.question_for_agent(data)
+    return agent.question_for_agent(data)
+
+
+def write_message_to_history():
+    print(db_config.get("chat-history-api", "not turned on"))
+    print("write_message_to_history")
 
 
 @router.websocket(route_prefix + "/{graphname}/chat")
-async def chat(graphname: str, websocket: WebSocket):
+async def chat(
+    graphname: str,
+    websocket: WebSocket,
+    bg_tasks: BackgroundTasks,
+):
     # TODO: conversation_id instead of graph name? (convos will need to keep track of the graph name)
 
     await websocket.accept()
 
+    # AUTH
     # this will error if auth does not pass. FastAPI will correctly respond depending on error
     msg = await websocket.receive_text()
     _, conn = ws_basic_auth(msg, graphname)
 
     # continuous convo setup
     conversation_history = []
-    agent = make_agent(graphname, conn, use_cypher)
+    # agent = make_agent(graphname, conn, use_cypher)
 
     while True:
         data = await websocket.receive_text()
         print(data)
         conversation_history.append(data)
         # TODO: send message to chat history
-        a(agent, data)
+        # bg_tasks.add_task(write_message_to_history)
+        # message = a(agent, data)
         await websocket.send_text(f"Message text was: {data}")
+        # await websocket.send_text(str(message))
         # TODO: send response to chat history
+        # bg_tasks.add_task(write_message_to_history)
