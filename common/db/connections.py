@@ -1,5 +1,4 @@
 import logging
-from os import chown
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -70,13 +69,12 @@ def get_db_connection_pwd(
 
 
 def get_db_connection_pwd_manual(
-    graphname, username: str, password: str, elevate=True
+    graphname, username: str, password: str,
 ) -> TigerGraphConnectionProxy:
     """
     Manual auth - pass in user/pass not from basic auth
     """
-    if elevate:
-        conn = elevate_db_connection_to_token(
+    conn = elevate_db_connection_to_token(
             db_config["hostname"], username, password, graphname
         )
 

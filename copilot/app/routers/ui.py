@@ -1,6 +1,6 @@
 import base64
-import os
 import logging
+import os
 import re
 from typing import Annotated
 
@@ -26,9 +26,10 @@ GRAPH_NAME_RE = re.compile(r"- Graph (.*)\(")
 
 def auth(usr: str, password: str, conn=None) -> tuple[list[str], TigerGraphConnection]:
     if conn is None:
-        conn = get_db_connection_pwd_manual(
-            "", username=usr, password=password, elevate=False
+        conn = TigerGraphConnection(
+            host=db_config["hostname"], graphname="", username=usr, password=password
         )
+
     try:
         # parse user info
         info = conn.gsql("LS USER")
@@ -64,6 +65,7 @@ def ui_basic_auth(
     1) Try authenticating with DB.
     2) Get list of graphs user has access to
     """
+    print(creds.username, creds.password)
     graphs = auth(creds.username, creds.password)[0]
     return graphs
 
@@ -100,7 +102,7 @@ async def chat(
 
     # continuous convo setup
     conversation_history = []
-    # agent = make_agent(graphname, conn, use_cypher)
+    agent = make_agent(graphname, conn, use_cypher)
 
     while True:
         data = await websocket.receive_text()
