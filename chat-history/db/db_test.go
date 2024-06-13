@@ -104,6 +104,28 @@ func TestUpdateUserConversationById(t *testing.T) {
 			if m.Comment != updatedComment {
 				t.Fatalf("Expected comment to be '%s', got '%s'", updatedComment, m.Comment)
 			}
+			// Ensure other fields are not affected
+			if m.ConversationId != originalMessage.ConversationId {
+				t.Fatalf("Expected conversation ID to be '%s', got '%s'", originalMessage.ConversationId, m.ConversationId)
+			}
+			if m.MessageId != originalMessage.MessageId {
+				t.Fatalf("Expected message ID to be '%s', got '%s'", originalMessage.MessageId, m.MessageId)
+			}
+			if m.ParentId != originalMessage.ParentId {
+				t.Fatalf("Expected parent ID to be '%v', got '%v'", originalMessage.ParentId, m.ParentId)
+			}
+			if m.ModelName != originalMessage.ModelName {
+				t.Fatalf("Expected model name to be '%s', got '%s'", originalMessage.ModelName, m.ModelName)
+			}
+			if m.Content != originalMessage.Content {
+				t.Fatalf("Expected content to be '%s', got '%s'", originalMessage.Content, m.Content)
+			}
+			if m.Role != originalMessage.Role {
+				t.Fatalf("Expected role to be '%s', got '%s'", originalMessage.Role, m.Role)
+			}
+			if m.ResponseTime != originalMessage.ResponseTime {
+				t.Fatalf("Expected response time to be '%f', got '%f'", originalMessage.ResponseTime, m.ResponseTime)
+			}
 		}
 	}
 }
