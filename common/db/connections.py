@@ -1,4 +1,5 @@
 import logging
+from os import chown
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -66,6 +67,25 @@ def get_db_connection_pwd(
     LogWriter.info("Connected to TigerGraph with password")
     return conn
 
+
+
+def get_db_connection_pwd_manual(
+    graphname, username: str, password: str, elevate=True
+) -> TigerGraphConnectionProxy:
+    """
+    Manual auth - pass in user/pass not from basic auth
+    """
+    if elevate:
+        conn = elevate_db_connection_to_token(
+            db_config["hostname"], username, password, graphname
+        )
+
+    conn.customizeHeader(
+        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
+    )
+    conn = TigerGraphConnectionProxy(conn)
+    LogWriter.info("Connected to TigerGraph with password")
+    return conn
 
 def elevate_db_connection_to_token(host, username, password, graphname) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
