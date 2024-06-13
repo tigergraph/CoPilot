@@ -1,0 +1,480 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --tigerOrange: 28, 93%, 62%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --shadeA: 0, 0%, 20%, 1;
+
+    --background: 345, 11%, 14%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.dark {
+  a {
+    @apply text-white;
+  }
+  .react-chatbot-kit-chat-inner-container {
+    @apply bg-background;
+  }
+  .react-chatbot-kit-chat-input-container{
+    @apply !bg-background !border-[#3D3D3D];
+  }
+  .open-dg {
+    @apply bg-background;
+  }
+  .open-dg .react-chatbot-kit-chat-input-container {
+    @apply !bg-background;
+  }
+  .dg, .fp {
+    @media only screen and (min-width: 768px) {
+      border-left: 1px solid #3D3D3D;
+    }
+  }
+  .fp .react-chatbot-kit-chat-input {
+    @apply bg-shadeA !border-[#3D3D3D];
+  }
+  .react-chatbot-kit-chat-input {
+    @apply bg-shadeA !border-[#3D3D3D];
+  }
+  .react-chatbot-kit-chat-btn-send {
+    @apply !bg-shadeA !border-[#3D3D3D];
+  }
+  .fp .react-chatbot-kit-chat-btn-send {
+    @apply !bg-shadeA !border-[#3D3D3D];
+  }
+  #expand {
+    @apply !bg-background;
+  }
+}
+
+:root {
+  font-family: Urbane-Light, Arial, serif;
+}
+
+.fp {
+  flex-grow: 1;
+  border-left: 1px solid #e5e7eb;
+}
+
+.dg {
+  flex-grow: 1;
+  @media only screen and (min-width: 768px) {
+    border-left: 1px solid #e5e7eb;
+  }
+}
+
+.fp .react-chatbot-kit-chat-container {
+  width: 100% !important;
+  height: calc(100vh - 70px) !important;
+}
+
+.dg .react-chatbot-kit-chat-container {
+  width: 100% !important;
+}
+
+.open-dg {
+  width: calc(100% - 100px) !important;
+  height: calc(90vh - 100px) !important;
+  position: absolute;
+  top: 50px;
+  right: 50px;
+  box-shadow: 0px 3px 5px #888888;
+  border-radius: 25px;
+  background: #fff;
+}
+
+.gradient {
+  border-radius: var(--radius-border_radius_8, 8px);
+  background: var(--Accent-Gradient, linear-gradient(92deg, #F89844 -5.11%, #F47B2E 108.1%));
+}
+
+.open-dialog-avatar {
+  top: calc(90vh - 181px) !important;
+}
+
+.open-dg .react-chatbot-kit-chat-inner-container {
+  border-radius: 25px !important;
+  height: calc(90vh - 100px) !important;
+}
+
+.fp .react-chatbot-kit-chat-message-container, .open-dg .react-chatbot-kit-chat-message-container {
+  height: calc(100vh - 100px) !important;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.closed-dialog .react-chatbot-kit-chat-message-container {
+  height: calc(80vh - 100px) !important;
+}
+
+.fp .react-chatbot-kit-chat-message-container{
+  padding: 0 17.5px 160px 17.5px;
+}
+
+.open-dg  .react-chatbot-kit-chat-message-container{
+  padding: 0 17.5px 100px 17.5px;
+}
+
+.open-dg .react-chatbot-kit-chat-message-container {
+  height: 70vh !important;
+}
+
+.closed-dialog, .closed-dialog .react-chatbot-kit-chat-message-container {
+  border-radius: 15px;
+}
+
+.closed-dialog .react-chatbot-kit-chat-inner-container {
+  border-radius: 15px !important;
+}
+
+.closed-dialog .react-chatbot-kit-chat-container {
+  width: 434px;
+  height: 75vh !important;
+}
+
+.react-chatbot-kit-user-chat-message-arrow {
+  display: none;
+}
+
+.react-chatbot-kit-user-chat-message {
+  width: auto;
+  --tw-bg-opacity: 1;
+  border-radius: var(--radius-border_radius_8, 8px);
+  background: var(--Accent-Gradient, linear-gradient(92deg, #F89844 -5.11%, #F47B2E 108.1%));
+}
+
+.back-drop {
+  position: absolute;
+  width: 100%;
+  background-color: #999;
+  height: calc(100vh + 50px);
+  top: 0px;
+  left: 0px;
+  z-index: -1;
+}
+
+.react-chatbot-kit-chat-bot-message{
+  width: 210px;
+  margin-left: 20px;
+}
+
+.react-chatbot-kit-user-chat-message{
+  width: auto !important;
+  margin-right: 12px !important;
+  padding-left:  20px !important;
+  padding-right: 20px !important;
+  --tw-bg-opacity: 1 !important;
+  background-color: #EB690A !important;
+  border-bottom-left-radius: 50px !important;
+  border-top-left-radius: 50px !important;
+  border-top-right-radius: 50px !important;
+  color: white !important;
+}
+
+.react-chatbot-kit-chat-input-container{
+  background-color: #fff !important;
+  border-top: 1px #ececec solid !important;
+}
+
+.open-dg .react-chatbot-kit-chat-input-container {
+  background-color: #fff !important;
+  border-bottom-right-radius: 25px !important;
+  border-bottom-left-radius: 25px !important;
+}
+
+.closed-dialog .react-chatbot-kit-chat-input-container {
+  border-bottom-right-radius: 25px;
+  border-bottom-left-radius: 25px;
+}
+
+.react-chatbot-kit-chat-input-form{
+  margin: 12px auto 20px auto;
+  max-width: 960px;
+}
+
+.open-dg .react-chatbot-kit-chat-input-form{
+  /* margin: 12px auto 20px auto; */
+  padding: 0 30px 0 30px;
+  max-width: 960px;
+}
+
+.closed-dialog .react-chatbot-kit-chat-input-form{
+  margin: 12px auto 20px auto;
+  padding: 0 30px 0 30px;
+  max-width: 960px;
+}
+
+.dg .react-chatbot-kit-chat-input-form{
+  max-width: 960px;
+}
+
+.fp .react-chatbot-kit-chat-input-form {
+  margin: 19px auto 20px auto;
+  max-width: 960px;
+}
+
+.fp .react-chatbot-kit-chat-input {
+  border-top: none !important;
+  background-color: #ececec;
+  border-bottom-left-radius: 50px !important;
+  border-top-left-radius: 50px;
+  border-top: 1px #ccc solid !important;
+  border-left: 1px #ccc solid !important;
+  border-bottom: 1px #ccc solid !important;
+  height: 72px;
+  text-indent: 20px;
+}
+
+.react-chatbot-kit-chat-input {
+  border-top: none !important;
+  background-color: #ececec;
+  border-bottom-left-radius: 25px !important;
+  border-top-left-radius: 25px;
+  border-top: 1px #ccc solid !important;
+  border-left: 1px #ccc solid !important;
+  border-bottom: 1px #ccc solid !important;
+  height: 48px;
+  text-indent: 20px;
+}
+
+.react-chatbot-kit-chat-input:focus-visible {
+  outline: none;
+}
+
+.react-chatbot-kit-chat-btn-send {
+  background-color: #ececec !important;
+  border-bottom-right-radius: 25px !important;
+  border-top-right-radius: 25px;
+  border-top: 1px #ccc solid !important;
+  border-right: 1px #ccc solid !important;
+  border-bottom: 1px #ccc solid !important;
+}
+
+.fp .react-chatbot-kit-chat-btn-send {
+  background-color: #ececec !important;
+  border-bottom-right-radius: 50px !important;
+  border-top-right-radius: 50px;
+  border-top: 1px #ccc solid !important;
+  border-right: 1px #ccc solid !important;
+  border-bottom: 1px #ccc solid !important;
+}
+
+.react-chatbot-kit-chat-btn-send svg {
+  fill: #999;
+}
+
+
+
+
+.boxA {
+  animation-duration: 0.55s;
+  animation-iteration-count: 1;
+}
+
+.bounce-3 {
+  animation-name: bounce-3;
+  animation-timing-function: ease;
+}
+
+@keyframes bounce-3 {
+  0%   { transform: translateY(200px); opacity: 0; }
+  30%  { transform: translateY(0); opacity: 0.25; }
+  50%  { transform: translateY(0); opacity: 0.5; }
+  100% { transform: translateY(0); opacity: 1;  }
+}
+
+
+
+
+#circle {
+  border-radius: var(--radius-border_radius_8, 8px);
+  background: var(--Accent-Gradient, linear-gradient(92deg, #F89844 -5.11%, #F47B2E 108.1%));
+  border-radius: 50%;
+  width: 55px;
+  height: 55px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  cursor: pointer;
+  transition: 0.3s;
+  opacity: 0.6;
+  color: #fff;
+}
+#circle:hover {opacity: 1}
+#circle svg {
+  color: #fff
+}
+
+
+
+
+#expand {
+  background: #fff !important;
+  border-radius: 50px;
+  width: 132px;
+  height: 55px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  cursor: pointer;
+  transition: 0.3s;
+  opacity: 0.6;
+}
+#expand:hover {opacity: 1}
+
+
+
+.button-image{
+  animation: up_down 2s ease infinite;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes up_down{
+  0%{
+    bottom :30px;
+  }
+  50%{
+    bottom :44px;
+  }
+  100%{
+    bottom :30px;
+  }
+}
+
+@-webkit-keyframes up_down{
+  0%{
+    bottom :30px;
+  }
+  50%{
+    bottom :44px;
+  }
+  100%{
+    bottom :30px;
+  }
+}
+
+@-khtml-keyframes up_down{
+  0%{
+      top :30px;
+  }
+  50%{
+      top :44px;
+  }
+  100%{
+      top :30px;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+/* DEMO-SPECIFIC STYLES */
+.type-writer {
+  overflow: hidden; /* Ensures the content is not revealed until the animation */
+  /* border-right: .15em solid orange; */
+  white-space: nowrap; /* Keeps the content on a single line */
+  animation: 
+    typing .40s steps(30, end),
+    blink-caret .5s step-end;
+}
+
+/* The typing effect */
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+/* The typewriter cursor effect */
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: orange }
+}

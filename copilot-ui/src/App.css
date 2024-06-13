@@ -1,0 +1,27 @@
+html, body{
+  height: 100%;
+}
+
+#root{
+  height: 100%;
+}
+
+@font-face {
+  font-family: 'Urbane-ExtraLight';
+  src: local('Lato'), url(./assets/fonts/urbane/Urbane-ExtraLight.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Urbane-Light';
+  src: local('Lato'), url(./assets/fonts/urbane/Urbane-Light.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Urbane-Medium';
+  src: local('Lato'), url(./assets/fonts/urbane/Urbane-Medium.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Urbane-DemiBold';
+  src: local('Lato'), url(./assets/fonts/urbane/Urbane-DemiBold.woff2) format('woff2');
+}
