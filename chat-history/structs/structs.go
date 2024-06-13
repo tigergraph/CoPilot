@@ -51,6 +51,7 @@ type Message struct {
 	ModelName      string          `json:"model"`
 	Content        string          `json:"content"`
 	Role           MessagengerRole `json:"role"`
+	ResponseTime   float64         `json:"response_time"`
 	Feedback       Feedback        `json:"feedback"`
 	Comment        string          `json:"comment"`
 }
@@ -64,7 +65,7 @@ func (m Message) String() string {
 	MessageId      %v
 	ParentId       %v
 		`,
-		m.ID,m.UpdatedAt, m.ConversationId, m.MessageId, m.ParentId,)
+		m.ID, m.UpdatedAt, m.ConversationId, m.MessageId, m.ParentId)
 	return fmt.Sprintf(`
 	ID             %v
 	ConversationId %v
