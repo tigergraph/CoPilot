@@ -1,5 +1,7 @@
+from typing import Dict, List, Optional, Union
+import enum
+
 from pydantic import BaseModel
-from typing import Optional, Union, Annotated, List, Dict
 
 
 class NaturalLanguageQuery(BaseModel):
@@ -124,8 +126,18 @@ class QueryUpsertRequest(BaseModel):
     query_info: Optional[GSQLQueryInfo]
 
 
+class Role(enum.Enum):
+    system = enum.auto()
+    user = enum.auto()
+
+
 class Message(BaseModel):
     conversation_id: str
     message_id: str
+    parent_id: Optional[str] = None
+    model: Optional[str] = None
+    content: Optional[str] = None
+    role: Optional[str] = None
+    response_time: Optional[float] = None # time in fractional seconds 
     feedback: Optional[str] = None
     comment: Optional[str] = None

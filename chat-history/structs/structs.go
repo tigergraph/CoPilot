@@ -52,7 +52,7 @@ type Message struct {
 	Content        string          `json:"content"`
 	Role           MessagengerRole `json:"role"`
 	ResponseTime   float64         `json:"response_time"`
-	Feedback       Feedback        `json:"feedback"`
+	Feedback       Feedback        `json:"feedback"`// time in fractional seconds (i.e., 1.25 seconds)
 	Comment        string          `json:"comment"`
 }
 

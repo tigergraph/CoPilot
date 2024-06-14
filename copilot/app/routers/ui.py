@@ -2,24 +2,26 @@ import base64
 import logging
 import os
 import re
+import time
 import traceback
+import uuid
 from typing import Annotated
 
+import httpx
 import requests
 from agent.agent import TigerGraphAgent, make_agent
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException,
-                     WebSocket, status)
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from langchain_core.messages import message_to_dict
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
 
-from common.config import db_config, embedding_service
+from common.config import db_config, embedding_service, llm_config
 from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import CoPilotResponse, Message
-
+from common.py_schemas.schemas import CoPilotResponse, Message, Role
 
 logger = logging.getLogger(__name__)
 
@@ -80,15 +82,18 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
 
 
 @router.post(f"{route_prefix}/feedback")
-def add_feedback(message: Message):
+def add_feedback(message: Message, _: Annotated[list[str], Depends(ui_basic_auth)]):
     try:
-        res = requests.post(f"{db_config['chat_history_api']}/conversation", json=message.model_dump())        
+        res = httpx.post(
+            f"{db_config['chat_history_api']}/conversation", json=message.model_dump()
+        )
         if res in None:
             raise HTTPException(status_code=404, detail="Conversation not found")
         return {"status": "success", "conversation": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 def run_agent(
     agent: TigerGraphAgent,
     data: str,
@@ -100,7 +105,7 @@ def run_agent(
     )
     try:
         # TODO: make num mesages in history configureable
-        resp = agent.question_for_agent(data, conversation_history[-3:])
+        resp = agent.question_for_agent(data, conversation_history[-4:])
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
 
     except MapQuestionToSchemaException:
@@ -134,43 +139,88 @@ def run_agent(
     return resp
 
 
-def write_message_to_history():
-    print(db_config.get("chat-history-api", "not turned on"))
-    print("write_message_to_history")
+async def write_message_to_history(message: Message, usr_auth: str):
+    ch = db_config.get("chat_history_api")
+    if ch is not None:
+        headers = {"Authorization": f"Basic {usr_auth}"}
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    f"{ch}/conversation", headers=headers, json=message.model_dump()
+                )
+                res.raise_for_status()
+        except Exception:
+            exc = traceback.format_exc()
+            logger.debug_pii(f"Error writing chat history Exception Trace:\n{exc}")
+
+    else:
+        LogWriter.info(f"chat-history not enabled. chat-history url: {ch}")
 
 
 @router.websocket(route_prefix + "/{graphname}/chat")
 async def chat(
     graphname: str,
     websocket: WebSocket,
-    bg_tasks: BackgroundTasks,
 ):
-    # TODO: conversation_id instead of graph name? (convos will need to keep track of the graph name)
+    """
+    TODO:
+    the text received from the UI should be a Message().
+        We need the conversation ID to
+            initially retrieve the convo
+            update the convo
+    """
     await websocket.accept()
 
     # AUTH
     # this will error if auth does not pass. FastAPI will correctly respond depending on error
-    msg = await websocket.receive_text()
-    _, conn = ws_basic_auth(msg, graphname)
+    usr_auth = await websocket.receive_text()
+    _, conn = ws_basic_auth(usr_auth, graphname)
 
-    # continuous convo setup
     # create convo_id
-    conversation_history = []  # TODO: go get history
+    conversation_history = []  # TODO: go get history instead of starting from 0
+    convo_id = str(uuid.uuid4())
     agent = make_agent(graphname, conn, use_cypher)
 
+    prev_id = None
     while True:
         data = await websocket.receive_text()
-        # TODO: send message to chat history
-        # bg_tasks.add_task(write_message_to_history)
 
-        message = run_agent(agent, data, conversation_history, graphname)
-        await websocket.send_text(message.model_dump_json())
+        # make message from data
+        message = Message(
+            conversation_id=convo_id,
+            message_id=str(uuid.uuid4()),
+            parent_id=prev_id,
+            model=llm_config["model_name"],
+            content=data,
+            role=Role.user.name,
+        )
+        # save message
+        await write_message_to_history(message, usr_auth)
+        prev_id = message.message_id
 
-        # don't include CoPilot appologies for not being able to answer in the agent's known history
-        # if message.answered_question:
+        # generate response and keep track of response time
+        start = time.monotonic()
+        resp = run_agent(agent, data, conversation_history, graphname)
+        elapsed = time.monotonic() - start
+
+        # reply
+        await websocket.send_text(resp.model_dump_json())
+
+        # append message to history
         conversation_history.append(
-            {"query": data, "response": message.natural_language_response}
+            {"query": data, "response": resp.natural_language_response}
         )
 
-        # TODO: send response to chat history
-        # bg_tasks.add_task(write_message_to_history)
+        # save message
+        message = Message(
+            conversation_id=convo_id,
+            message_id=str(uuid.uuid4()),
+            parent_id=prev_id,
+            model=llm_config["model_name"],
+            content=resp.natural_language_response,
+            role=Role.system.name,
+            response_time=elapsed,
+        )
+        await write_message_to_history(message, usr_auth)
+        prev_id = message.message_id
+        # print("**** convo:\n", message.conversation_id)
