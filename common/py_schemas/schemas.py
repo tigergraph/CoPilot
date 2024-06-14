@@ -122,3 +122,10 @@ class QueryDeleteRequest(BaseModel):
 class QueryUpsertRequest(BaseModel):
     id: Optional[str]
     query_info: Optional[GSQLQueryInfo]
+
+
+class Message(BaseModel):
+    conversation_id: str
+    message_id: str
+    feedback: Optional[str] = None
+    comment: Optional[str] = None

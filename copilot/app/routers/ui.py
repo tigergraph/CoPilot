@@ -18,7 +18,8 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import CoPilotResponse
+from common.py_schemas.schemas import CoPilotResponse, Message
+
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,16 @@ def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
     return {"graphs": graphs}
 
 
+@router.post(f"{route_prefix}/feedback")
+def add_feedback(message: Message):
+    try:
+        res = requests.post(f"{db_config['chat_history_api']}/conversation", json=message.model_dump())        
+        if res in None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"status": "success", "conversation": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 def run_agent(
     agent: TigerGraphAgent,
     data: str,
@@ -135,7 +146,6 @@ async def chat(
     bg_tasks: BackgroundTasks,
 ):
     # TODO: conversation_id instead of graph name? (convos will need to keep track of the graph name)
-
     await websocket.accept()
 
     # AUTH

@@ -29,3 +29,4 @@ build/
 /k8s
 run.sh
 configs
+venv
