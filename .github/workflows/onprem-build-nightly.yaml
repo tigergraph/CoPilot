@@ -57,7 +57,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: chat-history/
-        file: Dockerfile
+        file: ./chat-history/Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
@@ -67,7 +67,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: copilot-ui/
-        file: Dockerfile
+        file: ./copilot-ui/Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
