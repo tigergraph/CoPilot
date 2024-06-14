@@ -22,7 +22,7 @@ const ChatDialog = () => {
               </>
             ) : (
               <div className="px-10 py-10 max-w-[434px]">
-                <Login setIsAuth={setIsAuth} />
+                <Login />
               </div>
             )}
           </div>

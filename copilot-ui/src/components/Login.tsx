@@ -31,7 +31,8 @@ const formSchema = z.object({
   }),
 })
 
-const AuthContext = createContext();
+// TODO
+// const AuthContext = createContext();
 const WS_URL = 'http://0.0.0.0:8000/ui/ui-login';
 
 export function Login() {

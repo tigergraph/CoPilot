@@ -28,7 +28,7 @@ interface IChatbotMessageProps {
 export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbotMessageProps) => {
   const [showResult, setShowResult] = useState(false);
 
-  const explain = (e: any) => {
+  const explain = () => {
     setShowResult(prev => !prev);
   };
 
@@ -80,7 +80,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
             <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Regenerate!!')}>
               <PiArrowsCounterClockwiseFill className='text-[15px]' />
             </div>
-            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => explain('explain!!')}>
+            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => explain()}>
               <LuInfo className='text-[15px] mr-1' />
               <span className="text-xs">Explain</span>
             </div>

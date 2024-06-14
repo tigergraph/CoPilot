@@ -19,7 +19,8 @@ const ActionProvider: React.FC<ActionProviderProps> = ({ createChatBotMessage, s
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl);
   const [showLoad, setLoad] = useState(false);
 
-
+  // eslint-disable-next-line
+  // @ts-ignore
   const queryCopilotWs2 = useCallback((msg:string) => {
     sendMessage(msg);
   });

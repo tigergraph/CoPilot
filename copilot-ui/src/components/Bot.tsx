@@ -13,20 +13,13 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
 
-
-
 const Bot = ({ layout }: { layout?: string | undefined }) => {
-  const [store, setStore] = useState();
+  const [store, setStore] = useState<any>();
 
   useEffect(() => {
     const parseStore = JSON.parse(localStorage.getItem('site') || '{}');
