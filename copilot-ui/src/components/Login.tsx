@@ -48,7 +48,7 @@ export function Login() {
   //         method: 'POST',
   //         headers: {
   //           // Authorization: token,
-  //           Authorization: "Basic " + btoa('user_2' + ":" + 'Thisistheadmin!1')
+  //           Authorization: "Basic " + btoa('user_2' + ":" + '')
   //         },
   //       });
   //       const res = await response.json();

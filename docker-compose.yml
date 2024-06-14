@@ -66,3 +66,14 @@ services:
   #   volumes:
   #     - ./configs/:/code/configs
   #     - ./common:/code/common
+      #
+  ui:
+    image: tigergraphml/copilot-ui:latest 
+    container_name: ui 
+    build:
+      context: copilot-ui
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    # depends_on:
+    #   - eventual-consistency-service
