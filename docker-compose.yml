@@ -9,6 +9,7 @@ services:
       - 8000:8000
     depends_on:
       - eventual-consistency-service
+      - chat-history
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
@@ -18,7 +19,6 @@ services:
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
-
   eventual-consistency-service:
     image: tigergraphml/ecc:latest
     container_name: eventual-consistency-service
@@ -35,20 +35,44 @@ services:
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
-
-  report-service:
-    image: tigergraphml/report-service:latest
-    container_name: report-service
+  chat-history:
+    image: tigergraphml/chat-history:latest
+    container_name: chat-history
     build:
-      context: .
-      dockerfile: report-service/Dockerfile
+      context: chat-history/
+      dockerfile: Dockerfile
     ports:
       - 8002:8002
     environment:
-      LLM_CONFIG: "/code/configs/llm_config.json"
-      DB_CONFIG: "/code/configs/db_config.json"
-      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      CONFIG: "/configs/config.json"
       LOGLEVEL: "INFO"
     volumes:
-      - ./configs/:/code/configs
-      - ./common:/code/common
+      - ./chat-history/:/configs
+
+  # report-service:
+  #   image: tigergraphml/report-service:latest
+  #   container_name: report-service
+  #   build:
+  #     context: .
+  #     dockerfile: report-service/Dockerfile
+  #   ports:
+  #     - 8002:8002
+  #   environment:
+  #     LLM_CONFIG: "/code/configs/llm_config.json"
+  #     DB_CONFIG: "/code/configs/db_config.json"
+  #     MILVUS_CONFIG: "/code/configs/milvus_config.json"
+  #     LOGLEVEL: "INFO"
+  #   volumes:
+  #     - ./configs/:/code/configs
+  #     - ./common:/code/common
+      #
+  ui:
+    image: tigergraphml/copilot-ui:latest 
+    container_name: ui 
+    build:
+      context: copilot-ui
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    depends_on:
+      - copilot

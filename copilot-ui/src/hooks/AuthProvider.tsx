@@ -1,6 +1,9 @@
 import { useContext, createContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// TODO
+  // eslint-disable-next-line
+  // @ts-ignore
 const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {

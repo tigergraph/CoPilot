@@ -45,7 +45,7 @@
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 345, 11%, 14%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
@@ -114,10 +114,17 @@
   #expand {
     @apply !bg-background;
   }
+  .typewriter {
+    --bgColor: #272022;
+  }
 }
 
 :root {
   font-family: Urbane-Light, Arial, serif;
+}
+
+.bg-popover {
+  background-color: hsl(var(--popover));
 }
 
 .fp {
@@ -461,7 +468,7 @@
 .type-writer {
   overflow: hidden; /* Ensures the content is not revealed until the animation */
   /* border-right: .15em solid orange; */
-  white-space: nowrap; /* Keeps the content on a single line */
+  /*white-space: nowrap;  Keeps the content on a single line */
   animation: 
     typing .40s steps(30, end),
     blink-caret .5s step-end;
@@ -477,4 +484,102 @@
 @keyframes blink-caret {
   from, to { border-color: transparent }
   50% { border-color: orange }
+}
+
+
+
+
+
+
+@keyframes grow {
+  0% { max-height: var(--lineHeight); }
+  100% { max-height: calc(var(--lineHeight) * var(--lines)); }
+}
+
+@keyframes carriageReturn {
+  0% { top: 0; }
+  100% { top: calc(var(--lineHeight) * var(--lines)); }
+}
+
+@keyframes type {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
+@keyframes caret {
+  0% { color: var(--bgColor); }
+  100% { color: black; }
+}
+
+.typewriter {
+  --lines: 500;
+  --lineHeight: 1.5rem;
+  --timePerLine: 1s;
+  --widthCh: 22;
+  /* --width: calc(var(--widthCh) * 1ch);  */
+  /* do not touch the time property!!! */
+  --time: calc(var(--lines) * var(--timePerLine));
+  animation: grow var(--time) steps(var(--lines));
+  animation-fill-mode: forwards;
+  background: var(--bgColor);  
+  line-height: var(--lineHeight);
+  max-height: var(--lineHeight);
+  overflow: hidden;
+  position: relative;
+  width: var(--width);
+  /* word-break: break-all; */
+}
+
+.typewriter::before {
+  content: "";
+  animation: 
+    type var(--timePerLine) linear infinite, 
+    carriageReturn var(--time) steps(var(--lines)) var(--lines),
+    caret 0.5s steps(2) infinite;
+  background: var(--bgColor);
+  border-left: 2px solid;
+  bottom: 0;
+  height: 2rem;
+  position: absolute;
+  right: 0;
+  width: 100%;
+}
+
+.typewriter.no-caret::before {
+  border-left-width: 0;
+}
+
+.typewriter.big-caret::before {
+  border-left-width: 1ch;
+}
+
+.typewriter.monospace {
+  font-family: monospace, monospace;
+}
+
+.typewriter.monospace::before {
+  animation: 
+    type var(--timePerLine) steps(var(--widthCh)) infinite, 
+    carriageReturn var(--time) steps(var(--lines)) var(--lines),
+    caret 0.5s steps(2) infinite;
+}
+
+/* DEMO */
+section {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  left: 0;
+  padding: 1rem;
+  position: absolute;
+  top: 1rem;
+  width: 100%;
+}
+
+section:nth-child(2) { top: 10rem; }
+section:nth-child(3) { top: 20rem; }
+
+.lorem {
+  --widthCh: 60;
+  --timePerLine: 6s;
 }

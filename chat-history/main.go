@@ -12,7 +12,8 @@ import (
 )
 
 func main() {
-	config, err := config.LoadConfig("config.json")
+	configPath:= os.Getenv("CONFIG")
+	config, err := config.LoadConfig(configPath)
 	if err != nil {
 		panic(err)
 	}

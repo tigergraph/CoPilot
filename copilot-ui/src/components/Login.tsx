@@ -31,7 +31,8 @@ const formSchema = z.object({
   }),
 })
 
-const AuthContext = createContext();
+// TODO
+// const AuthContext = createContext();
 const WS_URL = 'http://0.0.0.0:8000/ui/ui-login';
 
 export function Login() {
@@ -47,7 +48,7 @@ export function Login() {
   //         method: 'POST',
   //         headers: {
   //           // Authorization: token,
-  //           Authorization: "Basic " + btoa('user_2' + ":" + 'Thisistheadmin!1')
+  //           Authorization: "Basic " + btoa('user_2' + ":" + '')
   //         },
   //       });
   //       const res = await response.json();
