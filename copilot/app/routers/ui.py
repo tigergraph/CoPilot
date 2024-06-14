@@ -223,4 +223,4 @@ async def chat(
         )
         await write_message_to_history(message, usr_auth)
         prev_id = message.message_id
-        # print("**** convo:\n", message.conversation_id)
+        print("**** convo_id:\n", message.conversation_id)
