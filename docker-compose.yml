@@ -1,24 +1,24 @@
 services:
-  # copilot:
-  #   image: tigergraphml/copilot:latest 
-  #   container_name: copilot
-  #   build:
-  #     context: .
-  #     dockerfile: copilot/Dockerfile
-  #   ports:
-  #     - 8000:8000
-  #   # depends_on:
-  #   #   - eventual-consistency-service
-  #   environment:
-  #     LLM_CONFIG: "/code/configs/llm_config.json"
-  #     DB_CONFIG: "/code/configs/db_config.json"
-  #     MILVUS_CONFIG: "/code/configs/milvus_config.json"
-  #     LOGLEVEL: "INFO"
-  #     USE_CYPHER: "false"
-  #   volumes:
-  #     - ./configs/:/code/configs
-  #     - ./common:/code/common
-  #
+  copilot:
+    image: tigergraphml/copilot:latest 
+    container_name: copilot
+    build:
+      context: .
+      dockerfile: copilot/Dockerfile
+    ports:
+      - 8000:8000
+    # depends_on:
+    #   - eventual-consistency-service
+    environment:
+      LLM_CONFIG: "/code/configs/llm_config.json"
+      DB_CONFIG: "/code/configs/db_config.json"
+      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      LOGLEVEL: "INFO"
+      USE_CYPHER: "false"
+    volumes:
+      - ./configs/:/code/configs
+      - ./common:/code/common
+
 #   eventual-consistency-service:
 #     image: tigergraphml/ecc:latest
 #     container_name: eventual-consistency-service

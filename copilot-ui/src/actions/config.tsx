@@ -4,6 +4,8 @@ import { UserAvatar } from '../components/UserAvatar';
 import { CustomChatMessage } from '../components/CustomChatMessage';
 import { Start } from '../components/Start';
 import CustomMessage from '../components/CustomMessage';
+import Loader from '@/components/Loader';
+import { TransactionFraud } from '@/components/TransactionFraud';
 
 
 const config = {
@@ -19,6 +21,11 @@ const config = {
     {
       widgetName: 'overview',
       widgetFunc: (props: any) => <Start {...props}  />,
+      mapStateToProps: ["messages"]
+    },
+    {
+      widgetName: 'transaction-fraud',
+      widgetFunc: (props: any) => <TransactionFraud {...props}  />,
       mapStateToProps: ["messages"]
     }
   ],

@@ -25,3 +25,8 @@ html, body{
   font-family: 'Urbane-DemiBold';
   src: local('Lato'), url(./assets/fonts/urbane/Urbane-DemiBold.woff2) format('woff2');
 }
+
+
+ol {
+  margin-left: 1.5em;
+}
