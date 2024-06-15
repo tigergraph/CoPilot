@@ -1,12 +1,16 @@
 import logging
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security.http import HTTPBase
 from fastapi import APIRouter, Request, Depends, Response
 from typing import Annotated
 
-from common.config import llm_config
+from common.config import llm_config, get_llm_service
 from common.py_schemas import ReportCreationRequest
+
+from report_agent.agent import TigerGraphReportAgent
+
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,11 +32,45 @@ async def health():
         ],
     }
 
+def retrieve_template(template_name: str):
+    # TODO: Implement this function - it should retrieve the template from the database
+    return template_name
+
 @router.post("/{graphname}/create_report")
 def create_report(graphname: str,
                   create_report_request: ReportCreationRequest, 
                   conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
-    return create_report_request.model_dump_json()
+    
+    agent = TigerGraphReportAgent(conn.state.conn, get_llm_service(llm_config))
+    sections = create_report_request.sections
+    if isinstance(sections, str):
+        sections = retrieve_template(sections)
+    if isinstance(sections, list):
+        if sections == []:
+            sections = agent.generate_sections(create_report_request.persona,
+                                               create_report_request.topic,
+                                               create_report_request.message_context).sections
+        else:
+            # if copilot_fortify == True, then need to add more questions to the section.
+            generate_sections = False
+    else:
+        return JSONResponse(status_code=400, content={"error": """Invalid sections data type.
+                                                               Must be an empty list (if sections are to be generated) 
+                                                               or a string of a report template name, or a list of sections."""})
+    gen_sections = []
+    for section in sections:
+        res = agent.generate_report_section(create_report_request.persona,
+                                            create_report_request.topic,
+                                            gen_sections,
+                                            section)
+        gen_sections.append(res)
+        
+    
+    report = agent.finalize_report(create_report_request.persona,
+                                   create_report_request.topic,
+                                   gen_sections)
+
+    return {"report": report.dict()}
 
 
 @router.get("/metrics")

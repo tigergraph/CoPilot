@@ -14,7 +14,7 @@ services:
       DB_CONFIG: "/code/configs/db_config.json"
       MILVUS_CONFIG: "/code/configs/milvus_config.json"
       LOGLEVEL: "INFO"
-      USE_CYPHER: "false"
+      USE_CYPHER: "true"
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
@@ -44,6 +44,8 @@ services:
       dockerfile: report-service/Dockerfile
     ports:
       - 8002:8002
+    depends_on:
+      - copilot
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"

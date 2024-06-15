@@ -25,6 +25,7 @@ copilot/app/logs/*
 copilot/logs/*
 copilot/tests/logs/*
 report-service/logs/*
+report-service/app/logs/*
 volumes
 build/
 /k8s

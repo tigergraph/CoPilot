@@ -125,8 +125,8 @@ class QueryUpsertRequest(BaseModel):
 
 class MessageContext(BaseModel):
     # TODO: fix this to contain proper message context
-    context: str
-    value: str
+    user: str
+    content: str
 
 class ReportQuestions(BaseModel):
     question: str
