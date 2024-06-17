@@ -123,6 +123,11 @@
   font-family: Urbane-Light, Arial, serif;
 }
 
+.chatbot-loader-container {
+  display: inline !important;
+  padding-top: 28px !important; 
+}
+
 .bg-popover {
   background-color: hsl(var(--popover));
 }

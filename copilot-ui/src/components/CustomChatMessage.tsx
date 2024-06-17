@@ -6,8 +6,6 @@ import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
 
-import { SetStateAction } from "react";
-
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
@@ -37,10 +35,8 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
 
   return (
     <>
-    {/* {JSON.stringify(typeof message)} */}
-
       {typeof message === 'string' ? (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
+        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">  
           <p className="typewriter">{message}</p>
           <div className="flex mt-3">
 
@@ -56,7 +52,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
             <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Regenerate!!')}>
               <PiArrowsCounterClockwiseFill className='text-[15px]' />
             </div>
-            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => alert('explain!!')}>
+            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => explain()}>
               <LuInfo className='text-[15px] mr-1' />
               <span className="text-xs">Explain</span>
             </div>
@@ -64,7 +60,8 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
           </div>
         </div>
       ) : (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
+        message.key === null ? message : (
+          <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
           <p className="typewriter">{message.natural_language_response}</p>
           <div className="flex mt-3">
 
@@ -93,6 +90,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
           </p> : null}
 
         </div>
+        )
       )}
 
 
