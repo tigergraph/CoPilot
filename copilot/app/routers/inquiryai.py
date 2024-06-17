@@ -1,39 +1,26 @@
 import json
-import os
 import logging
+import os
 import traceback
-from typing import List, Union, Annotated
+from typing import Annotated, List, Union
 
-from fastapi import APIRouter, HTTPException, Request, WebSocket, status, Depends
-from fastapi.responses import HTMLResponse
+from agent.agent import make_agent
+from fastapi import (APIRouter, Depends, HTTPException, Request, 
+                     status)
 from fastapi.security.http import HTTPBase
-
-from agent import TigerGraphAgent
-from common.config import embedding_service, embedding_store, llm_config, session_handler
-from common.llm_services import (
-    AWS_SageMaker_Endpoint,
-    AWSBedrock,
-    AzureOpenAI,
-    GoogleVertexAI,
-    OpenAI,
-    Groq,
-    Ollama,
-    HuggingFaceEndpoint
-)
-from common.logs.log import req_id_cv
-from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import (
-    CoPilotResponse,
-    GSQLQueryInfo,
-    GSQLQueryList,
-    NaturalLanguageQuery,
-    QueryDeleteRequest,
-    QueryUpsertRequest,
-)
-from common.logs.logwriter import LogWriter
 from tools.validation_utils import MapQuestionToSchemaException
 
+from common.config import embedding_service, embedding_store, session_handler
+from common.logs.log import req_id_cv
+from common.logs.logwriter import LogWriter
+from common.metrics.prometheus_metrics import metrics as pmetrics
+from common.py_schemas.schemas import (CoPilotResponse, GSQLQueryInfo,
+                                       GSQLQueryList, NaturalLanguageQuery,
+                                       QueryDeleteRequest, QueryUpsertRequest)
+
 logger = logging.getLogger(__name__)
+
+use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 router = APIRouter(tags=["InquiryAI"])
 security = HTTPBase(scheme="basic", auto_error=False)
 
@@ -43,7 +30,7 @@ def retrieve_answer(
     graphname,
     query: NaturalLanguageQuery,
     conn: Request,
-    credentials: Annotated[HTTPBase, Depends(security)]
+    credentials: Annotated[HTTPBase, Depends(security)],
 ) -> CoPilotResponse:
     conn = conn.state.conn
     logger.debug_pii(
@@ -52,124 +39,13 @@ def retrieve_answer(
     logger.debug(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
-    use_cypher = os.getenv("USE_CYPHER", "false").lower() == "true"
 
-    # TODO: This needs to be refactored just to use config.py
-    if llm_config["completion_service"]["llm_service"].lower() == "openai":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=openai agent created"
-        )
-        agent = TigerGraphAgent(
-            OpenAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "azure":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=azure agent created"
-        )
-        agent = TigerGraphAgent(
-            AzureOpenAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=sagemaker agent created"
-        )
-        agent = TigerGraphAgent(
-            AWS_SageMaker_Endpoint(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=vertexai agent created"
-        )
-        agent = TigerGraphAgent(
-            GoogleVertexAI(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=bedrock agent created"
-        )
-        agent = TigerGraphAgent(
-            AWSBedrock(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "groq":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=groq agent created"
-        )
-        agent = TigerGraphAgent(
-            Groq(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=ollama agent created"
-        )
-        agent = TigerGraphAgent(
-            Ollama(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
-        logger.debug(
-            f"/{graphname}/query request_id={req_id_cv.get()} llm_service=huggingface agent created"
-        )
-        agent = TigerGraphAgent(
-            HuggingFaceEndpoint(llm_config["completion_service"]),
-            conn,
-            embedding_service,
-            embedding_store,
-            use_cypher=use_cypher
-        )
-    else:
-        LogWriter.error(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"
-        )
-        raise Exception("LLM Completion Service Not Supported")
-
+    agent = make_agent(graphname, conn, use_cypher)
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
     try:
         resp = agent.question_for_agent(query.query)
-        '''
-        # try again if there were no steps taken
-        if len(steps["intermediate_steps"]) == 0:
-            steps = agent.question_for_agent(query.query)
-
-        logger.debug(f"/{graphname}/query request_id={req_id_cv.get()} agent executed")
-        
-        generate_func_output = steps["intermediate_steps"][-1][-1]
-        resp.natural_language_response = steps["output"]
-        resp.query_sources = {
-            "function_call": generate_func_output["function_call"],
-            "result": json.loads(generate_func_output["result"]),
-            "reasoning": generate_func_output["reasoning"],
-        }
-        resp.answered_question = True
-        '''
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -186,16 +62,7 @@ def retrieve_answer(
             f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
     except Exception:
-        try:
-            # if the output is json, it's intermediate agent output
-            #json.loads(str(steps))  # TODO: don't use errors as control flow
-            resp.natural_language_response = (
-                # "An error occurred while processing the response. Please try again."
-                "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
-            )
-        except:
-            # the output wasn't json. It was likely a message from the agent to the user
-            resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
+        resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
         resp.query_sources = {}
         resp.answered_question = False
@@ -211,8 +78,87 @@ def retrieve_answer(
     return resp
 
 
+conversation_history = []
+
+
+# TODO: This could be merged with /{graphname}/query endpoints, all agents can be refactored in seperated function or file
+@router.post("/{graphname}/query_with_history")
+def retrieve_answer_with_chathistory(
+    graphname,
+    query: NaturalLanguageQuery,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+) -> CoPilotResponse:
+    global conversation_history
+
+    conn = conn.state.conn
+    logger.debug_pii(
+        f"/{graphname}/query_with_history request_id={req_id_cv.get()} question={query.query}"
+    )
+    logger.debug(
+        f"/{graphname}/query_with_history request_id={req_id_cv.get()} database connection created"
+    )
+
+    # TODO: This needs to be refactored just to use config.py
+    agent = make_agent(graphname, conn, use_cypher)
+    resp = CoPilotResponse(
+        natural_language_response="", answered_question=False, response_type="inquiryai"
+    )
+    try:
+        # Retrieve latest 3 Q&A pairs in full conversation history
+        latest_history = conversation_history[-3:]
+        latest_history_query = [
+            {
+                "query": interaction.get("query", ""),
+                "response": interaction.get("response", ""),
+            }
+            for interaction in latest_history
+        ]
+
+        logger.info(f"latest 3 pairs of queries: {latest_history_query}")
+
+        resp = agent.question_for_agent(query.query, latest_history_query)
+        pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
+
+        conversation_history.append(
+            {"query": query.query, "response": resp.natural_language_response}
+        )
+
+    except MapQuestionToSchemaException:
+        resp.natural_language_response = (
+            "A schema mapping error occurred. Please try rephrasing your question."
+        )
+        resp.query_sources = {}
+        resp.answered_question = False
+        LogWriter.warning(
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
+        )
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+    except Exception:
+        resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
+
+        resp.query_sources = {}
+        resp.answered_question = False
+        LogWriter.warning(
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+        )
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
+
+    return resp
+
+
 @router.get("/{graphname}/list_registered_queries")
-def list_registered_queries(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def list_registered_queries(
+    graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
+):
     conn = conn.state.conn
     if conn.getVer().split(".")[0] <= "3":
         query_descs = embedding_store.list_registered_documents(
@@ -242,7 +188,10 @@ def get_query_embedding(graphname, query: NaturalLanguageQuery):
 
 @router.post("/{graphname}/register_docs")
 def register_docs(
-    graphname, query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]], conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
+    graphname,
+    query_list: Union[GSQLQueryInfo, List[GSQLQueryInfo]],
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
 ):
     conn = conn.state.conn
     # auth check
@@ -286,19 +235,26 @@ def register_docs(
 
 
 @router.post("/{graphname}/upsert_from_gsql")
-def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def upsert_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     req = conn
     conn = conn.state.conn
 
     query_names = query_list.queries
     query_descs = conn.getQueryDescription(query_names)
-    logger.debug("retrieved query descriptions from GSQL"+str(query_descs))
+    logger.debug("retrieved query descriptions from GSQL" + str(query_descs))
 
     query_info_list = []
     for query_desc in query_descs:
-        logger.debug("processing query description: "+str(query_desc))
+        logger.debug("processing query description: " + str(query_desc))
         if query_desc.get("description", None) is None:
-            logger.warning(f"Query may not perform well {query_desc['queryName']} because it has no description")
+            logger.warning(
+                f"Query may not perform well {query_desc['queryName']} because it has no description"
+            )
         params = query_desc["parameters"]
         if params == []:
             params = {}
@@ -326,7 +282,12 @@ def upsert_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
 
 
 @router.post("/{graphname}/delete_from_gsql")
-def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def delete_from_gsql(
+    graphname,
+    query_list: GSQLQueryList,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     req = conn
     conn = conn.state.conn
 
@@ -343,7 +304,7 @@ def delete_from_gsql(graphname, query_list: GSQLQueryList, conn: Request, creden
                 expr=f"function_header=='{query_desc['queryName']}' and graphname=='{graphname}'",
             ),
             req,
-            credentials
+            credentials,
         )
         func_counter += 1
 
@@ -355,7 +316,7 @@ def upsert_docs(
     graphname,
     request_data: Union[QueryUpsertRequest, List[QueryUpsertRequest]],
     conn: Request,
-    credentials: Annotated[HTTPBase, Depends(security)]
+    credentials: Annotated[HTTPBase, Depends(security)],
 ):
     conn = conn.state.conn
     # auth check
@@ -379,18 +340,24 @@ def upsert_docs(
                     detail="At least one of 'id' or 'query_info' is required",
                 )
             elif not id and query_info:
-                try: 
+                try:
                     # expr = f"function_header in ['{query_info.function_header}']"
                     expr = f"function_header == '{query_info.function_header}'"
                     id = embedding_store.get_pks(expr)
                     if id:
                         id = str(id[0])
-                        logger.info(f"Found document id {id} based on expression {expr}")
+                        logger.info(
+                            f"Found document id {id} based on expression {expr}"
+                        )
                     else:
                         id = ""
-                        logger.info(f"No document found based on expression {expr}, inserting as a new document")
+                        logger.info(
+                            f"No document found based on expression {expr}, inserting as a new document"
+                        )
                 except Exception as e:
-                    error_message = f"An error occurred while getting pks of document: {str(e)}"
+                    error_message = (
+                        f"An error occurred while getting pks of document: {str(e)}"
+                    )
                     raise e
 
             logger.debug(
@@ -427,7 +394,12 @@ def upsert_docs(
 
 
 @router.post("/{graphname}/delete_docs")
-def delete_docs(graphname, request_data: QueryDeleteRequest, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def delete_docs(
+    graphname,
+    request_data: QueryDeleteRequest,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
+):
     conn = conn.state.conn
     # auth check
     try:
@@ -470,7 +442,7 @@ def retrieve_docs(
     graphname,
     query: NaturalLanguageQuery,
     credentials: Annotated[HTTPBase, Depends(security)],
-    top_k: int = 3
+    top_k: int = 3,
 ):
     logger.debug_pii(
         f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}"
@@ -481,29 +453,16 @@ def retrieve_docs(
 
 
 @router.post("/{graphname}/login")
-def login(graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]):
+def login(
+    graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
+):
     session_id = session_handler.create_session(conn.state.conn.username, conn)
     return {"session_id": session_id}
 
 
 @router.post("/{graphname}/logout")
-def logout(graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
+def logout(
+    graphname, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]
+):
     session_handler.delete_session(session_id)
     return {"status": "success"}
-
-
-@router.get("/{graphname}/chat")
-def chat(request: Request):
-    return HTMLResponse(open("static/chat.html").read())
-
-
-@router.websocket("/{graphname}/ws")
-async def websocket_endpoint(websocket: WebSocket, graphname: str, session_id: str, credentials: Annotated[HTTPBase, Depends(security)]):
-    session = session_handler.get_session(session_id)
-    await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        res = retrieve_answer(
-            graphname, NaturalLanguageQuery(query=data), session.db_conn
-        )
-        await websocket.send_text(f"{res.natural_language_response}")

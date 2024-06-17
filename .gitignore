@@ -27,3 +27,6 @@ copilot/tests/logs/*
 volumes
 build/
 /k8s
+run.sh
+configs
+venv

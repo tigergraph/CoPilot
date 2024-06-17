@@ -1,26 +1,23 @@
-import time
-from langchain.agents import AgentType, initialize_agent
-from typing import List, Union
 import logging
-
-from pyTigerGraph import TigerGraphConnection
+import time
+from typing import Dict, List
 
 from agent.agent_graph import TigerGraphAgentGraph
 from tools import GenerateCypher, GenerateFunction, MapQuestionToSchema
 
-from common.embeddings.embedding_services import EmbeddingModel
+from common.config import embedding_service, embedding_store, llm_config
 from common.embeddings.base_embedding_store import EmbeddingStore
+from common.embeddings.embedding_services import EmbeddingModel
+from common.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock,
+                                 AzureOpenAI, GoogleVertexAI, Groq,
+                                 HuggingFaceEndpoint, Ollama, OpenAI)
 from common.llm_services.base_llm import LLM_Model
+from common.logs.log import req_id_cv
+from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 
-from common.logs.log import req_id_cv
-from common.logs.logwriter import LogWriter
-
-from typing_extensions import TypedDict
-
 logger = logging.getLogger(__name__)
-
 
 
 class TigerGraphAgent:
@@ -45,7 +42,7 @@ class TigerGraphAgent:
         db_connection: TigerGraphConnectionProxy,
         embedding_model: EmbeddingModel,
         embedding_store: EmbeddingStore,
-        use_cypher: bool = False
+        use_cypher: bool = False,
     ):
         self.conn = db_connection
 
@@ -68,20 +65,32 @@ class TigerGraphAgent:
         if use_cypher:
             self.cypher_tool = GenerateCypher(self.conn, self.llm)
             self.agent = TigerGraphAgentGraph(
-                self.llm, self.conn, self.embedding_model, self.embedding_store, self.mq2s, self.gen_func, self.cypher_tool
+                self.llm,
+                self.conn,
+                self.embedding_model,
+                self.embedding_store,
+                self.mq2s,
+                self.gen_func,
+                self.cypher_tool,
             ).create_graph()
         else:
             self.agent = TigerGraphAgentGraph(
-                self.llm, self.conn, self.embedding_model, self.embedding_store, self.mq2s, self.gen_func
+                self.llm,
+                self.conn,
+                self.embedding_model,
+                self.embedding_store,
+                self.mq2s,
+                self.gen_func,
             ).create_graph()
 
-        
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
 
-    def question_for_agent(self, question: str):
+    def question_for_agent(
+        self, question: str, conversation: List[Dict[str, str]] = None
+    ):
         """Question for Agent.
 
-        Ask the agent a question to be answered by the database. Returns the agent resoposne or raises an exception.
+        Ask the agent a question to be answered by the database. Returns the agent response or raises an exception.
 
         Args:
             question (str):
@@ -95,8 +104,22 @@ class TigerGraphAgent:
             logger.debug_pii(
                 f"request_id={req_id_cv.get()} question_for_agent question={question}"
             )
-            
-            for output in self.agent.stream({"question": question}):
+
+            input_data = {}
+            input_data["input"] = question
+            logger.info(f"conversation: {conversation}")
+
+            if conversation is not None:
+                input_data["conversation"] = [
+                    {"query": chat["query"], "response": chat["response"]}
+                    for chat in conversation
+                ]
+            else:
+                # Handle the case where conversation is None or empty
+                input_data["conversation"] = []
+            logger.info(f"input_data: {input_data}")
+
+            for output in self.agent.stream({"question": str(input_data)}):
                 for key, value in output.items():
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
@@ -116,3 +139,44 @@ class TigerGraphAgent:
             metrics.llm_request_duration_seconds.labels(self.model_name).observe(
                 duration
             )
+
+
+def make_agent(graphname, conn, use_cypher) -> TigerGraphAgent:
+    if llm_config["completion_service"]["llm_service"].lower() == "openai":
+        llm_service_name = "openai"
+        print(llm_config["completion_service"])
+        llm_provider = OpenAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "azure":
+        llm_service_name = "azure"
+        llm_provider = AzureOpenAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "sagemaker":
+        llm_service_name = "sagemaker"
+        llm_provider = AWS_SageMaker_Endpoint(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "vertexai":
+        llm_service_name = "vertexai"
+        llm_provider = GoogleVertexAI(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "bedrock":
+        llm_service_name = "bedrock"
+        llm_provider = AWSBedrock(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "groq":
+        llm_service_name = "groq"
+        llm_provider = Groq(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "ollama":
+        llm_service_name = "ollama"
+        llm_provider = Ollama(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
+        llm_service_name = "huggingface"
+        llm_provider = HuggingFaceEndpoint(llm_config["completion_service"])
+    else:
+        LogWriter.error(
+            f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"
+        )
+        raise Exception("LLM Completion Service Not Supported")
+
+    logger.debug(
+        f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service={llm_service_name} agent created"
+    )
+    agent = TigerGraphAgent(
+        llm_provider, conn, embedding_service, embedding_store, use_cypher=use_cypher
+    )
+    return agent
