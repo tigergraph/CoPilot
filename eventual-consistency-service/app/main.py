@@ -43,7 +43,8 @@ def start_ecc_in_thread(graphname: str, conn: TigerGraphConnectionProxy):
     LogWriter.info(f"Eventual consistency checker started for graph {graphname}")
 
 def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
-    check_interval_seconds = milvus_config.get("sync_interval_seconds", 30 * 60)
+    check_interval_seconds = milvus_config.get("sync_interval_seconds", 1800) # default 30 minutes
+    cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days
     if graphname not in consistency_checkers:
         vector_indices = {}
         if milvus_config.get("enabled") == "true":
@@ -105,6 +106,7 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
 
         checker = EventualConsistencyChecker(
             check_interval_seconds,
+            cleanup_interval_seconds,
             graphname,
             vertex_field,  # FIXME: if milvus is not enabled, this is not defined and will crash here (vertex_field used before assignment)
             embedding_service,
@@ -115,7 +117,14 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
             extractor,
         )
         consistency_checkers[graphname] = checker
+
+        # start the longer cleanup process that will run in further spaced-out intervals
+        thread = Thread(target=checker.initialize_cleanup, daemon=True)
+        thread.start()
+
+        # start the main ECC process that searches for new vertices that need to be processed
         checker.initialize()
+
     return consistency_checkers[graphname]
 
 @app.get("/")

@@ -490,5 +490,31 @@ class MilvusEmbeddingStore(EmbeddingStore):
             )
         return res
 
+    def query(self, expr: str, output_fields: List[str]):
+        """Get output fields with expression
+
+        Args:
+            expr: Expression - E.g: "pk > 0"
+
+        Returns:
+            List of output fields' contents
+        """
+
+        from pymilvus import MilvusException
+
+        if self.milvus.col is None:
+            LogWriter.info("No existing collection to query.")
+            return None
+
+        try:
+            query_result = self.milvus.col.query(
+                expr=expr, output_fields=output_fields
+            )
+        except MilvusException as exc:
+            LogWriter.error(f"Failed to get outputs: {self.milvus.collection_name} error: {exc}")
+            raise exc
+
+        return query_result
+
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec

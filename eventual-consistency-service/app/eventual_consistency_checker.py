@@ -25,7 +25,8 @@ class EventualConsistencyChecker:
         conn: TigerGraphConnectionProxy,
         chunker: BaseChunker,
         extractor: BaseExtractor,
-        batch_size = 10
+        batch_size = 10,
+        run_forever = True
     ):
         self.interval_seconds = interval_seconds
         self.graphname = graphname
@@ -38,10 +39,12 @@ class EventualConsistencyChecker:
         self.chunker = chunker
         self.extractor = extractor
         self.batch_size = batch_size
+        self.run_forever = run_forever
 
         self._check_query_install("Scan_For_Updates")
         self._check_query_install("Update_Vertices_Processing_Status")
         self._check_query_install("ECC_Status")
+        self._check_query_install("Check_Nonexistent_Vertices")
 
     def _install_query(self, query_name):
         LogWriter.info(f"Installing query {query_name}")
@@ -244,6 +247,24 @@ class EventualConsistencyChecker:
 
         return len(vertex_ids_content_map) != 0
 
+    def verify_and_cleanup_embeddings(self):
+        for v_type in self.embedding_indices:
+            query_result = self.embedding_stores[self.graphname + "_" + v_type].query("pk > 0", [self.vertex_field])
+            if query_result is not None:
+                vertex_ids = [item.get(self.vertex_field) for item in query_result]
+
+                if vertex_ids:
+                    non_existent_vertices = self.conn.runInstalledQuery(
+                        "Check_Nonexistent_Vertices",
+                        {"v_type": v_type, "vertex_ids": vertex_ids}
+                    )[0]["@@missing_vertices"]
+
+                    for vertex_id in non_existent_vertices:
+                        LogWriter.info(f"Vertex {vertex_id} no longer exists in TigerGraph. Removing from Milvus.")
+                        self.embedding_stores[self.graphname + "_" + v_type].remove_embeddings(
+                            expr=f"{self.vertex_field} == '{vertex_id}'"
+                        )
+
     def initialize(self):
         LogWriter.info(
             f"Eventual Consistency Check running for graphname {self.graphname} "
@@ -251,7 +272,26 @@ class EventualConsistencyChecker:
         self.is_initialized = True
         while True:
             self.fetch_and_process_vertex()
-            time.sleep(self.interval_seconds)
+
+            if not self.run_forever:
+                break
+            else:
+                time.sleep(self.interval_seconds)
+
+            
+    def initialize_cleanup(self):
+        LogWriter.info(
+            f"Eventual Consistency Check running cleanup for graphname {self.graphname} "
+        )
+        self.is_initialized = True
+        while True and self.run_forever:
+            self.verify_and_cleanup_embeddings()
+            time.sleep(self.interval_seconds * 2)
+
+            if not self.run_forever:
+                break
+            else:
+                time.sleep(self.interval_seconds)
 
     def get_status(self):
         statuses = {}
