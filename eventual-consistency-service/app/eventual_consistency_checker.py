@@ -17,6 +17,7 @@ class EventualConsistencyChecker:
     def __init__(
         self,
         interval_seconds,
+        cleanup_interval_seconds,
         graphname,
         vertex_field,
         embedding_service: EmbeddingModel,
@@ -29,6 +30,7 @@ class EventualConsistencyChecker:
         run_forever = True
     ):
         self.interval_seconds = interval_seconds
+        self.cleanup_interval_seconds = cleanup_interval_seconds
         self.graphname = graphname
         self.conn = conn
         self.is_initialized = False
@@ -286,12 +288,11 @@ class EventualConsistencyChecker:
         self.is_initialized = True
         while True and self.run_forever:
             self.verify_and_cleanup_embeddings()
-            time.sleep(self.interval_seconds * 2)
 
             if not self.run_forever:
                 break
             else:
-                time.sleep(self.interval_seconds)
+                time.sleep(self.cleanup_interval_seconds)
 
     def get_status(self):
         statuses = {}
