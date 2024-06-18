@@ -1,4 +1,5 @@
 from supportai.retrievers import BaseRetriever
+
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 
 
@@ -26,9 +27,8 @@ class HNSWRetriever(BaseRetriever):
                 "collection_name": self.conn.graphname + "_" + index,
                 "top_k": top_k,
             },
-            usePost=True
         )
-        res = self.conn.runInstalledQuery("HNSW_Search_Content", params)
+        res = self.conn.runInstalledQuery("HNSW_Search_Content", params, usePost=True)
         return res
 
     def retrieve_answer(self, question, index, top_k=1, withHyDE=False):

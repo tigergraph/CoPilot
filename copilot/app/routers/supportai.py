@@ -387,7 +387,7 @@ def build_concepts(
     return {"status": "success"}
 
 
-@router.get("/{graphname}/supportai/consistency_status")
+@router.get("/{graphname}/supportai/forceupdate")
 def ecc(
     graphname,
     conn: Request,
