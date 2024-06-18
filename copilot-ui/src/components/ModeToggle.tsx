@@ -1,16 +1,16 @@
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useTheme } from "@/components/ThemeProvider"
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/components/ThemeProvider";
 
 export function ModeToggle() {
-  const { setTheme } = useTheme()
+  const { setTheme } = useTheme();
 
   return (
     <div className="absolute right-1 top-[13px]">
@@ -35,5 +35,5 @@ export function ModeToggle() {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  )
+  );
 }

@@ -20,7 +20,7 @@ i18n
           forgotPassword: "Forgot Password",
           submit: "Submit",
           noAccount: "Don't have an account?",
-          signUp: "Sign Up"
+          signUp: "Sign Up",
         },
       },
       es: {
@@ -32,17 +32,10 @@ i18n
           forgotPassword: "¿Has olvidado tu contraseña?",
           submit: "Entregar",
           noAccount: "¿No tienes una cuenta?",
-          signUp: "Regístrate"
+          signUp: "Regístrate",
         },
       },
     },
   });
 
 export default i18n;
-
-
-
-
-
-
-

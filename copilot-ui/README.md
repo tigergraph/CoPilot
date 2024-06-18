@@ -1,11 +1,10 @@
-** Please note, we are using 'pnpm' for module installations. You will save a lot of space on your disk proportional to the number of projects and dependencies, and you have a lot faster installations!.
+\*\* Please note, we are using 'pnpm' for module installations. You will save a lot of space on your disk proportional to the number of projects and dependencies, and you have a lot faster installations!.
 
 https://pnpm.io/
 
 To install dependancies: 'pnpm i'
 To start local dev: 'pnpm run dev'
 To add dependancies: 'pnpm add -----'
-
 
 # React + TypeScript + Vite
 
@@ -26,12 +25,12 @@ If you are developing a production application, we recommend updating the config
 export default {
   // other rules...
   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
+    ecmaVersion: "latest",
+    sourceType: "module",
+    project: ["./tsconfig.json", "./tsconfig.node.json"],
     tsconfigRootDir: __dirname,
   },
-}
+};
 ```
 
 - Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`

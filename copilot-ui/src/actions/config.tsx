@@ -1,16 +1,15 @@
-import { createCustomMessage } from 'react-chatbot-kit';
-import { BotAvatar } from '../components/BotAvatar';
-import { UserAvatar } from '../components/UserAvatar';
-import { CustomChatMessage } from '../components/CustomChatMessage';
-import { Start } from '../components/Start';
-import CustomMessage from '../components/CustomMessage';
-import Loader from '@/components/Loader';
-import { TransactionFraud } from '@/components/TransactionFraud';
-
+import { createCustomMessage } from "react-chatbot-kit";
+import { BotAvatar } from "../components/BotAvatar";
+import { UserAvatar } from "../components/UserAvatar";
+import { CustomChatMessage } from "../components/CustomChatMessage";
+import { Start } from "../components/Start";
+import CustomMessage from "../components/CustomMessage";
+import Loader from "@/components/Loader";
+import { TransactionFraud } from "@/components/TransactionFraud";
 
 const config = {
   initialMessages: [
-    createCustomMessage('Test', 'custom', { widget: 'overview' })
+    createCustomMessage("Test", "custom", { widget: "overview" }),
   ],
 
   customMessages: {
@@ -19,31 +18,31 @@ const config = {
 
   widgets: [
     {
-      widgetName: 'overview',
-      widgetFunc: (props: any) => <Start {...props}  />,
-      mapStateToProps: ["messages"]
+      widgetName: "overview",
+      widgetFunc: (props: any) => <Start {...props} />,
+      mapStateToProps: ["messages"],
     },
     {
-      widgetName: 'transaction-fraud',
-      widgetFunc: (props: any) => <TransactionFraud {...props}  />,
-      mapStateToProps: ["messages"]
-    }
+      widgetName: "transaction-fraud",
+      widgetFunc: (props: any) => <TransactionFraud {...props} />,
+      mapStateToProps: ["messages"],
+    },
   ],
 
-  customStyles:{
+  customStyles: {
     botMessageBox: {
-      backgroundColor: '#8B5CF6'
-    }
+      backgroundColor: "#8B5CF6",
+    },
   },
 
   customComponents: {
     header: () => <div></div>,
-    botChatMessage: (props: any) => <CustomChatMessage {...props}/>,
-    botAvatar: (props: any) => <BotAvatar {...props}/>,
-    userAvatar: (props: any) => <UserAvatar {...props}/>
-  }
+    botChatMessage: (props: any) => <CustomChatMessage {...props} />,
+    botAvatar: (props: any) => <BotAvatar {...props} />,
+    userAvatar: (props: any) => <UserAvatar {...props} />,
+  },
 
-  // Defines an object of custom components that will replace the stock chatbot components. 
+  // Defines an object of custom components that will replace the stock chatbot components.
   //   customComponents: {
   //     // Replaces the default header
   //    header: () => <div style={{ backgroundColor: 'red', padding: "5px", borderRadius: "3px" }}>This is the header</div>
