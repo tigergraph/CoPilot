@@ -19,88 +19,113 @@ interface IChatbotMessageProps {
   setState?: React.Dispatch<any>;
   customComponents?: any;
   customStyles: {
-  backgroundColor: string;
+    backgroundColor: string;
   };
 }
 
-export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbotMessageProps) => {
+export const CustomChatMessage: FC<IChatbotMessageProps> = ({
+  message,
+}: IChatbotMessageProps) => {
   const [showResult, setShowResult] = useState(false);
 
   const explain = () => {
-    setShowResult(prev => !prev);
+    setShowResult((prev) => !prev);
   };
 
   // TODO
-  // const determineContentType = (message: any) => {} 
+  // const determineContentType = (message: any) => {}
 
   return (
     <>
-      {typeof message === 'string' ? (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">  
+      {typeof message === "string" ? (
+        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
           <p className="typewriter">{message}</p>
           <div className="flex mt-3">
-
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Like!!')}>
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Like!!")}
+            >
               <FaRegThumbsUp />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('DisLike!!')}>
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("DisLike!!")}
+            >
               <FaRegThumbsDown />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Copy!!')}>
-              <IoMdCopy className='text-[15px]' />
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Copy!!")}
+            >
+              <IoMdCopy className="text-[15px]" />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Regenerate!!')}>
-              <PiArrowsCounterClockwiseFill className='text-[15px]' />
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Regenerate!!")}
+            >
+              <PiArrowsCounterClockwiseFill className="text-[15px]" />
             </div>
-            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => explain()}>
-              <LuInfo className='text-[15px] mr-1' />
+            <div
+              className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer"
+              onClick={() => explain()}
+            >
+              <LuInfo className="text-[15px] mr-1" />
               <span className="text-xs">Explain</span>
             </div>
-    
           </div>
         </div>
+      ) : message.key === null ? (
+        message
       ) : (
-        message.key === null ? message : (
-          <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
+        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
           <p className="typewriter">{message.natural_language_response}</p>
           <div className="flex mt-3">
-
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Like!!')}>
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Like!!")}
+            >
               <FaRegThumbsUp />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('DisLike!!')}>
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("DisLike!!")}
+            >
               <FaRegThumbsDown />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Copy!!')}>
-              <IoMdCopy className='text-[15px]' />
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Copy!!")}
+            >
+              <IoMdCopy className="text-[15px]" />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Regenerate!!')}>
-              <PiArrowsCounterClockwiseFill className='text-[15px]' />
+            <div
+              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+              onClick={() => alert("Regenerate!!")}
+            >
+              <PiArrowsCounterClockwiseFill className="text-[15px]" />
             </div>
-            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => explain()}>
-              <LuInfo className='text-[15px] mr-1' />
+            <div
+              className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer"
+              onClick={() => explain()}
+            >
+              <LuInfo className="text-[15px] mr-1" />
               <span className="text-xs">Explain</span>
             </div>
-            
           </div>
 
-          {showResult ? <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
-            <strong>Reasoning:</strong> {message.query_sources.reasoning}
-            <span className="absolute right-2 bottom-1 cursor-pointer" onClick={() => setShowResult(false)}>X</span>
-          </p> : null}
-
+          {showResult ? (
+            <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
+              <strong>Reasoning:</strong> {message.query_sources.reasoning}
+              <span
+                className="absolute right-2 bottom-1 cursor-pointer"
+                onClick={() => setShowResult(false)}
+              >
+                X
+              </span>
+            </p>
+          ) : null}
         </div>
-        )
       )}
-
-
-
-
-
-
-
-
-
 
       {/* {message ? message : message.natural_language_response} */}
       {/* {message ? (
@@ -159,5 +184,3 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({ message }: IChatbo
     </>
   );
 };
-
-

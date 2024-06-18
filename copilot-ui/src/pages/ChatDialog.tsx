@@ -13,12 +13,18 @@ const ChatDialog = () => {
   return (
     <>
       {chatWindow ? (
-        <div className={open ? 'open-dg' : ''}>
-          <div className={open ? 'flex justify-between boxA bounce-3' : 'closed-dialog absolute right-10 bottom-[130px] bg-white dark:bg-background shadow-md'}>
+        <div className={open ? "open-dg" : ""}>
+          <div
+            className={
+              open
+                ? "flex justify-between boxA bounce-3"
+                : "closed-dialog absolute right-10 bottom-[130px] bg-white dark:bg-background shadow-md"
+            }
+          >
             {isAuth ? (
               <>
-                {open && <SideMenuDialog height='dg' />}
-                <Bot layout={open ? 'dg' : ''} />
+                {open && <SideMenuDialog height="dg" />}
+                <Bot layout={open ? "dg" : ""} />
               </>
             ) : (
               <div className="px-10 py-10 max-w-[434px]">
@@ -29,27 +35,33 @@ const ChatDialog = () => {
         </div>
       ) : null}
 
-      <div id='circle'
-           className='absolute right-7 bottom-7 button-image bg-[#50d71e]'
-           onClick={() => setChatWindow(showChat => !showChat)}>
-           {chatWindow ? 'X' : <img src="./white-tg-logo.svg" />}
+      <div
+        id="circle"
+        className="absolute right-7 bottom-7 button-image bg-[#50d71e]"
+        onClick={() => setChatWindow((showChat) => !showChat)}
+      >
+        {chatWindow ? "X" : <img src="./white-tg-logo.svg" />}
       </div>
 
-      {chatWindow && isAuth && <div
-        id='expand'
-        className='absolute right-[105px] bottom-7 button-image bg-[#fff]'
-        onClick={() => setOpen(prev => !prev)}
-      >
-        {open ? (
-          <>
-            <span>Collapse</span> <RiCollapseDiagonalFill className="ml-1 text-xl" />
-          </>
-        ) : (
-          <>
-            <span>Expand</span> <RiExpandDiagonalFill className="ml-1 text-xl" />
-          </>
-        )}
-      </div>}
+      {chatWindow && isAuth && (
+        <div
+          id="expand"
+          className="absolute right-[105px] bottom-7 button-image bg-[#fff]"
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          {open ? (
+            <>
+              <span>Collapse</span>{" "}
+              <RiCollapseDiagonalFill className="ml-1 text-xl" />
+            </>
+          ) : (
+            <>
+              <span>Expand</span>{" "}
+              <RiExpandDiagonalFill className="ml-1 text-xl" />
+            </>
+          )}
+        </div>
+      )}
 
       <div className="back-drop"></div>
     </>
@@ -57,5 +69,3 @@ const ChatDialog = () => {
 };
 
 export default ChatDialog;
-
-

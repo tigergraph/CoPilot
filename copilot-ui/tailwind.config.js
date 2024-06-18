@@ -2,10 +2,10 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
   ],
   prefix: "",
   theme: {
@@ -59,7 +59,7 @@ module.exports = {
         tigerOrange: {
           DEFAULT: "hsl(var(--tigerOrange))",
           foreground: "hsl(var(--tigerOrange-foreground))",
-        }
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -83,4 +83,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};

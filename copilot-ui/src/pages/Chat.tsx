@@ -6,7 +6,7 @@ const Chat = () => {
     <>
       <div className="flex justify-between boxA bounce-3">
         <SideMenu />
-        <Bot layout='fp'/>
+        <Bot layout="fp" />
       </div>
     </>
   );

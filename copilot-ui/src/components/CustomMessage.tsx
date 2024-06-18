@@ -1,7 +1,5 @@
 const CustomMessage = () => {
-  return (
-    null
-  );
+  return null;
 };
 
 export default CustomMessage;
