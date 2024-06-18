@@ -14,6 +14,6 @@ clean:
 
 run: clean test build
 	clear
-	DEV=true ./chat-history
+	CONFIG="config.json" DEV=true ./chat-history
 
 

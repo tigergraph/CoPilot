@@ -69,10 +69,11 @@ export function Login() {
   const loginAction = async (data: z.infer<typeof formSchema>) => {
     console.log(data);
     try {
+      const creds = btoa(data.email + ':' + data.password); 
       const response = await fetch(WS_URL, {
         method: "POST",
         headers: {
-          Authorization: "Basic " + btoa(data.email + ":" + data.password),
+          Authorization: "Basic " + creds,
           "Content-Type": "application/json",
         },
       });
@@ -82,6 +83,7 @@ export function Login() {
         setUser(res);
         setToken(res);
         localStorage.setItem("site", JSON.stringify(res));
+        localStorage.setItem("creds", creds);
         navigate("/chat");
         return;
       }

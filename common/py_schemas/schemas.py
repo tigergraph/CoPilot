@@ -139,5 +139,5 @@ class Message(BaseModel):
     content: Optional[str] = None
     role: Optional[str] = None
     response_time: Optional[float] = None # time in fractional seconds 
-    feedback: Optional[str] = None
+    feedback: Optional[int] = None
     comment: Optional[str] = None

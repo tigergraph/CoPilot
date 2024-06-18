@@ -1,11 +1,9 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { createClientMessage } from "react-chatbot-kit";
-import useWebSocket, { ReadyState } from "react-use-websocket";
-import Loader from "../components/Loader";
+import React, {useState, useCallback, useEffect} from 'react';
+import {createClientMessage} from 'react-chatbot-kit';
+import useWebSocket, {ReadyState} from 'react-use-websocket';
+import Loader from '../components/Loader';
 
-const API_QUERY =
-  "https://copilot-tg-26bfd0cd-6582-414e-937e-e2c83ecb5a79.us-east-1.i.tgcloud.io/Transaction_Fraud/query";
-const WS_URL = "ws://0.0.0.0:8000/ui/Demo_Graph1/chat";
+const WS_URL = 'ws://0.0.0.0:8000/ui/Demo_Graph1/chat';
 
 interface ActionProviderProps {
   createChatBotMessage: any;
@@ -13,14 +11,35 @@ interface ActionProviderProps {
   children: any;
 }
 
-const ActionProvider: React.FC<ActionProviderProps> = ({
-  createChatBotMessage,
-  setState,
-  children,
-}) => {
+export enum Feedback {
+  NoFeedback = 0,
+  LIKE,
+  DISLIKE,
+}
+export interface Message {
+  // 	ConversationId uuid.UUID       `json:"conversation_id" gorm:"not null"`
+  conversationId: string;
+  // 	MessageId      uuid.UUID       `json:"message_id" gorm:"unique;not null"`
+  messageId: string;
+  // 	ParentId       *uuid.UUID      `json:"parent_id"` // pointer allows nil
+  parentId: string;
+  // 	ModelName      string          `json:"model"`
+  modelName: string;
+  // 	Content        string          `json:"content"`
+  content: string;
+  // 	Role           MessagengerRole `json:"role"`
+  role: string;
+  // 	ResponseTime   float64         `json:"response_time"`
+  // 	Feedback       Feedback        `json:"feedback"`// time in fractional seconds (i.e., 1.25 seconds)
+  feedback: Feedback;
+  // 	Comment        string          `json:"comment"`
+  comment: string;
+}
+
+const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, setState, children}) => {
   const [socketUrl, setSocketUrl] = useState(WS_URL);
-  const [messageHistory, setMessageHistory] = useState<MessageEvent<any>[]>([]);
-  const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl);
+  const [messageHistory, setMessageHistory] = useState<MessageEvent<Message>[]>([]);
+  const {sendMessage, lastMessage, readyState} = useWebSocket(socketUrl);
 
   // eslint-disable-next-line
   // @ts-ignore
@@ -30,8 +49,8 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
 
   useWebSocket(WS_URL, {
     onOpen: () => {
-      queryCopilotWs2("dXNlcl8yOlRoaXNpc3RoZWFkbWluITE=");
-      console.log("WebSocket connection established.");
+      queryCopilotWs2('dXNlcl8yOlRoaXNpc3RoZWFkbWluITE=');
+      console.log('WebSocket connection established.');
     },
   });
 
@@ -43,7 +62,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   };
 
   const defaultQuestions = (msg: string) => {
-    if (msg === "Tell me about transaction fraud.") {
+    if (msg === 'Tell me about transaction fraud.') {
       handleTransactionFraud(msg);
     } else {
       const clientMessage = createClientMessage(msg, {
@@ -73,11 +92,11 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     });
     updateState(clientMessage);
     const botMessage = createChatBotMessage(
-      "Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:",
+      'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
       {
         delay: 2000,
-        widget: "transaction-fraud",
-      },
+        widget: 'transaction-fraud',
+      }
     );
     updateState(botMessage);
   };
@@ -85,13 +104,13 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   useEffect(() => {
     if (lastMessage !== null) {
       setMessageHistory((prev) => prev.concat(lastMessage));
-      // setTimeout(() => {
       const botMessage = createChatBotMessage(JSON.parse(lastMessage.data));
+      console.log(botMessage.message);
+      
       setState((prev) => {
         const newPrevMsg = prev.messages.slice(0, -1);
-        return { ...prev, messages: [...newPrevMsg, botMessage] };
+        return {...prev, messages: [...newPrevMsg, botMessage]};
       });
-      // }, 300);
     }
   }, [lastMessage]);
 
@@ -120,18 +139,16 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   // }
 
   const connectionStatus = {
-    [ReadyState.CONNECTING]: "Connecting",
-    [ReadyState.OPEN]: "Open",
-    [ReadyState.CLOSING]: "Closing",
-    [ReadyState.CLOSED]: "Closed",
-    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+    [ReadyState.CONNECTING]: 'Connecting',
+    [ReadyState.OPEN]: 'Open',
+    [ReadyState.CLOSING]: 'Closing',
+    [ReadyState.CLOSED]: 'Closed',
+    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
   }[readyState];
 
   return (
     <div>
-      <span className="absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]">
-        The WebSocket is currently {connectionStatus}
-      </span>
+      <span className='absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]'>The WebSocket is currently {connectionStatus}</span>
       {React.Children.map(children, (child) => {
         return React.cloneElement(child, {
           actions: {
