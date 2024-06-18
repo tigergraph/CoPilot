@@ -43,10 +43,15 @@ def start_ecc_in_thread(graphname: str, conn: TigerGraphConnectionProxy):
     LogWriter.info(f"Eventual consistency checker started for graph {graphname}")
 
 def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
-    check_interval_seconds = milvus_config.get("sync_interval_seconds", 1800) # default 30 minutes
-    cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days
-    if graphname not in consistency_checkers:
+    if graphname in consistency_checkers:
+        return consistency_checkers[graphname]
+
+    try:
+        check_interval_seconds = milvus_config.get("sync_interval_seconds", 1800) # default 30 minutes
+        cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days
         vector_indices = {}
+        vertex_field = None
+
         if milvus_config.get("enabled") == "true":
             vertex_field = milvus_config.get("vertex_field", "vertex_id")
             index_names = milvus_config.get(
@@ -104,11 +109,14 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
         else:
             raise ValueError("Invalid extractor type")
 
+        if vertex_field is None:
+            raise ValueError("vertex_field is not defined. Ensure Milvus is enabled in the configuration.")
+
         checker = EventualConsistencyChecker(
             check_interval_seconds,
             cleanup_interval_seconds,
             graphname,
-            vertex_field,  # FIXME: if milvus is not enabled, this is not defined and will crash here (vertex_field used before assignment)
+            vertex_field,
             embedding_service,
             index_names,
             vector_indices,
@@ -119,13 +127,15 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
         consistency_checkers[graphname] = checker
 
         # start the longer cleanup process that will run in further spaced-out intervals
-        thread = Thread(target=checker.initialize_cleanup, daemon=True)
-        thread.start()
+        cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
+        cleanup_thread.start()
 
         # start the main ECC process that searches for new vertices that need to be processed
         checker.initialize()
 
-    return consistency_checkers[graphname]
+        return checker
+    except Exception as e:
+        LogWriter.error(f"Failed to start eventual consistency checker for graph {graphname}: {e}")
 
 @app.get("/")
 def root():
