@@ -1,11 +1,18 @@
 import { FC, useState } from "react";
-import { FaRegThumbsUp } from "react-icons/fa";
-import { FaRegThumbsDown } from "react-icons/fa";
+import {
+  FaRegThumbsUp,
+  FaThumbsUp,
+  FaRegThumbsDown,
+  FaThumbsDown,
+} from "react-icons/fa";
 import { PiGraph } from "react-icons/pi";
 import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
+import { Feedback, Message } from "@/actions/ActionProvider";
 
+const COPILOT_URL = "http://0.0.0.0:8000";
+let graphName = "Demo_Graph1"; //TODO: change to currently selected graph
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
@@ -27,11 +34,25 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
   message,
 }: IChatbotMessageProps) => {
   const [showResult, setShowResult] = useState(false);
+  const [feedback, setFeedback] = useState(Feedback.NoFeedback);
 
   const explain = () => {
     setShowResult((prev) => !prev);
   };
 
+  const sendFeedback = async (action: Feedback, message: Message) => {
+    const creds = localStorage.getItem("creds");
+    setFeedback(action);
+    message.feedback = action;
+    await fetch(`${COPILOT_URL}/ui/feedback`, {
+      method: "POST",
+      body: JSON.stringify(message),
+      headers: {
+        Authorization: `Basic ${creds}`,
+        "Content-Type": "application/json",
+      },
+    });
+  };
   // TODO
   // const determineContentType = (message: any) => {}
 
@@ -78,19 +99,35 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
         message
       ) : (
         <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          <p className="typewriter">{message.natural_language_response}</p>
+          <p className="typewriter">{message.content}</p>
           <div className="flex mt-3">
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => alert("Like!!")}
+              onClick={() => {
+                if (feedback !== Feedback.LIKE) {
+                  sendFeedback(Feedback.LIKE, message);
+                } else {
+                  sendFeedback(Feedback.NoFeedback, message);
+                }
+              }}
             >
-              <FaRegThumbsUp />
+              {feedback === Feedback.LIKE ? <FaThumbsUp /> : <FaRegThumbsUp />}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => alert("DisLike!!")}
+              onClick={() => {
+                if (feedback !== Feedback.DISLIKE) {
+                  sendFeedback(Feedback.DISLIKE, message);
+                } else {
+                  sendFeedback(Feedback.NoFeedback, message);
+                }
+              }}
             >
-              <FaRegThumbsDown />
+              {feedback === Feedback.DISLIKE ? (
+                <FaThumbsDown />
+              ) : (
+                <FaRegThumbsDown />
+              )}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"

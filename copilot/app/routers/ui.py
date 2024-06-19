@@ -12,7 +12,6 @@ import requests
 from agent.agent import TigerGraphAgent, make_agent
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from langchain_core.messages import message_to_dict
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
 
@@ -73,25 +72,37 @@ def ui_basic_auth(
     2) Get list of graphs user has access to
     """
     graphs = auth(creds.username, creds.password)[0]
-    return graphs
+    return graphs, creds
 
 
 @router.post(f"{route_prefix}/ui-login")
-def login(graphs: Annotated[list[str], Depends(ui_basic_auth)]):
+def login(auth: Annotated[list[str], Depends(ui_basic_auth)]):
+    graphs = auth[0]
     return {"graphs": graphs}
 
 
 @router.post(f"{route_prefix}/feedback")
-def add_feedback(message: Message, _: Annotated[list[str], Depends(ui_basic_auth)]):
+def add_feedback(
+    message: Message,
+    creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+):
+    creds = creds[1]
+    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
     try:
         res = httpx.post(
-            f"{db_config['chat_history_api']}/conversation", json=message.model_dump()
+            f"{db_config['chat_history_api']}/conversation",
+            json=message.model_dump(),
+            headers={"Authorization": f"Basic {auth}"},
         )
-        if res in None:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        return {"status": "success", "conversation": res}
+        res.raise_for_status()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/ui/feedback request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        raise e
+
+    return {"message": "feedback saved", "message_id": message.message_id}
 
 
 def run_agent(
@@ -115,12 +126,12 @@ def run_agent(
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
+            f"/{graphname}/ui/chat request_id={req_id_cv.get()} agent execution failed due to MapQuestionToSchemaException"
         )
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
         exc = traceback.format_exc()
         logger.debug_pii(
-            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+            f"/{graphname}/ui/chat request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
     except Exception:
         resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
@@ -128,11 +139,11 @@ def run_agent(
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
-            f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+            f"/{graphname}/ui/chat request_id={req_id_cv.get()} agent execution failed due to unknown exception"
         )
         exc = traceback.format_exc()
         logger.debug_pii(
-            f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+            f"/{graphname}/ui/chat request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
         pmetrics.llm_query_error_total.labels(embedding_service.model_name).inc()
 
@@ -149,9 +160,9 @@ async def write_message_to_history(message: Message, usr_auth: str):
                     f"{ch}/conversation", headers=headers, json=message.model_dump()
                 )
                 res.raise_for_status()
-        except Exception:
+        except Exception:  # catch all exceptions to log them, but don't raise
             exc = traceback.format_exc()
-            logger.debug_pii(f"Error writing chat history Exception Trace:\n{exc}")
+            logger.debug_pii(f"Error writing chat history\nException Trace:\n{exc}")
 
     else:
         LogWriter.info(f"chat-history not enabled. chat-history url: {ch}")
@@ -203,14 +214,6 @@ async def chat(
         resp = run_agent(agent, data, conversation_history, graphname)
         elapsed = time.monotonic() - start
 
-        # reply
-        await websocket.send_text(resp.model_dump_json())
-
-        # append message to history
-        conversation_history.append(
-            {"query": data, "response": resp.natural_language_response}
-        )
-
         # save message
         message = Message(
             conversation_id=convo_id,
@@ -220,7 +223,18 @@ async def chat(
             content=resp.natural_language_response,
             role=Role.system.name,
             response_time=elapsed,
+            answered_question=resp.answered_question,
+            response_type=resp.response_type,
+            query_sources=resp.query_sources,
         )
         await write_message_to_history(message, usr_auth)
         prev_id = message.message_id
-        print("**** convo_id:\n", message.conversation_id)
+        print(f"**** convo_id:\n{message.conversation_id}")
+
+        # reply
+        await websocket.send_text(message.model_dump_json())
+
+        # append message to history
+        conversation_history.append(
+            {"query": data, "response": resp.natural_language_response}
+        )

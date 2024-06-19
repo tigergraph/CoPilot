@@ -30,3 +30,4 @@ build/
 run.sh
 configs
 venv
+.env
