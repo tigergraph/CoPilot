@@ -1,5 +1,6 @@
 import json
 import logging
+from threading import ExceptHookArgs
 from typing import Optional
 
 from agent.agent_generation import TigerGraphAgentGenerator
@@ -68,14 +69,9 @@ class TigerGraphAgentGraph:
             logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
             self.supportai_enabled = False
 
-    def emit_progress(self,msg):
-        # print('********')
-        # print(self.q)
-        # print(msg)
-        # print('********')
-        # import time
-        # time.sleep(5)
-        self.q.put(msg)
+    def emit_progress(self, msg):
+        if self.q is not None:
+            self.q.put(msg)
 
     def route_question(self, state):
         """
@@ -152,6 +148,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent cypher generator.
         """
+        self.emit_progress("gen cypher")
         cypher = self.cypher_gen._run(state["question"])
 
         response = self.db_connection.gsql(cypher)
@@ -174,6 +171,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent overlap search.
         """
+        self.emit_progress("hnsw overlap")
         retriever = HNSWOverlapRetriever(
             self.embedding_model,
             self.embedding_store,
