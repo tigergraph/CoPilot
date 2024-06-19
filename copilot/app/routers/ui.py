@@ -86,7 +86,6 @@ def add_feedback(
     message: Message,
     creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
 ):
-    print("****",message)
     creds = creds[1]
     auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
     try:
@@ -227,7 +226,7 @@ async def chat(
         )
         await write_message_to_history(message, usr_auth)
         prev_id = message.message_id
-        print("**** convo_id:\n", message.conversation_id)
+        print(f"**** convo_id:\n{message.conversation_id}")
 
         # reply
         await websocket.send_text(message.model_dump_json())
