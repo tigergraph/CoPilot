@@ -1,9 +1,9 @@
-import React, {useState, useCallback, useEffect} from 'react';
-import {createClientMessage} from 'react-chatbot-kit';
-import useWebSocket, {ReadyState} from 'react-use-websocket';
-import Loader from '../components/Loader';
+import React, { useState, useCallback, useEffect } from "react";
+import { createClientMessage } from "react-chatbot-kit";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+import Loader from "../components/Loader";
 
-const WS_URL = 'ws://0.0.0.0:8000/ui/Demo_Graph1/chat';
+const WS_URL = "ws://0.0.0.0:8000/ui/Demo_Graph1/chat";
 
 interface ActionProviderProps {
   createChatBotMessage: any;
@@ -27,10 +27,16 @@ export interface Message {
   comment: string;
 }
 
-const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, setState, children}) => {
+const ActionProvider: React.FC<ActionProviderProps> = ({
+  createChatBotMessage,
+  setState,
+  children,
+}) => {
   const [socketUrl, setSocketUrl] = useState(WS_URL);
-  const [messageHistory, setMessageHistory] = useState<MessageEvent<Message>[]>([]);
-  const {sendMessage, lastMessage, readyState} = useWebSocket(socketUrl);
+  const [messageHistory, setMessageHistory] = useState<MessageEvent<Message>[]>(
+    [],
+  );
+  const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl);
 
   // eslint-disable-next-line
   // @ts-ignore
@@ -97,10 +103,10 @@ const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, se
       setMessageHistory((prev) => prev.concat(lastMessage));
       const botMessage = createChatBotMessage(JSON.parse(lastMessage.data));
       console.log(botMessage.message);
-      
+
       setState((prev) => {
         const newPrevMsg = prev.messages.slice(0, -1);
-        return {...prev, messages: [...newPrevMsg, botMessage]};
+        return { ...prev, messages: [...newPrevMsg, botMessage] };
       });
     }
   }, [lastMessage]);

@@ -69,7 +69,7 @@ export function Login() {
   const loginAction = async (data: z.infer<typeof formSchema>) => {
     console.log(data);
     try {
-      const creds = btoa(data.email + ':' + data.password); 
+      const creds = btoa(data.email + ":" + data.password);
       const response = await fetch(WS_URL, {
         method: "POST",
         headers: {

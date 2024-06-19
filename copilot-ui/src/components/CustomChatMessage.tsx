@@ -1,13 +1,18 @@
 import { FC, useState } from "react";
-import { FaRegThumbsUp, FaThumbsUp, FaRegThumbsDown, FaThumbsDown} from "react-icons/fa";
+import {
+  FaRegThumbsUp,
+  FaThumbsUp,
+  FaRegThumbsDown,
+  FaThumbsDown,
+} from "react-icons/fa";
 import { PiGraph } from "react-icons/pi";
 import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
-import { Feedback, Message } from '@/actions/ActionProvider';
+import { Feedback, Message } from "@/actions/ActionProvider";
 
-const COPILOT_URL = 'http://0.0.0.0:8000';
-let graphName = 'Demo_Graph1'//TODO: change to currently selected graph
+const COPILOT_URL = "http://0.0.0.0:8000";
+let graphName = "Demo_Graph1"; //TODO: change to currently selected graph
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
@@ -35,19 +40,19 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
     setShowResult((prev) => !prev);
   };
 
-  const sendFeedback = async (action:Feedback, message: Message) => {
+  const sendFeedback = async (action: Feedback, message: Message) => {
     const creds = localStorage.getItem("creds");
     setFeedback(action);
     message.feedback = action;
-    await fetch(`${COPILOT_URL}/ui/feedback`,{
+    await fetch(`${COPILOT_URL}/ui/feedback`, {
       method: "POST",
       body: JSON.stringify(message),
       headers: {
-        "Authorization": `Basic ${creds}`,
+        Authorization: `Basic ${creds}`,
         "Content-Type": "application/json",
       },
-    })
-  }
+    });
+  };
   // TODO
   // const determineContentType = (message: any) => {}
 
@@ -99,26 +104,30 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
               onClick={() => {
-                if(feedback !== Feedback.LIKE){
+                if (feedback !== Feedback.LIKE) {
                   sendFeedback(Feedback.LIKE, message);
-                } else{
+                } else {
                   sendFeedback(Feedback.NoFeedback, message);
                 }
               }}
             >
-              {feedback === Feedback.LIKE? < FaThumbsUp/> : <FaRegThumbsUp/>}
+              {feedback === Feedback.LIKE ? <FaThumbsUp /> : <FaRegThumbsUp />}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() =>{
-                if(feedback !== Feedback.DISLIKE){
+              onClick={() => {
+                if (feedback !== Feedback.DISLIKE) {
                   sendFeedback(Feedback.DISLIKE, message);
-                } else{
+                } else {
                   sendFeedback(Feedback.NoFeedback, message);
                 }
-              }} 
+              }}
             >
-              {feedback === Feedback.DISLIKE? <FaThumbsDown /> : <FaRegThumbsDown/>}
+              {feedback === Feedback.DISLIKE ? (
+                <FaThumbsDown />
+              ) : (
+                <FaRegThumbsDown />
+              )}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
