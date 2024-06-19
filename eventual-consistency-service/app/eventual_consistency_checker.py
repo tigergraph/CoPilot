@@ -286,7 +286,7 @@ class EventualConsistencyChecker:
             f"Eventual Consistency Check running cleanup for graphname {self.graphname} "
         )
         self.is_initialized = True
-        while True and self.run_forever:
+        while True:
             self.verify_and_cleanup_embeddings()
 
             if not self.run_forever:

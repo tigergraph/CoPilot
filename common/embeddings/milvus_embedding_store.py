@@ -12,6 +12,7 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
 from common.metrics.prometheus_metrics import metrics
 from common.logs.logwriter import LogWriter
+from pymilvus import MilvusException
 
 logger = logging.getLogger(__name__)
 
@@ -499,8 +500,6 @@ class MilvusEmbeddingStore(EmbeddingStore):
         Returns:
             List of output fields' contents
         """
-
-        from pymilvus import MilvusException
 
         if self.milvus.col is None:
             LogWriter.info("No existing collection to query.")
