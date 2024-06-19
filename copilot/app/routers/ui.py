@@ -223,6 +223,9 @@ async def chat(
             content=resp.natural_language_response,
             role=Role.system.name,
             response_time=elapsed,
+            answered_question=resp.answered_question,
+            response_type=resp.response_type,
+            query_sources=resp.query_sources,
         )
         await write_message_to_history(message, usr_auth)
         prev_id = message.message_id

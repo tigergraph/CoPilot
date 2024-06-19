@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional, Union
 import enum
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -137,7 +137,10 @@ class Message(BaseModel):
     parent_id: Optional[str] = None
     model: Optional[str] = None
     content: Optional[str] = None
+    answered_question: Optional[bool] = False
+    response_type: Optional[str] = None
+    query_sources: Optional[Dict] = None
     role: Optional[str] = None
-    response_time: Optional[float] = None # time in fractional seconds 
+    response_time: Optional[float] = None  # time in fractional seconds
     feedback: Optional[int] = None
     comment: Optional[str] = None
