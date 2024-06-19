@@ -3,14 +3,25 @@ import time
 from typing import Dict, List
 
 from agent.agent_graph import TigerGraphAgentGraph
+from agent.Q import Q
+from fastapi import WebSocket
+
+# from agent.agent_async.agent import AsyncTigerGraphAgentGraph
 from tools import GenerateCypher, GenerateFunction, MapQuestionToSchema
 
 from common.config import embedding_service, embedding_store, llm_config
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.embedding_services import EmbeddingModel
-from common.llm_services import (AWS_SageMaker_Endpoint, AWSBedrock,
-                                 AzureOpenAI, GoogleVertexAI, Groq,
-                                 HuggingFaceEndpoint, Ollama, OpenAI)
+from common.llm_services import (
+    AWS_SageMaker_Endpoint,
+    AWSBedrock,
+    AzureOpenAI,
+    GoogleVertexAI,
+    Groq,
+    HuggingFaceEndpoint,
+    Ollama,
+    OpenAI,
+)
 from common.llm_services.base_llm import LLM_Model
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
@@ -43,6 +54,7 @@ class TigerGraphAgent:
         embedding_model: EmbeddingModel,
         embedding_store: EmbeddingStore,
         use_cypher: bool = False,
+        ws=None,
     ):
         self.conn = db_connection
 
@@ -62,26 +74,23 @@ class TigerGraphAgent:
             embedding_store,
         )
 
+        self.cypher_tool = None
         if use_cypher:
             self.cypher_tool = GenerateCypher(self.conn, self.llm)
-            self.agent = TigerGraphAgentGraph(
-                self.llm,
-                self.conn,
-                self.embedding_model,
-                self.embedding_store,
-                self.mq2s,
-                self.gen_func,
-                self.cypher_tool,
-            ).create_graph()
-        else:
-            self.agent = TigerGraphAgentGraph(
-                self.llm,
-                self.conn,
-                self.embedding_model,
-                self.embedding_store,
-                self.mq2s,
-                self.gen_func,
-            ).create_graph()
+
+        if ws is not None:
+            self.q = Q()
+
+        self.agent = TigerGraphAgentGraph(
+            self.llm,
+            self.conn,
+            self.embedding_model,
+            self.embedding_store,
+            self.mq2s,
+            self.gen_func,
+            cypher_gen_tool=self.cypher_tool,
+            q=self.q,
+        ).create_graph()
 
         logger.debug(f"request_id={req_id_cv.get()} agent initialized")
 
@@ -141,7 +150,7 @@ class TigerGraphAgent:
             )
 
 
-def make_agent(graphname, conn, use_cypher) -> TigerGraphAgent:
+def make_agent(graphname, conn, use_cypher, ws: WebSocket) -> TigerGraphAgent:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         llm_service_name = "openai"
         print(llm_config["completion_service"])
@@ -176,7 +185,23 @@ def make_agent(graphname, conn, use_cypher) -> TigerGraphAgent:
     logger.debug(
         f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service={llm_service_name} agent created"
     )
+
+    # if ws is not None:
+    #     agent = AsyncTigerGraphAgentGraph(
+    #         llm_provider,
+    #         conn,
+    #         embedding_service,
+    #         embedding_store,
+    #         use_cypher=use_cypher,
+    #         ws=ws
+    #     )
+    # else:
     agent = TigerGraphAgent(
-        llm_provider, conn, embedding_service, embedding_store, use_cypher=use_cypher
+        llm_provider,
+        conn,
+        embedding_service,
+        embedding_store,
+        use_cypher=use_cypher,
+        ws=ws,
     )
     return agent
