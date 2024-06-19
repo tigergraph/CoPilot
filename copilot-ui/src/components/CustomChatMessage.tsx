@@ -35,8 +35,10 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
     setShowResult((prev) => !prev);
   };
 
-  const sendFeedback = async (message: Message) => {
+  const sendFeedback = async (action:Feedback, message: Message) => {
     const creds = localStorage.getItem("creds");
+    setFeedback(action);
+    message.feedback = action;
     await fetch(`${COPILOT_URL}/ui/feedback`,{
       method: "POST",
       body: JSON.stringify(message),
@@ -97,9 +99,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
               onClick={() => {
-                message.feedback = Feedback.LIKE
-                setFeedback(Feedback.LIKE)
-                sendFeedback(message);
+                if(feedback !== Feedback.LIKE){
+                  sendFeedback(Feedback.LIKE, message);
+                } else{
+                  sendFeedback(Feedback.NoFeedback, message);
+                }
               }}
             >
               {feedback === Feedback.LIKE? < FaThumbsUp/> : <FaRegThumbsUp/>}
@@ -107,9 +111,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
               onClick={() =>{
-                message.feedback = Feedback.DISLIKE
-                setFeedback(Feedback.DISLIKE)
-                sendFeedback(message);
+                if(feedback !== Feedback.DISLIKE){
+                  sendFeedback(Feedback.DISLIKE, message);
+                } else{
+                  sendFeedback(Feedback.NoFeedback, message);
+                }
               }} 
             >
               {feedback === Feedback.DISLIKE? <FaThumbsDown /> : <FaRegThumbsDown/>}
