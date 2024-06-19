@@ -32,7 +32,7 @@ const formSchema = z.object({
 
 // TODO
 // const AuthContext = createContext();
-const WS_URL = "http://0.0.0.0:8000/ui/ui-login";
+const WS_URL = "http://" + process.env.REACT_APP_BACKEND_HOST + "/ui/ui-login";
 
 export function Login() {
   const { i18n, t } = useTranslation();
