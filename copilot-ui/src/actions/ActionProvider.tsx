@@ -17,22 +17,13 @@ export enum Feedback {
   DISLIKE,
 }
 export interface Message {
-  // 	ConversationId uuid.UUID       `json:"conversation_id" gorm:"not null"`
   conversationId: string;
-  // 	MessageId      uuid.UUID       `json:"message_id" gorm:"unique;not null"`
   messageId: string;
-  // 	ParentId       *uuid.UUID      `json:"parent_id"` // pointer allows nil
   parentId: string;
-  // 	ModelName      string          `json:"model"`
   modelName: string;
-  // 	Content        string          `json:"content"`
   content: string;
-  // 	Role           MessagengerRole `json:"role"`
   role: string;
-  // 	ResponseTime   float64         `json:"response_time"`
-  // 	Feedback       Feedback        `json:"feedback"`// time in fractional seconds (i.e., 1.25 seconds)
   feedback: Feedback;
-  // 	Comment        string          `json:"comment"`
   comment: string;
 }
 
@@ -49,8 +40,8 @@ const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, se
 
   useWebSocket(WS_URL, {
     onOpen: () => {
-      queryCopilotWs2('dXNlcl8yOlRoaXNpc3RoZWFkbWluITE=');
-      console.log('WebSocket connection established.');
+      queryCopilotWs2("dXNlcl8yOlRoaXNpc3RoZWFkbWluITE=");
+      console.log("WebSocket connection established.");
     },
   });
 
@@ -62,7 +53,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, se
   };
 
   const defaultQuestions = (msg: string) => {
-    if (msg === 'Tell me about transaction fraud.') {
+    if (msg === "Tell me about transaction fraud.") {
       handleTransactionFraud(msg);
     } else {
       const clientMessage = createClientMessage(msg, {
@@ -92,11 +83,11 @@ const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, se
     });
     updateState(clientMessage);
     const botMessage = createChatBotMessage(
-      'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
+      "Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:",
       {
         delay: 2000,
-        widget: 'transaction-fraud',
-      }
+        widget: "transaction-fraud",
+      },
     );
     updateState(botMessage);
   };
@@ -139,16 +130,18 @@ const ActionProvider: React.FC<ActionProviderProps> = ({createChatBotMessage, se
   // }
 
   const connectionStatus = {
-    [ReadyState.CONNECTING]: 'Connecting',
-    [ReadyState.OPEN]: 'Open',
-    [ReadyState.CLOSING]: 'Closing',
-    [ReadyState.CLOSED]: 'Closed',
-    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
+    [ReadyState.CONNECTING]: "Connecting",
+    [ReadyState.OPEN]: "Open",
+    [ReadyState.CLOSING]: "Closing",
+    [ReadyState.CLOSED]: "Closed",
+    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
   }[readyState];
 
   return (
     <div>
-      <span className='absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]'>The WebSocket is currently {connectionStatus}</span>
+      <span className="absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]">
+        The WebSocket is currently {connectionStatus}
+      </span>
       {React.Children.map(children, (child) => {
         return React.cloneElement(child, {
           actions: {
