@@ -1,0 +1,14 @@
+CREATE DISTRIBUTED QUERY Check_Nonexistent_Vertices(STRING v_type, SET<STRING> vertex_ids) {
+  SetAccum<STRING> @@missing_vertices;
+  seeds = {v_type};
+
+  /* Iterate over the input set of vertex IDs and check for existence */
+  FOREACH id IN vertex_ids DO
+    V = SELECT s FROM seeds:s WHERE s.id == id;
+    IF V.size() == 0 THEN
+      @@missing_vertices += id;
+    END;
+  END;
+
+  PRINT @@missing_vertices;
+}
