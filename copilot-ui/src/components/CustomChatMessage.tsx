@@ -1,6 +1,5 @@
 import { FC, useState } from "react";
-import { FaRegThumbsUp } from "react-icons/fa";
-import { FaRegThumbsDown } from "react-icons/fa";
+import { FaRegThumbsUp, FaThumbsUp, FaRegThumbsDown, FaThumbsDown} from "react-icons/fa";
 import { PiGraph } from "react-icons/pi";
 import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
@@ -30,17 +29,14 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
   message,
 }: IChatbotMessageProps) => {
   const [showResult, setShowResult] = useState(false);
+  const [feedback, setFeedback] = useState(Feedback.NoFeedback);
 
   const explain = () => {
     setShowResult((prev) => !prev);
   };
 
-  const sendFeedback = async (action:Feedback,message:Message) => {
-    console.log(action);
-    const creds =localStorage.getItem("creds");
-    
-    console.log('message',message);
-    message.feedback = action;
+  const sendFeedback = async (message: Message) => {
+    const creds = localStorage.getItem("creds");
     await fetch(`${COPILOT_URL}/ui/feedback`,{
       method: "POST",
       body: JSON.stringify(message),
@@ -101,18 +97,22 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
               onClick={() => {
-                sendFeedback(Feedback.LIKE, message);
+                message.feedback = Feedback.LIKE
+                setFeedback(Feedback.LIKE)
+                sendFeedback(message);
               }}
             >
-              <FaRegThumbsUp />
+              {feedback === Feedback.LIKE? < FaThumbsUp/> : <FaRegThumbsUp/>}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
               onClick={() =>{
-                sendFeedback(Feedback.DISLIKE, message);
+                message.feedback = Feedback.DISLIKE
+                setFeedback(Feedback.DISLIKE)
+                sendFeedback(message);
               }} 
             >
-              <FaRegThumbsDown />
+              {feedback === Feedback.DISLIKE? <FaThumbsDown /> : <FaRegThumbsDown/>}
             </div>
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
