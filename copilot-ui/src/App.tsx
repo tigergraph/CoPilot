@@ -1,6 +1,6 @@
-import './App.css'
-import { useEffect, useState } from 'react';
-import { Login } from './components/Login';
+import "./App.css";
+import { useEffect, useState } from "react";
+import { Login } from "./components/Login";
 
 function App() {
   // const [isAuth, setIsAuth] = useState(false);
@@ -19,7 +19,7 @@ function App() {
         </div>
       </div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

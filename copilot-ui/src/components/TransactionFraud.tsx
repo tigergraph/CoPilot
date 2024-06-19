@@ -1,38 +1,45 @@
-import { FC, useState } from 'react';
-import { useTheme } from "@/components/ThemeProvider"
+import { FC, useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface Start {
-    props: any;
-    setState: any;
-    actionProvider: any,
-    actions: any
-    fullPage: any
+  props: any;
+  setState: any;
+  actionProvider: any;
+  actions: any;
+  fullPage: any;
 }
 
 export const TransactionFraud: FC<Start> = (props) => {
-    const [visibility, setVisibility] = useState(true);
-    const getTheme = useTheme().theme;
+  const [visibility, setVisibility] = useState(true);
+  const getTheme = useTheme().theme;
 
-    const defaultQuestions = (msg: string) => {
-      props.actions.defaultQuestions(msg);
-      setVisibility(false);
-    }
+  const defaultQuestions = (msg: string) => {
+    props.actions.defaultQuestions(msg);
+    setVisibility(false);
+  };
 
-    return (
-      <>
-        <div className='ml-[50px]'>
-          <ol>
-            <h1 className='mb-5 text-lg'>1. Financial Transactions</h1>
-            <p className='block mb-5'>Financial transactions involve the exchange of money between parties. Key aspects include:</p>
-            - Parties Involved: The buyer and the seller.<br/>
-            - Medium of Exchange: Cash, checks, credit cards, electronic transfers.<br/>
-            - Types: Purchase of goods/services, investment, loan issuance, etc.<br/>
-            - Records: Documented through receipts, invoices, bank statements.
-          </ol>
-        </div>
-        <img src='chart.svg' className="mx-auto mb-5 mt-10" />
+  return (
+    <>
+      <div className="ml-[50px]">
+        <ol>
+          <h1 className="mb-5 text-lg">1. Financial Transactions</h1>
+          <p className="block mb-5">
+            Financial transactions involve the exchange of money between
+            parties. Key aspects include:
+          </p>
+          - Parties Involved: The buyer and the seller.
+          <br />
+          - Medium of Exchange: Cash, checks, credit cards, electronic
+          transfers.
+          <br />
+          - Types: Purchase of goods/services, investment, loan issuance, etc.
+          <br />- Records: Documented through receipts, invoices, bank
+          statements.
+        </ol>
+      </div>
+      <img src="chart.svg" className="mx-auto mb-5 mt-10" />
 
-        {/* <img src='tg-logo-xl.svg' className="mx-auto mb-5 mt-10" />
+      {/* <img src='tg-logo-xl.svg' className="mx-auto mb-5 mt-10" />
         <h1 className="text-center text-2xl font-bold mb-10 dark:text-white">How can I help you?</h1>
         
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 mb-10">
@@ -47,6 +54,6 @@ export const TransactionFraud: FC<Start> = (props) => {
             </div>
           ))}
         </div> */}
-      </>
-    )
-}
+    </>
+  );
+};
