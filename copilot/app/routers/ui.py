@@ -23,7 +23,7 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import AgentProgess, CoPilotResponse, Message, Role
+from common.py_schemas.schemas import AgentProgess, CoPilotResponse, Message, ResponseType, Role
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
         if msg is not None and msg != DONE:
             message = AgentProgess(
                 content=msg,
-                response_type="progress",
+                response_type=ResponseType.PROGRESS,
             )
             await ws.send_text(message.model_dump_json())
 
