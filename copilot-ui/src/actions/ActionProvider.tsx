@@ -3,8 +3,6 @@ import {createClientMessage} from 'react-chatbot-kit';
 import useWebSocket, {ReadyState} from 'react-use-websocket';
 import Loader from '../components/Loader';
 
-const API_QUERY =
-  "https://copilot-tg-26bfd0cd-6582-414e-937e-e2c83ecb5a79.us-east-1.i.tgcloud.io/Transaction_Fraud/query";
 const WS_URL = "/ui/Transaction_Fraud/chat";
 
 interface ActionProviderProps {
