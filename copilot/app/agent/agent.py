@@ -5,8 +5,6 @@ from typing import Dict, List
 from agent.agent_graph import TigerGraphAgentGraph
 from agent.Q import Q
 from fastapi import WebSocket
-
-# from agent.agent_async.agent import AsyncTigerGraphAgentGraph
 from tools import GenerateCypher, GenerateFunction, MapQuestionToSchema
 
 from common.config import embedding_service, embedding_store, llm_config
@@ -150,7 +148,7 @@ class TigerGraphAgent:
             )
 
 
-def make_agent(graphname, conn, use_cypher, ws: WebSocket) -> TigerGraphAgent:
+def make_agent(graphname, conn, use_cypher, ws: WebSocket = None) -> TigerGraphAgent:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         llm_service_name = "openai"
         print(llm_config["completion_service"])
