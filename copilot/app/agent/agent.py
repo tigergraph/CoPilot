@@ -186,16 +186,6 @@ def make_agent(graphname, conn, use_cypher, ws: WebSocket) -> TigerGraphAgent:
         f"/{graphname}/query_with_history request_id={req_id_cv.get()} llm_service={llm_service_name} agent created"
     )
 
-    # if ws is not None:
-    #     agent = AsyncTigerGraphAgentGraph(
-    #         llm_provider,
-    #         conn,
-    #         embedding_service,
-    #         embedding_store,
-    #         use_cypher=use_cypher,
-    #         ws=ws
-    #     )
-    # else:
     agent = TigerGraphAgent(
         llm_provider,
         conn,

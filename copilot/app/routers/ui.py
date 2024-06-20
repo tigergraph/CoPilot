@@ -112,21 +112,15 @@ async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
     # loop on q until done token emit events through ws
     msg = None
     pop = asyncer.asyncify(agent.q.pop)
-    
+
     while msg != DONE:
         msg = await pop()
-        # from asyncio import sleep print('********')
-        # print(msg)
-        # print('********')
-        # await sleep(2)
-        if msg is not None:
+        if msg is not None and msg != DONE:
             message = AgentProgess(
                 content=msg,
                 response_type="progress",
             )
             await ws.send_text(message.model_dump_json())
-
-    return True
 
 
 async def run_agent(
@@ -142,9 +136,7 @@ async def run_agent(
     a_question_for_agent = asyncer.asyncify(agent.question_for_agent)
     try:
         # start agent and sample from Q to emit progress
-        # resp = await a_question_for_agent(data, conversation_history[-4:])
 
-        # TODO: cancel emit progress if agent errs
         async with asyncio.TaskGroup() as tg:
             # run agent
             a_resp = tg.create_task(
@@ -155,6 +147,7 @@ async def run_agent(
             tg.create_task(emit_progress(agent, ws))
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         resp = a_resp.result()
+        agent.q.clear()
 
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -234,47 +227,6 @@ async def chat(
     prev_id = None
     while True:
         data = await websocket.receive_text()
-        if False:
-            from asyncio import sleep as asleep
-
-            # progress
-            message = AgentProgess(
-                content=f"progress 1",
-                response_type="progress",
-            )
-            await websocket.send_text(message.model_dump_json())
-            await asleep(1)
-            message = AgentProgess(
-                content=f"progress 2",
-                response_type="progress",
-            )
-            await websocket.send_text(message.model_dump_json())
-            await asleep(1)
-            message = AgentProgess(
-                content=f"progress 3",
-                response_type="progress",
-            )
-            await websocket.send_text(message.model_dump_json())
-            await asleep(1)
-            message = AgentProgess(
-                content=f"progress 4",
-                response_type="progress",
-            )
-            await websocket.send_text(message.model_dump_json())
-            await asleep(1)
-            # resp
-            message = Message(
-                conversation_id=convo_id,
-                message_id=str(uuid.uuid4()),
-                parent_id=prev_id,
-                model=llm_config["model_name"],
-                content=f"echo: {data}",
-                role=Role.SYSTEM,
-                answered_question=True,
-                response_type="inquiryai",
-            )
-            await websocket.send_text(message.model_dump_json())
-            continue
 
         # make message from data
         message = Message(

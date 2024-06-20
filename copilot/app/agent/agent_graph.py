@@ -1,6 +1,5 @@
 import json
 import logging
-from threading import ExceptHookArgs
 from typing import Optional
 
 from agent.agent_generation import TigerGraphAgentGenerator
@@ -9,7 +8,6 @@ from agent.agent_rewrite import TigerGraphAgentRewriter
 from agent.agent_router import TigerGraphAgentRouter
 from agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
 from agent.Q import DONE, Q
-from fastapi import WebSocket
 from langgraph.graph import END, StateGraph
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from supportai.retrievers import HNSWOverlapRetriever
@@ -59,7 +57,6 @@ class TigerGraphAgentGraph:
         self.gen_func = gen_func_tool
         self.cypher_gen = cypher_gen_tool
         self.enable_human_in_loop = enable_human_in_loop
-
         self.q = q
 
         self.supportai_enabled = True
@@ -77,7 +74,6 @@ class TigerGraphAgentGraph:
         """
         Run the agent router.
         """
-        self.emit_progress("routing")
         step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
         if state.get("question_retry_count") is None:
             state["question_retry_count"] = 0
@@ -116,7 +112,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent schema mapping.
         """
-        self.emit_progress("Mapping question to schema")
+        self.emit_progress("Mapping your question to the graph's schema")
         try:
             step = self.mq2s._run(state["question"])
             state["schema_mapping"] = step
@@ -128,7 +124,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent function generator.
         """
-        self.emit_progress("gen func")
+        self.emit_progress("Generating the code to answer your question")
         try:
             step = self.gen_func._run(
                 state["question"],
@@ -148,7 +144,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent cypher generator.
         """
-        self.emit_progress("gen cypher")
+        self.emit_progress("Generating the Cypher to answer your question")
         cypher = self.cypher_gen._run(state["question"])
 
         response = self.db_connection.gsql(cypher)
@@ -171,7 +167,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent overlap search.
         """
-        self.emit_progress("hnsw overlap")
+        self.emit_progress("Searching the graph for relevant information")
         retriever = HNSWOverlapRetriever(
             self.embedding_model,
             self.embedding_store,
@@ -192,7 +188,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent generator.
         """
-        self.emit_progress("gen ans")
+        self.emit_progress("Putting the pieces together")
         step = TigerGraphAgentGenerator(self.llm_provider)
         logger.debug_pii(
             f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}"
@@ -229,7 +225,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent question rewriter.
         """
-        self.emit_progress("rewrite question")
+        self.emit_progress("Thinking")
         step = TigerGraphAgentRewriter(self.llm_provider)
         state["question"] = step.rewrite_question(state["question"])
         return state
@@ -238,7 +234,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent hallucination check.
         """
-        self.emit_progress("check hallucination")
+        self.emit_progress("Checking the response for mistakes")
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
         hallucinations = step.check_hallucination(
             state["answer"].natural_language_response, state["context"]
@@ -253,7 +249,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent usefulness check.
         """
-        self.emit_progress("check usefulness")
+        # self.emit_progress("check usefulness")
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
         usefulness = step.check_usefulness(
             state["question"], state["answer"].natural_language_response
