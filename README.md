@@ -212,14 +212,16 @@ You can also disable the consistency_checker, which reconciles Milvus and TigerG
 ```
 
 ##### Milvus configuration
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. `sync_interval_seconds` is the number of seconds which the eventual-consistency-checker (ECC) service will be scheduled to check for new vertices in TigerGraph in order to create embeddings in Milvus. In the same way `cleanup_interval_seconds` is the number of seconds the ECC service will be scheduled to check for stale Milvus embeddings (e.g. if TigerGraph is restored from backup, or a vertex is deleted).
 ```json
 {
     "host": "milvus-standalone",
     "port": 19530,
     "username": "",
     "password": "",
-    "enabled": "true"
+    "enabled": "true",
+    "sync_interval_seconds": 1800,
+    "cleanup_interval_seconds": 2592000
 }
 ```
 

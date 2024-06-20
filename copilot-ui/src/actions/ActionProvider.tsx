@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { createClientMessage } from "react-chatbot-kit";
-import useWebSocket, { ReadyState } from "react-use-websocket";
-import Loader from "../components/Loader";
+import React, {useState, useCallback, useEffect} from 'react';
+import {createClientMessage} from 'react-chatbot-kit';
+import useWebSocket, {ReadyState} from 'react-use-websocket';
+import Loader from '../components/Loader';
 
 const WS_URL = "ws://0.0.0.0:8000/ui/Demo_Graph1/chat";
 
@@ -62,7 +62,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   };
 
   const defaultQuestions = (msg: string) => {
-    if (msg === "Tell me about transaction fraud.") {
+    if (msg === 'Tell me about transaction fraud.') {
       handleTransactionFraud(msg);
     } else {
       const clientMessage = createClientMessage(msg, {
@@ -92,11 +92,11 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     });
     updateState(clientMessage);
     const botMessage = createChatBotMessage(
-      "Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:",
+      'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
       {
         delay: 2000,
-        widget: "transaction-fraud",
-      },
+        widget: 'transaction-fraud',
+      }
     );
     updateState(botMessage);
   };
@@ -109,7 +109,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
 
       setState((prev) => {
         const newPrevMsg = prev.messages.slice(0, -1);
-        return { ...prev, messages: [...newPrevMsg, botMessage] };
+        return {...prev, messages: [...newPrevMsg, botMessage]};
       });
     }
   }, [lastMessage]);
@@ -139,18 +139,16 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   // }
 
   const connectionStatus = {
-    [ReadyState.CONNECTING]: "Connecting",
-    [ReadyState.OPEN]: "Open",
-    [ReadyState.CLOSING]: "Closing",
-    [ReadyState.CLOSED]: "Closed",
-    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+    [ReadyState.CONNECTING]: 'Connecting',
+    [ReadyState.OPEN]: 'Open',
+    [ReadyState.CLOSING]: 'Closing',
+    [ReadyState.CLOSED]: 'Closed',
+    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
   }[readyState];
 
   return (
     <div>
-      <span className="absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]">
-        The WebSocket is currently {connectionStatus}
-      </span>
+      <span className='absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]'>The WebSocket is currently {connectionStatus}</span>
       {React.Children.map(children, (child) => {
         return React.cloneElement(child, {
           actions: {
