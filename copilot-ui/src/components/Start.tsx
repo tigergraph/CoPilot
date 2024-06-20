@@ -8,8 +8,9 @@ const questions = [
   { title: "Describe flow of one transaction." },
   { title: "How TigerGraph can help me?" },
   { title: "How to use visualization correctly?" },
-  { title: "What is William Torres' ID?" },
-  // { title: "How to detect fraud in transactions?" },
+  { title: "How to detect fraud in transactions?" },
+  // { title: "What is William Torres' ID?" },
+  // { title: "What's his email?" },
 ];
 
 interface Start {
