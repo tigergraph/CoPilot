@@ -15,10 +15,13 @@ services:
       DB_CONFIG: "/code/configs/db_config.json"
       MILVUS_CONFIG: "/code/configs/milvus_config.json"
       LOGLEVEL: "INFO"
-      USE_CYPHER: "false"
+      USE_CYPHER: "true"
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
+    networks:
+      - copilot_local
+
   eventual-consistency-service:
     image: tigergraphml/ecc:latest
     container_name: eventual-consistency-service
@@ -35,6 +38,9 @@ services:
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
+    networks:
+      - copilot_local
+
   chat-history:
     image: tigergraphml/chat-history:latest
     container_name: chat-history
@@ -48,6 +54,8 @@ services:
       LOGLEVEL: "INFO"
     volumes:
       - ./chat-history/:/configs
+    networks:
+      - copilot_local
 
   # report-service:
   #   image: tigergraphml/report-service:latest
@@ -76,3 +84,21 @@ services:
       - 3000:3000
     depends_on:
       - copilot
+    networks:
+      - copilot_local
+
+  nginx:
+    container_name: nginx
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - ui
+      - copilot
+    networks:
+      - copilot_local
+
+networks:
+  copilot_local:
