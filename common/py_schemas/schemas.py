@@ -126,9 +126,9 @@ class QueryUpsertRequest(BaseModel):
     query_info: Optional[GSQLQueryInfo]
 
 
-class Role(enum.Enum):
-    system = enum.auto()
-    user = enum.auto()
+class Role(enum.StrEnum):
+    SYSTEM = enum.auto()
+    USER = enum.auto()
 
 
 class Message(BaseModel):
@@ -144,3 +144,13 @@ class Message(BaseModel):
     response_time: Optional[float] = None  # time in fractional seconds
     feedback: Optional[int] = None
     comment: Optional[str] = None
+
+
+class ResponseType(enum.StrEnum):
+    PROGRESS = enum.auto()
+    MESSAGE = enum.auto()
+
+
+class AgentProgess(BaseModel):
+    content: str
+    response_type: ResponseType

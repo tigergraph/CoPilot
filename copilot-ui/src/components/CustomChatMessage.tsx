@@ -99,7 +99,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
         message
       ) : (
         <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          <p className="typewriter">{message.content}</p>
+          {message.response_type === "progress" ? (
+            <p className="copilot-thinking typewriter">{message.content}</p>
+          ) : (
+            <p className="typewriter">{message.content}</p>
+          )}
           <div className="flex mt-3">
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
