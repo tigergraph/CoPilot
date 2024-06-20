@@ -5,7 +5,7 @@ import Loader from '../components/Loader';
 
 const API_QUERY =
   "https://copilot-tg-26bfd0cd-6582-414e-937e-e2c83ecb5a79.us-east-1.i.tgcloud.io/Transaction_Fraud/query";
-const WS_URL = "ws://" + process.env.REACT_APP_BACKEND_HOST + "/ui/Demo_Graph1/chat";
+const WS_URL = "/ui/Transaction_Fraud/chat";
 
 interface ActionProviderProps {
   createChatBotMessage: any;

@@ -1,0 +1,179 @@
+services:
+  copilot:
+    image: tigergraphml/copilot:dev 
+    container_name: copilot
+    ports:
+      - 8000:8000
+    depends_on:
+      - eventual-consistency-service
+      - chat-history
+    environment:
+      LLM_CONFIG: "/code/configs/llm_config.json"
+      DB_CONFIG: "/code/configs/db_config.json"
+      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      LOGLEVEL: "INFO"
+      USE_CYPHER: "true"
+    volumes:
+      - ./configs/:/code/configs
+      - ./common:/code/common
+    networks:
+      - copilot_local
+
+  eventual-consistency-service:
+    image: tigergraphml/ecc:dev
+    container_name: eventual-consistency-service
+    ports:
+      - 8001:8001
+    depends_on:
+      - milvus-standalone
+    environment:
+      LLM_CONFIG: "/code/configs/llm_config.json"
+      DB_CONFIG: "/code/configs/db_config.json"
+      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      LOGLEVEL: "INFO"
+    volumes:
+      - ./configs/:/code/configs
+      - ./common:/code/common
+    networks:
+      - copilot_local
+
+  chat-history:
+    image: tigergraphml/chat-history:dev
+    container_name: chat-history
+    ports:
+      - 8002:8002
+    environment:
+      CONFIG: "/configs/config.json"
+      LOGLEVEL: "INFO"
+    volumes:
+      - ./chat-history/:/configs
+    networks:
+      - copilot_local
+
+  # report-service:
+  #   image: tigergraphml/report-service:latest
+  #   container_name: report-service
+  #   build:
+  #     context: .
+  #     dockerfile: report-service/Dockerfile
+  #   ports:
+  #     - 8002:8002
+  #   environment:
+  #     LLM_CONFIG: "/code/configs/llm_config.json"
+  #     DB_CONFIG: "/code/configs/db_config.json"
+  #     MILVUS_CONFIG: "/code/configs/milvus_config.json"
+  #     LOGLEVEL: "INFO"
+  #   volumes:
+  #     - ./configs/:/code/configs
+  #     - ./common:/code/common
+      #
+  ui:
+    image: tigergraphml/copilot-ui:dev 
+    container_name: ui
+    build:
+      context: copilot-ui
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    depends_on:
+      - copilot
+    networks:
+      - copilot_local
+
+  etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - copilot_local
+
+  minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9002:9000"
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9002/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - copilot_local
+
+  milvus-standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.3.10
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+    - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
+    networks:
+      - copilot_local
+
+  # tigergraph:
+  #   image: tigergraph/tigergraph:latest
+  #   ports:
+  #     - "14022:22"
+  #     - "9000:9000"
+  #     - "14240:14240"
+  #   environment:
+  #     - ~/data:/home/tigergraph/mydata
+  #     - tg-data:/home/tigergraph
+  #   ulimits:
+  #     nofile:
+  #       soft: 1000000
+  #       hard: 1000000
+
+  nginx:
+    container_name: nginx
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - ui
+      - copilot
+    networks:
+      - copilot_local
+
+networks:
+  copilot_local:
+
+volumes:
+  tg-data: {}
