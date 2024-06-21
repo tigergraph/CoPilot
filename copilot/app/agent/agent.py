@@ -26,7 +26,6 @@ from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 
-
 logger = logging.getLogger(__name__)
 
 
