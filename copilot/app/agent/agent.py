@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from typing import Dict, List
 
@@ -25,6 +26,7 @@ from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
+
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,7 @@ class TigerGraphAgent:
         if use_cypher:
             self.cypher_tool = GenerateCypher(self.conn, self.llm)
 
+        self.q = None
         if ws is not None:
             self.q = Q()
 
@@ -126,7 +129,7 @@ class TigerGraphAgent:
                 input_data["conversation"] = []
             logger.info(f"input_data: {input_data}")
 
-            for output in self.agent.stream({"question": str(input_data)}):
+            for output in self.agent.stream({"question": str(input_data)}, {"recursion_limit": 100}):
                 for key, value in output.items():
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 

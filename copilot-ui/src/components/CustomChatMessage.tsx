@@ -12,7 +12,7 @@ import { LuInfo } from "react-icons/lu";
 import { Feedback, Message } from "@/actions/ActionProvider";
 
 const COPILOT_URL = "http://0.0.0.0:8000";
-let graphName = "Demo_Graph1"; //TODO: change to currently selected graph
+let graphName = "Transaction_Fraud"; //TODO: change to currently selected graph
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
