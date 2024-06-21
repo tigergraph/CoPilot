@@ -129,7 +129,7 @@ class TigerGraphAgent:
                 input_data["conversation"] = []
             logger.info(f"input_data: {input_data}")
 
-            for output in self.agent.stream({"question": str(input_data)}, {"recursion_limit": 100}):
+            for output in self.agent.stream({"question": str(input_data)}):
                 for key, value in output.items():
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
