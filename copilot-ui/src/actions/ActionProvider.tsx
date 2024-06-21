@@ -3,7 +3,8 @@ import {createClientMessage} from 'react-chatbot-kit';
 import useWebSocket, {ReadyState} from 'react-use-websocket';
 import Loader from '../components/Loader';
 
-const WS_URL = 'ws://0.0.0.0:8000/ui/Transaction_Fraud/chat';
+
+const WS_URL = "/ui/Transaction_Fraud/chat";
 
 interface ActionProviderProps {
   createChatBotMessage: any;
