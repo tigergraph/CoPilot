@@ -23,7 +23,7 @@ class TigerGraphAgentRewriter:
         Returns:
             str: The rewritten question.
         """
-        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY generate_answer")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY rewrite_question")
 
         rewrite_parser = PydanticOutputParser(pydantic_object=QuestionRewriteResponse)
 
@@ -43,5 +43,5 @@ class TigerGraphAgentRewriter:
         question_rewriter = re_write_prompt | self.llm.model | rewrite_parser
 
         generation = question_rewriter.invoke({"question": question})
-        LogWriter.info(f"request_id={req_id_cv.get()} EXIT generate_answer")
-        return generation
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT rewrite_question")
+        return generation.rewritten_question

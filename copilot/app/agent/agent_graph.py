@@ -61,7 +61,7 @@ class TigerGraphAgentGraph:
 
         self.supportai_enabled = True
         try:
-            self.db_connection.getQueryMetadata("HNSW_Overlap")
+            self.db_connection.getQueryMetadata("HNSW_Overlap_Search")
         except TigerGraphException as e:
             logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
             self.supportai_enabled = False
@@ -70,16 +70,21 @@ class TigerGraphAgentGraph:
         if self.q is not None:
             self.q.put(msg)
 
+    def entry(self, state):
+        if state.get("question_retry_count") is None:
+            state["question_retry_count"] = 0
+        else:
+            state["question_retry_count"] += 1
+        return state
+
     def route_question(self, state):
         """
         Run the agent router.
         """
-        step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
-        if state.get("question_retry_count") is None:
-            state["question_retry_count"] = 0
-        elif state["question_retry_count"] > 2:
+        if state["question_retry_count"] > 2:
             return "apologize"
-        state["question_retry_count"] += 1
+        self.emit_progress("Thinking")
+        step = TigerGraphAgentRouter(self.llm_provider, self.db_connection)
         logger.debug_pii(
             f"request_id={req_id_cv.get()} Routing question: {state['question']}"
         )
@@ -225,7 +230,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent question rewriter.
         """
-        self.emit_progress("Thinking")
+        self.emit_progress("Rephrasing the question")
         step = TigerGraphAgentRewriter(self.llm_provider)
         state["question"] = step.rewrite_question(state["question"])
         return state
@@ -293,7 +298,7 @@ class TigerGraphAgentGraph:
         Create a graph of the agent.
         """
         self.workflow.set_entry_point("entry")
-        self.workflow.add_node("entry", lambda x: x)
+        self.workflow.add_node("entry", self.entry)
         self.workflow.add_node("generate_answer", self.generate_answer)
         self.workflow.add_node("map_question_to_schema", self.map_question_to_schema)
         self.workflow.add_node("generate_function", self.generate_function)
