@@ -61,7 +61,7 @@ class TigerGraphAgentGraph:
 
         self.supportai_enabled = True
         try:
-            self.db_connection.getQueryMetadata("HNSW_Overlap_Search")
+            self.db_connection.getQueryMetadata("HNSW_Search_Sub")
         except TigerGraphException as e:
             logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
             self.supportai_enabled = False

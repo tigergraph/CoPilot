@@ -1,8 +1,9 @@
-CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host, 
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host, 
   UINT milvus_port, STRING collection_prefix, STRING vector_field_name, 
   STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
   SetAccum<VERTEX> @@start_set;
   SetAccum<VERTEX> @@tmp_start_set;
+  SetAccum<EDGE> @@edges;
   SumAccum<INT> @num_times_seen;
   MapAccum<STRING, STRING> @@relationship_info;
   MapAccum<STRING, STRING> @@entity_info;
@@ -30,6 +31,7 @@ CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_
   
   FOREACH i IN RANGE[0, num_hops-1] DO
     start = SELECT t FROM start:s -(:e)- :t
+            ACCUM @@edges += e
             POST-ACCUM t.@num_times_seen += 1;
   END;
   
@@ -53,5 +55,5 @@ CREATE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_
   @@final_retrieval += ("RelationshipInfo" -> @@relationship_info);
   @@final_retrieval += ("EntityInfo" -> @@entity_info);
   
-  PRINT @@final_retrieval;
+  PRINT @@final_retrieval, @@edges;
 }
