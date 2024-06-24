@@ -1,4 +1,4 @@
-CREATE QUERY HNSW_Search(
+CREATE QUERY HNSW_Overlap_Search(
   STRING input,
   STRING index_name,
   UINT k=10,
