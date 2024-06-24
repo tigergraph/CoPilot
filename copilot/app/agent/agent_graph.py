@@ -192,7 +192,7 @@ class TigerGraphAgentGraph:
         state["context"] = {
             "function_call": "HNSW_Overlap_Search",
             "result": step[0],
-            "query_output_format": self.db_connection.getQueryMetadata("HNSW_Overlap_Search")
+            "query_output_format": self.db_connection.getQueryMetadata("HNSW_Overlap_Search")["output"]
         }
         state["lookup_source"] = "supportai"
         return state
