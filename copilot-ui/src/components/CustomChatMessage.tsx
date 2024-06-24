@@ -151,15 +151,18 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
           </div>
 
           {showResult ? (
-            <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
-              <strong>Reasoning:</strong> {message.query_sources.reasoning}
-              <span
-                className="absolute right-2 bottom-1 cursor-pointer"
-                onClick={() => setShowResult(false)}
-              >
-                X
-              </span>
-            </p>
+            <>
+              {message.query_sources.result}
+              <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
+                <strong>Reasoning:</strong> {message.query_sources.reasoning}
+                <span
+                  className="absolute right-2 bottom-1 cursor-pointer"
+                  onClick={() => setShowResult(false)}
+                >
+                  X
+                </span>
+              </p>
+            </>
           ) : null}
         </div>
       )}
