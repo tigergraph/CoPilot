@@ -157,7 +157,11 @@ class TigerGraphAgentGraph:
         try:
             json_str = "\n".join(response_lines[1:])
             response_json = json.loads(json_str)
-            state["context"] = {"answer": response_json["results"][0], "cypher": cypher}
+            state["context"] = {
+                "answer": response_json["results"][0],
+                "cypher": cypher,
+                "reasoning": "The following OpenCypher query was executed to answer the question. {}".format(cypher)
+            }
         except:
             state["context"] = {
                 "error": True,
@@ -185,7 +189,11 @@ class TigerGraphAgentGraph:
             num_seen_min=2,
         )
 
-        state["context"] = step[0]
+        state["context"] = {
+            "function_call": "HNSW_Overlap_Search",
+            "result": step[0],
+            "query_output_format": self.db_connection.getQueryMetadata("HNSW_Overlap_Search")
+        }
         state["lookup_source"] = "supportai"
         return state
 
@@ -199,7 +207,7 @@ class TigerGraphAgentGraph:
             f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}"
         )
         if state["lookup_source"] == "supportai":
-            answer = step.generate_answer(state["question"], state["context"])
+            answer = step.generate_answer(state["question"], state["context"]["result"]["@@final_retrieval"])
         elif state["lookup_source"] == "inquiryai":
             answer = step.generate_answer(state["question"], state["context"]["result"])
         elif state["lookup_source"] == "cypher":
