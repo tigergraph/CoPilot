@@ -186,7 +186,9 @@ class TigerGraphAgentGraph:
         step = retriever.search(
             state["question"],
             indices=["Document", "DocumentChunk", "Entity", "Relationship"],
+            top_k=5,
             num_seen_min=2,
+            num_hops=2
         )
 
         state["context"] = {
