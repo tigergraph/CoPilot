@@ -19,17 +19,23 @@ import {
 
 const Bot = ({ layout }: { layout?: string | undefined }) => {
   const [store, setStore] = useState<any>();
+  const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
     const parseStore = JSON.parse(localStorage.getItem("site") || "{}");
     setStore(parseStore);
+
+    const date = new Date();
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+    const formattedDate = date.toLocaleDateString('en-US', options);
+    setCurrentDate(formattedDate);
   }, []);
 
   return (
     <div className={layout}>
       {layout === "fp" && (
         <div className="border-b border-gray-300 dark:border-[#3D3D3D] h-[70px] flex justify-end items-center bg-white dark:bg-background z-50 rounded-tr-lg">
-          <div className="text-sm pl-5 mr-auto">May 21, Tuesday</div>
+          <div className="text-sm pl-5 mr-auto">{currentDate}</div>
 
           <div className="text-sm flex items-center border dark:border-[#3D3D3D] p-2 border-gray-300 rounded-md mr-5">
             <img src="/workgroup-icon.svg" alt="" className="mr-2" />

@@ -76,6 +76,7 @@ class TigerGraphAgent:
         if use_cypher:
             self.cypher_tool = GenerateCypher(self.conn, self.llm)
 
+        self.q = None
         if ws is not None:
             self.q = Q()
 
