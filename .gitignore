@@ -34,3 +34,10 @@ run.sh
 configs
 venv
 .env
+
+hld
+times*
+a.md
+gen
+mq2s
+*par_times

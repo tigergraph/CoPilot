@@ -3,8 +3,10 @@ import {createClientMessage} from 'react-chatbot-kit';
 import useWebSocket, {ReadyState} from 'react-use-websocket';
 import Loader from '../components/Loader';
 
-
-const WS_URL = "/ui/pyTigerGraphRAG/chat";
+// const WS_URL = "/ui/Transaction_Fraud/chat";
+// const WS_URL = "ws://0.0.0.0:8000/ui/Demo_Graph1/chat";
+// const WS_URL = "ws://0.0.0.0:8000/ui/Transaction_Fraud/chat";
+const WS_URL = "ws://0.0.0.0:8000/ui/pyTigerGraphRAG/chat";
 
 interface ActionProviderProps {
   createChatBotMessage: any;

@@ -23,7 +23,13 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import AgentProgess, CoPilotResponse, Message, ResponseType, Role
+from common.py_schemas.schemas import (
+    AgentProgess,
+    CoPilotResponse,
+    Message,
+    ResponseType,
+    Role,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -222,8 +228,6 @@ async def chat(
     convo_id = str(uuid.uuid4())
     agent = make_agent(graphname, conn, use_cypher, ws=websocket)
 
-    # from anyio import sleep as asleep
-
     prev_id = None
     while True:
         data = await websocket.receive_text()
@@ -270,3 +274,23 @@ async def chat(
         conversation_history.append(
             {"query": data, "response": resp.natural_language_response}
         )
+
+        # resp = {
+        #     "conversation_id": "57c06863-7346-4224-a78b-e3b3c08f1cc8",
+        #     "message_id": "4f09d0aa-2b02-4880-8536-2cf9505010ee",
+        #     "parent_id": "6ae5bd6f-1eb8-4c0d-b134-551fc7733838",
+        #     "model": "GPT-4",
+        #     "content": "The card with ID 4039101933538921 has the following attributes: card number is 4039101933538921, it is not associated with fraud (is_fraud: 0), it has a pagerank of 1.238044, it is associated with a customer ID 274726916, it is part of a cluster of size 247, and the occupation associated with this card is 'IT sales professional'.",
+        #     "answered_question": True,
+        #     "response_type": "inquiryai",
+        #     "query_sources": {
+        #         "function_call": "getVerticesById('Card', '4039101933538921')",
+        #         "result": '[{"v_id": "4039101933538921", "v_type": "Card", "attributes": {"card_number": 4039101933538921, "is_fraud": 0, "pagerank": 1.238044, "c_id": 274726916, "c_size": 247, "occupation": "IT sales professional"}}]',
+        #         "reasoning": "The question asks for the detailed attributes of a card. The ID of the card was provided in the previous conversation. Therefore, we use the getVerticesById function to retrieve the attributes of the card with the given ID.",
+        #     },
+        #     "role": "system",
+        #     "response_time": 23.385843110270798,
+        # }
+        # import json
+        #
+        # await websocket.send_text(json.dumps(resp))
