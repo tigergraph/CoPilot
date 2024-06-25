@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import logging
 import os
@@ -7,9 +8,11 @@ import traceback
 import uuid
 from typing import Annotated
 
+import asyncer
 import httpx
 import requests
 from agent.agent import TigerGraphAgent, make_agent
+from agent.Q import DONE
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
@@ -20,7 +23,7 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import CoPilotResponse, Message, Role
+from common.py_schemas.schemas import AgentProgess, CoPilotResponse, Message, ResponseType, Role
 
 logger = logging.getLogger(__name__)
 
@@ -105,19 +108,46 @@ def add_feedback(
     return {"message": "feedback saved", "message_id": message.message_id}
 
 
-def run_agent(
+async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
+    # loop on q until done token emit events through ws
+    msg = None
+    pop = asyncer.asyncify(agent.q.pop)
+
+    while msg != DONE:
+        msg = await pop()
+        if msg is not None and msg != DONE:
+            message = AgentProgess(
+                content=msg,
+                response_type=ResponseType.PROGRESS,
+            )
+            await ws.send_text(message.model_dump_json())
+
+
+async def run_agent(
     agent: TigerGraphAgent,
     data: str,
     conversation_history: list[dict[str, str]],
     graphname,
+    ws: WebSocket,
 ) -> CoPilotResponse:
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
+    a_question_for_agent = asyncer.asyncify(agent.question_for_agent)
     try:
-        # TODO: make num mesages in history configureable
-        resp = agent.question_for_agent(data, conversation_history[-4:])
+        # start agent and sample from Q to emit progress
+
+        async with asyncio.TaskGroup() as tg:
+            # run agent
+            a_resp = tg.create_task(
+                # TODO: make num mesages in history configureable
+                a_question_for_agent(data, conversation_history[-4:])
+            )
+            # sample Q and emit events
+            tg.create_task(emit_progress(agent, ws))
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
+        resp = a_resp.result()
+        agent.q.clear()
 
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -190,7 +220,9 @@ async def chat(
     # create convo_id
     conversation_history = []  # TODO: go get history instead of starting from 0
     convo_id = str(uuid.uuid4())
-    agent = make_agent(graphname, conn, use_cypher)
+    agent = make_agent(graphname, conn, use_cypher, ws=websocket)
+
+    # from anyio import sleep as asleep
 
     prev_id = None
     while True:
@@ -203,7 +235,7 @@ async def chat(
             parent_id=prev_id,
             model=llm_config["model_name"],
             content=data,
-            role=Role.user.name,
+            role=Role.USER,
         )
         # save message
         await write_message_to_history(message, usr_auth)
@@ -211,7 +243,7 @@ async def chat(
 
         # generate response and keep track of response time
         start = time.monotonic()
-        resp = run_agent(agent, data, conversation_history, graphname)
+        resp = await run_agent(agent, data, conversation_history, graphname, websocket)
         elapsed = time.monotonic() - start
 
         # save message
@@ -221,7 +253,7 @@ async def chat(
             parent_id=prev_id,
             model=llm_config["model_name"],
             content=resp.natural_language_response,
-            role=Role.system.name,
+            role=Role.SYSTEM,
             response_time=elapsed,
             answered_question=resp.answered_question,
             response_type=resp.response_type,

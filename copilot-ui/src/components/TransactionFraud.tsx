@@ -1,5 +1,5 @@
 import { FC, useState, useEffect } from "react";
-import { MyDiagram } from "./graphs/ReaGraph";
+import { KnowledgeGraph } from "./graphs/KnowledgeGraph";
 
 const mockData = {
   "natural_language_response": "The card with ID 4218196001337 has more than 800 transactions from 2021-04-01 to 2021-08-01, with a total of 870 transactions.",
@@ -20,10 +20,10 @@ interface Start {
   fullPage: any;
 }
 
-export const TransactionFraud: FC<Start> = (props) => {
+export const TransactionFraud: FC<Start> = () => {
   const [sdata, setsdata] = useState(JSON.parse(mockData.query_sources.result));
   const [edges, setEdges] = useState([]);
-  const [dataArray, setdataArray] = useState();
+  const [dataArray, setdataArray] = useState<any>();
 
   useEffect(() => {
     const setresults = sdata[1]["@@edges"];
@@ -35,14 +35,50 @@ export const TransactionFraud: FC<Start> = (props) => {
   }, [sdata, edges]);
 
 
-  const getNodes = edges.map((d) => (
+  //            "v_id":"4218196001337",
+  //            "v_type":"Card",
+  //            "attributes":{
+  //               "Transaction_Count":2564,
+  //               "Total_Transaction_Amount":163226.2,
+  //               "Maximum_Transaction_Amount":3389.92,
+  //               "Minimum_Transaction_Amount":1.01,
+  //               "Average_Transaction_Amount":63.66081123244933
+  //            }
+
+// const nodes = [
+//     {
+//       id: '0',
+//       label: '4218196001337'
+//     },
+//     {
+//       id: '734576',
+//       label: '734576'
+//     }
+//   ];
+  
+// const edges = [
+//   {
+//     source: '734576',
+//     id: '734576',
+//     target: '0',
+//     label: 'Card_Send_Transaction'
+//   },
+//  {
+//    source: '23414',
+//    id: '23414',
+//    target: '0',
+//    label: 'Card_Send_Transaction'
+//  },
+// ]
+
+  const getNodes = edges.map((d:any) => (
     {
       "id": `${d.to_id}`,
       "label": `${d.to_id}`
     }
   ));
 
-  const getEdgez = edges.map((d) => (
+  const getEdgez = edges.map((d:any) => (
     {
       "source": `${d.to_id}`,
       "id": `${d.to_id}`,
@@ -75,7 +111,7 @@ export const TransactionFraud: FC<Start> = (props) => {
       </div>
 
       <div style={{ position: "relative", width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
-        <MyDiagram data={dataArray} />
+        <KnowledgeGraph data={dataArray} />
       </div>
 
     </>

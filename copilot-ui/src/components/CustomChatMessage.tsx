@@ -10,9 +10,10 @@ import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
 import { Feedback, Message } from "@/actions/ActionProvider";
+import { KnowledgeGraph } from "./graphs/KnowledgeGraph";
 
 const COPILOT_URL = "http://0.0.0.0:8000";
-let graphName = "Demo_Graph1"; //TODO: change to currently selected graph
+let graphName = "Transaction_Fraud"; //TODO: change to currently selected graph
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
@@ -35,6 +36,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
 }: IChatbotMessageProps) => {
   const [showResult, setShowResult] = useState(false);
   const [feedback, setFeedback] = useState(Feedback.NoFeedback);
+  const [ghresult, setghResult] = useState();
 
   const explain = () => {
     setShowResult((prev) => !prev);
@@ -53,6 +55,38 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
       },
     });
   };
+
+  // [
+  //   {
+  //      "rlt":[
+  //         {
+  //            "v_id":"4218196001337",
+  //            "v_type":"Card",
+  //            "attributes":{
+  //               "Transaction_Count":2564,
+  //               "Total_Transaction_Amount":163226.2,
+  //               "Maximum_Transaction_Amount":3389.92,
+  //               "Minimum_Transaction_Amount":1.01,
+  //               "Average_Transaction_Amount":63.66081123244933
+  //            }
+  //         }
+  //      ]
+  //    }
+  // ]
+
+
+  const renderResult = (result: any):any => { 
+    // setghResult(JSON.parse(result));
+    const determineType = JSON.parse(result)
+    console.log('determineType', determineType);
+    console.log(typeof determineType); //object
+    if(typeof determineType === 'string') {
+      console.log('STRING', determineType);
+    } else {
+      console.log('OTHER', determineType);
+    }
+  }
+
   // TODO
   // const determineContentType = (message: any) => {}
 
@@ -99,7 +133,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
         message
       ) : (
         <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          <p className="typewriter">{message.content}</p>
+          {message.response_type === "progress" ? (
+            <p className="copilot-thinking typewriter">{message.content}</p>
+          ) : (
+            <p className="typewriter">{message.content}</p>
+          )}
           <div className="flex mt-3">
             <div
               className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
@@ -152,7 +190,13 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
 
           {showResult ? (
             <>
-              {message.query_sources.result}
+              {/* {message.query_sources.result} */}
+
+              <div style={{ position: "relative", width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
+                {renderResult(message.query_sources.result)}
+                {/* {JSON.stringify(ghresult, null, 2)} */}
+              </div>
+
               <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
                 <strong>Reasoning:</strong> {message.query_sources.reasoning}
                 <span
@@ -164,6 +208,11 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
               </p>
             </>
           ) : null}
+
+
+
+
+
         </div>
       )}
 
@@ -224,3 +273,6 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
     </>
   );
 };
+
+
+            {/* <KnowledgeGraph data={dataArray} /> */}

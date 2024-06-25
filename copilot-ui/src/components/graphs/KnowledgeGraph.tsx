@@ -1,7 +1,7 @@
 import {useRef} from 'react';
 import { GraphCanvas } from 'reagraph';
 
-export const darkTheme: Theme = {
+export const darkTheme: any = {
   canvas: {
     background: '#272022',
     fog: '#fff'
@@ -59,9 +59,8 @@ export const darkTheme: Theme = {
   }
 };
 
-export const MyDiagram = ({ data }) => {
-  const ref = useRef<GraphCanvasRef | null>(null);
-  console.log(data);
+export const KnowledgeGraph = ({ data }) => {
+  const ref = useRef<any | null>(null);
 
   return (
     <>
