@@ -80,3 +80,15 @@ class KnowledgeGraph(BaseModel):
     rels: List[Relationship] = Field(
         ..., description="List of relationships in the knowledge graph"
     )
+
+class ReportQuestion(BaseModel):
+    question: str = Field("The question to be asked")
+    reasoning: str = Field("The reasoning behind the question")
+
+class ReportSection(BaseModel):
+    section: str = Field("Name of the section")
+    description: str = Field("Description of the section")
+    questions: List[ReportQuestion] = Field("List of questions and reasoning for the section")
+
+class ReportSections(BaseModel):
+    sections: List[ReportSection] = Field("List of sections for the report")
