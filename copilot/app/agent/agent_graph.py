@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from agent.agent_generation import TigerGraphAgentGenerator
 from agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
@@ -160,7 +160,9 @@ class TigerGraphAgentGraph:
             state["context"] = {
                 "answer": response_json["results"][0],
                 "cypher": cypher,
-                "reasoning": "The following OpenCypher query was executed to answer the question. {}".format(cypher)
+                "reasoning": "The following OpenCypher query was executed to answer the question. {}".format(
+                    cypher
+                ),
             }
         except:
             state["context"] = {
@@ -176,7 +178,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent overlap search.
         """
-        self.emit_progress("Searching the graph for relevant information")
+        self.emit_progress("Searching the knowledge graph")
         retriever = HNSWOverlapRetriever(
             self.embedding_model,
             self.embedding_store,
@@ -188,13 +190,15 @@ class TigerGraphAgentGraph:
             indices=["Document", "DocumentChunk", "Entity", "Relationship"],
             top_k=5,
             num_seen_min=2,
-            num_hops=2
+            num_hops=2,
         )
 
         state["context"] = {
             "function_call": "HNSW_Overlap_Search",
             "result": step[0],
-            "query_output_format": self.db_connection.getQueryMetadata("HNSW_Overlap_Search")["output"]
+            "query_output_format": self.db_connection.getQueryMetadata(
+                "HNSW_Overlap_Search"
+            )["output"],
         }
         state["lookup_source"] = "supportai"
         return state
@@ -203,7 +207,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent generator.
         """
-        self.emit_progress("Putting the pieces together")
+        self.emit_progress("Connecting the pieces")
         step = TigerGraphAgentGenerator(self.llm_provider)
         logger.debug_pii(
             f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}"
@@ -213,7 +217,9 @@ class TigerGraphAgentGraph:
         print(state["lookup_source"])
         print("*****")
         if state["lookup_source"] == "supportai":
-            answer = step.generate_answer(state["question"], state["context"]["result"]["@@final_retrieval"])
+            answer = step.generate_answer(
+                state["question"], state["context"]["result"]["@@final_retrieval"]
+            )
         elif state["lookup_source"] == "inquiryai":
             answer = step.generate_answer(state["question"], state["context"]["result"])
         elif state["lookup_source"] == "cypher":
@@ -224,7 +230,8 @@ class TigerGraphAgentGraph:
 
         if state["lookup_source"] == "supportai":
             import re
-            citations = [re.sub(r'_chunk_\d+', '', x) for x in answer.citation]
+
+            citations = [re.sub(r"_chunk_\d+", "", x) for x in answer.citation]
             state["context"]["reasoning"] = list(set(citations))
         try:
             resp = CoPilotResponse(
@@ -257,7 +264,7 @@ class TigerGraphAgentGraph:
         """
         Run the agent hallucination check.
         """
-        self.emit_progress("Checking the response for mistakes")
+        self.emit_progress("Checking the response is relevant")
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
         hallucinations = step.check_hallucination(
             state["answer"].natural_language_response, state["context"]
@@ -272,7 +279,6 @@ class TigerGraphAgentGraph:
         """
         Run the agent usefulness check.
         """
-        # self.emit_progress("check usefulness")
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
         usefulness = step.check_usefulness(
             state["question"], state["answer"].natural_language_response
@@ -425,5 +431,4 @@ class TigerGraphAgentGraph:
         self.workflow.add_edge("apologize", END)
 
         app = self.workflow.compile()
-        app.get_graph().draw_png("graph.png")
         return app
