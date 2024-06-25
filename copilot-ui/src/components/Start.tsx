@@ -11,7 +11,7 @@ const questions = [
   // { title: "How to detect fraud in transactions?" },
   // { title: "What is William Torres' ID?" },
   // { title: "What's his email?" },
-  {title:"How do I get a count of vertices in Python?"}
+  // {title:"How do I get a count of vertices in Python?"}
 ];
 
 interface Start {

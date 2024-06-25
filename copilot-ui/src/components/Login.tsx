@@ -32,8 +32,8 @@ const formSchema = z.object({
 
 // TODO
 // const AuthContext = createContext();
-// const WS_URL = "/ui/ui-login";
-const WS_URL = "http://localhost:8000/ui/ui-login";
+const WS_URL = "/ui/ui-login";
+// const WS_URL = "http://localhost:8000/ui/ui-login";
 
 export function Login() {
   const { i18n, t } = useTranslation();
