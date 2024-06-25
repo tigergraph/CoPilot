@@ -302,6 +302,14 @@ class TigerGraphAgentGraph:
             return "error"
         else:
             return "success"
+        
+    def create_report(self, state):
+        """
+        Write a report using the CoPilot Report Service
+        """
+        import requests
+
+        url = "http://localhost:8002/Transaction_Fraud/create_report"
 
     def create_graph(self):
         """
