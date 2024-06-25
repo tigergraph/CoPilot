@@ -1,6 +1,6 @@
 FROM golang:1.22.3 as builder
 
-WORKDIR app
+WORKDIR /app 
 COPY . .
 RUN go mod download
 RUN go build -v -o server
@@ -19,7 +19,6 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
 # Copy the binary to the production image from the builder stage.
 COPY --from=builder /app/server server
 
-EXPOSE 8000
 
 CMD ["./server"]
 

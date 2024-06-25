@@ -53,6 +53,26 @@ jobs:
            ${{ env.IMAGE }}
            tigergraphml/ecc:dev
 
+    - name: Build and push Docker image chat-history
+      uses: docker/build-push-action@v5
+      with:
+        context: chat-history/
+        file: ./chat-history/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/chat-history:dev
+
+    - name: Build and push Docker image copilot-ui
+      uses: docker/build-push-action@v5
+      with:
+        context: copilot-ui/
+        file: ./copilot-ui/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/copilot-ui:dev
+
     - name: Set SSH key
       run: |
           mkdir -p ~/.ssh

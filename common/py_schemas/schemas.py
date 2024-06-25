@@ -1,5 +1,7 @@
+import enum
+from typing import Dict, List, Optional, Union
+
 from pydantic import BaseModel
-from typing import Optional, Union, Annotated, List, Dict
 
 
 class NaturalLanguageQuery(BaseModel):
@@ -146,3 +148,32 @@ class ReportCreationRequest(BaseModel):
     persona: Optional[str] = None
     conversation_id: Optional[str] = None
     message_context: Optional[List[MessageContext]] = None
+
+class Role(enum.StrEnum):
+    SYSTEM = enum.auto()
+    USER = enum.auto()
+
+
+class Message(BaseModel):
+    conversation_id: str
+    message_id: str
+    parent_id: Optional[str] = None
+    model: Optional[str] = None
+    content: Optional[str] = None
+    answered_question: Optional[bool] = False
+    response_type: Optional[str] = None
+    query_sources: Optional[Dict] = None
+    role: Optional[str] = None
+    response_time: Optional[float] = None  # time in fractional seconds
+    feedback: Optional[int] = None
+    comment: Optional[str] = None
+
+
+class ResponseType(enum.StrEnum):
+    PROGRESS = enum.auto()
+    MESSAGE = enum.auto()
+
+
+class AgentProgess(BaseModel):
+    content: str
+    response_type: ResponseType

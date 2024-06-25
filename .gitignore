@@ -29,3 +29,7 @@ report-service/app/logs/*
 volumes
 build/
 /k8s
+run.sh
+configs
+venv
+.env

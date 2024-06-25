@@ -12,6 +12,7 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
 from common.metrics.prometheus_metrics import metrics
 from common.logs.logwriter import LogWriter
+from pymilvus import MilvusException
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +490,30 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 expr="", limit=5000, output_fields=output_fields
             )
         return res
+
+    def query(self, expr: str, output_fields: List[str]):
+        """Get output fields with expression
+
+        Args:
+            expr: Expression - E.g: "pk > 0"
+
+        Returns:
+            List of output fields' contents
+        """
+
+        if self.milvus.col is None:
+            LogWriter.info("No existing collection to query.")
+            return None
+
+        try:
+            query_result = self.milvus.col.query(
+                expr=expr, output_fields=output_fields
+            )
+        except MilvusException as exc:
+            LogWriter.error(f"Failed to get outputs: {self.milvus.collection_name} error: {exc}")
+            raise exc
+
+        return query_result
 
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec
