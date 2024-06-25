@@ -218,6 +218,10 @@ class TigerGraphAgentGraph:
             f"request_id={req_id_cv.get()} Generated answer: {answer.generated_answer}"
         )
 
+        if state["lookup_source"] == "supportai":
+            import re
+            citations = [re.sub(r'_chunk_\d+', '', x) for x in answer.citation]
+            state["context"]["reasoning"] = list(set(citations))
         try:
             resp = CoPilotResponse(
                 natural_language_response=answer.generated_answer,

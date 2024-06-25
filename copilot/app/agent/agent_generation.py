@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class CoPilotAnswerOutput(BaseModel):
     generated_answer: str = Field(description="The generated answer to the question. Make sure maintain a professional tone and keep the answer consice.")
+    citation: list[str] = Field(description="The citation for the answer. List the information used.")
 
 class TigerGraphAgentGenerator:
     def __init__(self, llm_model):
