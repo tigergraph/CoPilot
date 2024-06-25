@@ -206,11 +206,20 @@ class GenerateFunction(BaseTool):
             loc = {}
             exec("res = conn." + parsed_func, {"conn": self.conn}, loc)
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT GenerateFunction._run()")
-            return {
-                "function_call": parsed_func,
-                "result": json.dumps(loc["res"]),
-                "reasoning": generated.func_call_reasoning,
-            }
+            if "runInstalledQuery" in parsed_func:
+                query_name = parsed_func.split("(")[1].split(",")[0].strip("'")
+                return {
+                    "function_call": parsed_func,
+                    "result": json.dumps(loc["res"]),
+                    "reasoning": generated.func_call_reasoning,
+                    "query_output_format": self.conn.getQueryMetadata(query_name)["output"]
+                }
+            else:
+                return {
+                    "function_call": parsed_func,
+                    "result": json.dumps(loc["res"]),
+                    "reasoning": generated.func_call_reasoning,
+                }
             # return "Function {} produced the result {}, due to reason {}".format(generated, json.dumps(loc["res"]), generated.func_call_reasoning)
         except Exception as e:
             LogWriter.warning(

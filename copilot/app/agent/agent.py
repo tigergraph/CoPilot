@@ -79,6 +79,8 @@ class TigerGraphAgent:
         self.q = None
         if ws is not None:
             self.q = Q()
+        else:
+            self.q = None
 
         self.agent = TigerGraphAgentGraph(
             self.llm,
@@ -152,7 +154,6 @@ class TigerGraphAgent:
 def make_agent(graphname, conn, use_cypher, ws: WebSocket = None) -> TigerGraphAgent:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         llm_service_name = "openai"
-        print(llm_config["completion_service"])
         llm_provider = OpenAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         llm_service_name = "azure"
