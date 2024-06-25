@@ -33,15 +33,17 @@ class TigerGraphAgentRouter:
         router_parser = PydanticOutputParser(pydantic_object=RouterResponse)
 
         prompt = PromptTemplate(
-            template="""You are an expert at routing a user question to a vectorstore or function calls. \n
-            Use the vectorstore for questions on that would be best suited by text documents. \n
-            Use the function calls for questions that ask about structured data, or operations on structured data. \n
-            Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls. \n
-            The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}. \n
-            Otherwise, use vectorstore. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
-            Return the a JSON with a single key 'datasource' and no premable or explaination. \n
-            Question to route: {question}
-            Format: {format_instructions}""",
+            template="""\
+You are an expert at routing a user question to a vectorstore or function calls.
+Use the vectorstore for questions on that would be best suited by text documents.
+Use the function calls for questions that ask about structured data, or operations on structured data.
+Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls.
+The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}.
+Otherwise, use vectorstore. Give a binary choice 'functions' or 'vectorstore' based on the question.
+Return the a JSON with a single key 'datasource' and no premable or explaination.
+Question to route: {question}
+Format: {format_instructions}\
+""",
             input_variables=["question", "v_types", "e_types"],
             partial_variables={
                 "format_instructions": router_parser.get_format_instructions()

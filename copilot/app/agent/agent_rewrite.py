@@ -28,10 +28,11 @@ class TigerGraphAgentRewriter:
         rewrite_parser = PydanticOutputParser(pydantic_object=QuestionRewriteResponse)
 
         re_write_prompt = PromptTemplate(
-            template="""You a question re-writer that converts an input question to a better version that is optimized \n 
-            for AI agent question answering. Look at the initial and formulate an improved question. \n
-            Here is the initial question: \n\n {question}. 
-            Format your response in the following manner {format_instructions}""",
+            template="""You are a question re-writer that converts an input question to a better version that is optimized \
+for AI agent question answering. Look at the initial and formulate an improved question. \n
+Here is the initial question:
+{question}
+Format your response in the following manner {format_instructions}""",
             input_variables=["question"],
             partial_variables={
                 "format_instructions": rewrite_parser.get_format_instructions()

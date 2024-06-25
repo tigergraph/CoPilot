@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from agent.agent_generation import TigerGraphAgentGenerator
 from agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
@@ -208,6 +208,10 @@ class TigerGraphAgentGraph:
         logger.debug_pii(
             f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}"
         )
+        print("*****")
+        print(state)
+        print(state["lookup_source"])
+        print("*****")
         if state["lookup_source"] == "supportai":
             answer = step.generate_answer(state["question"], state["context"]["result"]["@@final_retrieval"])
         elif state["lookup_source"] == "inquiryai":
@@ -302,7 +306,14 @@ class TigerGraphAgentGraph:
         """
         Check if the state has an error.
         """
-        if state["context"].get("error") is not None:
+        print("*****")
+        print(state.get("context").get("error"))
+        print("*****")
+        if (
+            isinstance(state.get("context"), Exception)
+            and state.get("context") is not None
+            and state["context"].get("error") is not None
+        ):
             return "error"
         else:
             return "success"
@@ -414,4 +425,5 @@ class TigerGraphAgentGraph:
         self.workflow.add_edge("apologize", END)
 
         app = self.workflow.compile()
+        app.get_graph().draw_png("graph.png")
         return app
