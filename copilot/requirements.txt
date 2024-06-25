@@ -124,7 +124,7 @@ tqdm==4.66.1
 types-requests==2.31.0.6
 types-urllib3==1.26.25.14
 typing-inspect==0.9.0
-typing_extensions==4.7.1
+typing_extensions==4.8.0
 tzdata==2023.3
 ujson==5.9.0
 unstructured==0.10.23

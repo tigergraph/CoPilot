@@ -38,7 +38,7 @@ class TigerGraphAgentRouter:
             Use the function calls for questions that ask about structured data, or operations on structured data. \n
             Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls. \n
             The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}. \n
-            Otherwise, use function calls. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
+            Otherwise, use vectorstore. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
             Return the a JSON with a single key 'datasource' and no premable or explaination. \n
             Question to route: {question}
             Format: {format_instructions}""",
