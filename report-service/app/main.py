@@ -130,7 +130,7 @@ async def auth_middleware(request: Request, call_next):
                 LogWriter.error("Failed to connect to TigerGraph. Incorrect ID Token.")
                 return JSONResponse(status_code=401,
                                     content={"message": "Failed to connect to TigerGraph. Incorrect ID Token."})
-        conn.ai.configureCoPilotHost("http://localhost:8000")
+        conn.ai.configureCoPilotHost("http://copilot:8000")
         request.state.conn = conn
     response = await call_next(request)
     return response

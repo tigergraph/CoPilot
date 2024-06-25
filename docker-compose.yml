@@ -49,8 +49,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - 8002:8002
-    depends_on:
-      - copilot
     environment:
       CONFIG: "/configs/config.json"
       LOGLEVEL: "INFO"
@@ -66,7 +64,9 @@ services:
       context: .
       dockerfile: report-service/Dockerfile
     ports:
-      - 8002:8002
+      - 8003:8003
+    depends_on:
+      - copilot
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
@@ -75,6 +75,8 @@ services:
     volumes:
       - ./configs/:/code/configs
       - ./common:/code/common
+    networks:
+      - copilot_local
   
   ui:
     image: tigergraphml/copilot-ui:latest 

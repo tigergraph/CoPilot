@@ -33,12 +33,13 @@ class TigerGraphAgentRouter:
         router_parser = PydanticOutputParser(pydantic_object=RouterResponse)
 
         prompt = PromptTemplate(
-            template="""You are an expert at routing a user question to a vectorstore or function calls. \n
+            template="""You are an expert at routing a user question to a vectorstore or function calls, or a report service for more complex tasks. \n
             Use the vectorstore for questions on that would be best suited by text documents. \n
             Use the function calls for questions that ask about structured data, or operations on structured data. \n
+            If a report is explicitly requested, use the report service. \n
             Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls. \n
             The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}. \n
-            Otherwise, use vectorstore. Give a binary choice 'functions' or 'vectorstore' based on the question. \n
+            Otherwise, use vectorstore. Give a choice of 'functions', 'vectorstore', or 'report' based on the question. \n
             Return the a JSON with a single key 'datasource' and no premable or explaination. \n
             Question to route: {question}
             Format: {format_instructions}""",
@@ -50,5 +51,5 @@ class TigerGraphAgentRouter:
 
         question_router = prompt | self.llm.model | router_parser
         res = question_router.invoke({"question": question, "v_types": v_types, "e_types": e_types})
-        LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question with decision={res.datasource}")
         return res

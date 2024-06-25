@@ -245,7 +245,7 @@ async def chat(
         start = time.monotonic()
         resp = await run_agent(agent, data, conversation_history, graphname, websocket)
         elapsed = time.monotonic() - start
-
+        print(resp)
         # save message
         message = Message(
             conversation_id=convo_id,

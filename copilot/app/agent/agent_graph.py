@@ -93,12 +93,14 @@ class TigerGraphAgentGraph:
             logger.debug_pii(
                 f"request_id={req_id_cv.get()} Routing question to: {source}"
             )
-            if source.datasource == "vectorstore":
-                return "supportai_lookup"
-            elif source.datasource == "functions":
-                return "inquiryai_lookup"
-        else:
+        if source.datasource == "vectorstore" and self.supportai_enabled:
+            return "supportai_lookup"
+        elif source.datasource == "functions":
             return "inquiryai_lookup"
+        elif source.datasource == "report":
+            return "report"
+        else:
+            return "inquiyai_lookup"
 
     def apologize(self, state):
         """
@@ -307,9 +309,35 @@ class TigerGraphAgentGraph:
         """
         Write a report using the CoPilot Report Service
         """
+        self.emit_progress("Generating report. This may take a few minutes")
         import requests
 
-        url = "http://localhost:8002/Transaction_Fraud/create_report"
+        url = "http://report-service:8003/Transaction_Fraud/create_report"
+
+        headers = {'Authorization': 'Basic c3VwcG9ydGFpOnN1cHBvcnRhaQ=='}
+
+        payload = {
+            "topic": "Fraud Report",
+            "sections": [],
+            "draft_iterations": 1,
+            "message_context": json.loads(state["question"].replace("'", '"')),
+            "persona": "fraud investigator"
+        }
+
+        logger.info(payload)
+
+        res = requests.post(url, json=payload, headers=headers)
+
+        resp = CoPilotResponse(
+            natural_language_response=res.text,
+            answered_question=True,
+            response_type="report"
+        )
+
+        state["answer"] = resp
+        self.emit_progress(DONE)
+        return state
+
 
     def create_graph(self):
         """
@@ -323,6 +351,7 @@ class TigerGraphAgentGraph:
         if self.supportai_enabled:
             self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
         self.workflow.add_node("rewrite_question", self.rewrite_question)
+        self.workflow.add_node("create_report", self.create_report)
         self.workflow.add_node("apologize", self.apologize)
 
         if self.cypher_gen:
@@ -398,6 +427,7 @@ class TigerGraphAgentGraph:
                 {
                     "supportai_lookup": "hnsw_overlap_search",
                     "inquiryai_lookup": "map_question_to_schema",
+                    "report": "create_report",
                     "apologize": "apologize",
                 },
             )
@@ -407,11 +437,13 @@ class TigerGraphAgentGraph:
                 self.route_question,
                 {
                     "inquiryai_lookup": "map_question_to_schema",
+                    "report": "create_report",
                     "apologize": "apologize",
                 },
             )
 
         self.workflow.add_edge("map_question_to_schema", "generate_function")
+        self.workflow.add_edge("create_report", END)
         if self.supportai_enabled:
             self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")

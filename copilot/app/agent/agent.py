@@ -127,7 +127,7 @@ class TigerGraphAgent:
             else:
                 # Handle the case where conversation is None or empty
                 input_data["conversation"] = []
-            logger.info(f"input_data: {input_data}")
+            #logger.info(f"input_data: {input_data}")
 
             for output in self.agent.stream({"question": str(input_data)}):
                 for key, value in output.items():

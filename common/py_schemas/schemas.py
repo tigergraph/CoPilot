@@ -127,8 +127,8 @@ class QueryUpsertRequest(BaseModel):
 
 class MessageContext(BaseModel):
     # TODO: fix this to contain proper message context
-    user: str
-    content: str
+    input: str
+    conversation: List[Dict[str, str]] = None
 
 class ReportQuestions(BaseModel):
     question: str
@@ -147,7 +147,7 @@ class ReportCreationRequest(BaseModel):
     draft_iterations: int = 1
     persona: Optional[str] = None
     conversation_id: Optional[str] = None
-    message_context: Optional[List[MessageContext]] = None
+    message_context: Optional[MessageContext] = None
 
 class Role(enum.StrEnum):
     SYSTEM = enum.auto()
