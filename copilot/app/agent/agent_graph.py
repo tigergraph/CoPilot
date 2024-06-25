@@ -132,12 +132,7 @@ class TigerGraphAgentGraph:
         self.emit_progress("Generating the code to answer your question")
         try:
             step = self.gen_func._run(
-                state["question"],
-                state["schema_mapping"].target_vertex_types,
-                state["schema_mapping"].target_vertex_attributes,
-                state["schema_mapping"].target_vertex_ids,
-                state["schema_mapping"].target_edge_types,
-                state["schema_mapping"].target_edge_attributes,
+                state["question"]
             )
             state["context"] = step
         except Exception as e:
@@ -310,7 +305,6 @@ class TigerGraphAgentGraph:
         self.workflow.set_entry_point("entry")
         self.workflow.add_node("entry", self.entry)
         self.workflow.add_node("generate_answer", self.generate_answer)
-        self.workflow.add_node("map_question_to_schema", self.map_question_to_schema)
         self.workflow.add_node("generate_function", self.generate_function)
         if self.supportai_enabled:
             self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
@@ -338,7 +332,7 @@ class TigerGraphAgentGraph:
                         "grounded": END,
                         "inquiryai_not_useful": "generate_cypher",
                         "cypher_not_useful": "hnsw_overlap_search",
-                        "supportai_not_useful": "map_question_to_schema",
+                        "supportai_not_useful": "generate_function",
                     },
                 )
             else:
@@ -367,7 +361,7 @@ class TigerGraphAgentGraph:
                         "grounded": END,
                         "not_useful": "rewrite_question",
                         "inquiryai_not_useful": "hnsw_overlap_search",
-                        "supportai_not_useful": "map_question_to_schema",
+                        "supportai_not_useful": "generate_function",
                     },
                 )
             else:
@@ -379,7 +373,7 @@ class TigerGraphAgentGraph:
                         "grounded": END,
                         "not_useful": "rewrite_question",
                         "inquiryai_not_useful": "apologize",
-                        "supportai_not_useful": "map_question_to_schema",
+                        "supportai_not_useful": "generate_function",
                     },
                 )
 
@@ -389,7 +383,7 @@ class TigerGraphAgentGraph:
                 self.route_question,
                 {
                     "supportai_lookup": "hnsw_overlap_search",
-                    "inquiryai_lookup": "map_question_to_schema",
+                    "inquiryai_lookup": "generate_function",
                     "apologize": "apologize",
                 },
             )
@@ -398,12 +392,11 @@ class TigerGraphAgentGraph:
                 "entry",
                 self.route_question,
                 {
-                    "inquiryai_lookup": "map_question_to_schema",
+                    "inquiryai_lookup": "generate_function",
                     "apologize": "apologize",
                 },
             )
 
-        self.workflow.add_edge("map_question_to_schema", "generate_function")
         if self.supportai_enabled:
             self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")

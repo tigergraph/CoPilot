@@ -65,54 +65,50 @@ class GenerateFunction(BaseTool):
         self.embedding_model = embedding_model
         self.embedding_store = embedding_store
 
+
+    def generate_schema_rep(self):
+        verts = self.conn.getVertexTypes()
+        edges = self.conn.getEdgeTypes()
+        vertex_schema = []
+        for vert in verts:
+            primary_id = self.conn.getVertexType(vert)["PrimaryId"]["AttributeName"]
+            attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] for attr in self.conn.getVertexType(vert)["Attributes"]])
+            if attributes == "":
+                attributes = "No attributes"
+            vertex_schema.append(f"{vert}\n\tPrimary Id Attribute: {primary_id}\n\tAttributes: \n\t\t{attributes}")
+
+        edge_schema = []
+        for edge in edges:
+            from_vertex = self.conn.getEdgeType(edge)["FromVertexTypeName"]
+            to_vertex = self.conn.getEdgeType(edge)["ToVertexTypeName"]
+            #reverse_edge = conn.getEdgeType(edge)["Config"].get("REVERSE_EDGE")
+            attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] for attr in self.conn.getVertexType(vert)["Attributes"]])
+            if attributes == "":
+                attributes = "No attributes"
+            edge_schema.append(f"{edge}\n\tFrom Vertex: {from_vertex}\n\tTo Vertex: {to_vertex}\n\tAttributes: \n\t\t{attributes}") #\n\tReverse Edge: \n\t\t{reverse_edge}")
+
+        schema_rep = f"""The schema of the graph is as follows:
+        Vertex Types:
+        {chr(10).join(vertex_schema)}
+
+        Edge Types:
+        {chr(10).join(edge_schema)}
+        """
+        return schema_rep
+
     def _run(
         self,
-        question: str,
-        target_vertex_types: List[str] = [],
-        target_vertex_attributes: Dict[str, List[str]] = {},
-        target_vertex_ids: Dict[str, List[str]] = {},
-        target_edge_types: List[str] = [],
-        target_edge_attributes: Dict[str, List[str]] = {},
+        question: str
     ) -> str:
         """Run the tool.
         Args:
             question (str):
                 The question to answer with the database.
-            target_vertex_types (List[str]):
-                The list of vertex types the question mentions.
-            target_vertex_attributes (Dict[str, List[str]]):
-                The dictionary of vertex attributes the question mentions, in the form {"vertex_type": ["attr1", "attr2"]}
-            target_vertex_ids (Dict[str, List[str]):
-                The dictionary of vertex ids the question mentions, in the form of {"vertex_type": ["v_id1", "v_id2"]}
-            target_edge_types (List[str]):
-                The list of edge types the question mentions.
-            target_edge_attributes (Dict[str, List[str]]):
-                The dictionary of edge attributes the question mentions, in the form {"edge_type": ["attr1", "attr2"]}
         """
         LogWriter.info(f"request_id={req_id_cv.get()} ENTRY GenerateFunction._run()")
 
-        if target_vertex_types == [] and target_edge_types == []:
-            return "No vertex or edge types recognized. MapQuestionToSchema and then try again."
 
-        try:
-            validate_schema(
-                self.conn,
-                target_vertex_types,
-                target_edge_types,
-                target_vertex_attributes,
-                target_edge_attributes,
-            )
-        except MapQuestionToSchemaException as e:
-            LogWriter.warning(
-                f"request_id={req_id_cv.get()} WARN input schema not valid"
-            )
-            return e
-
-        lookup_question = question + " "
-        if target_vertex_types != []:
-            lookup_question += "using vertices: " + str(target_vertex_types) + " "
-        if target_edge_types != []:
-            lookup_question += "using edges: " + str(target_edge_types)
+        lookup_question = question
 
         logger.debug_pii(
             f"request_id={req_id_cv.get()} retrieving documents for question={lookup_question}"
@@ -123,11 +119,7 @@ class GenerateFunction(BaseTool):
             template=self.prompt,
             input_variables=[
                 "question",
-                "vertex_types",
-                "edge_types",
-                "vertex_attributes",
-                "vertex_ids",
-                "edge_attributes",
+                "schema",
                 "doc1",
                 "doc2",
                 "doc3",
@@ -160,7 +152,6 @@ class GenerateFunction(BaseTool):
         docs = pytg_docs + custom_docs
 
         valid_function_calls = [x["function_header"] for x in self.embedding_store.list_registered_documents(output_fields=["function_header"])]
-
         if len(docs) == 0:
             LogWriter.warning(f"request_id={req_id_cv.get()} WARN no documents found")
             raise NoDocumentsFoundException
@@ -168,11 +159,7 @@ class GenerateFunction(BaseTool):
         inputs = [
             {
                 "question": question,
-                "vertex_types": target_vertex_types,
-                "edge_types": target_edge_types,
-                "vertex_attributes": target_vertex_attributes,
-                "vertex_ids": target_vertex_ids,
-                "edge_attributes": target_edge_attributes,
+                "schema": self.generate_schema_rep(),
                 "doc1": docs[0].page_content,
                 "doc2": docs[1].page_content if len(docs) > 1 else "",
                 "doc3": docs[2].page_content if len(docs) > 2 else "",
@@ -183,6 +170,7 @@ class GenerateFunction(BaseTool):
                 "doc8": docs[7].page_content if len(docs) > 7 else ""
             }
         ]
+
 
         logger.debug(f"request_id={req_id_cv.get()} retrieved documents={docs}")
 
