@@ -4,12 +4,11 @@ When certain entities are mapped to vertex attributes, may consider to generate 
 If a WHERE clause is generated, please follow the instruction with proper quoting. To construct a WHERE clause string. Ensure that string attribute values are properly quoted. 
 For example, if the generated function is "conn.getVertices('Person', where='name=William Torres')", Expected Output: "conn.getVertices('Person', where='name="William Torres"')", This rule applies to all types of attributes. e.g., name, email, address and so on.
 Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
-Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
-Vertex Types: {vertex_types}
-Vertex Attributes: {vertex_attributes}
-Vertex IDs: {vertex_ids}
-Edge Types: {edge_types}
-Edge Attributes: {edge_attributes}
+Use the schema below to understand the schema of the graph. Keep in mind that the question may use different names for the vertices, edges, and attributes. Use the best judgment to match the schema with the question.
+
+Always use the most concise function call. For example, if the question asks for the number of vertices, use the getVertexCount() function. If the question asks for the number of edges, use the getEdgeCount() function.
+
+Schema: {schema}
 Question: {question}
 First Docstring: {doc1}
 Second Docstring: {doc2}
