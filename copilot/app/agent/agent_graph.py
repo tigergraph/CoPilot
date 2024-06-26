@@ -326,12 +326,13 @@ class TigerGraphAgentGraph:
 
         logger.info(payload)
 
-        res = requests.post(url, json=payload, headers=headers)
+        res = requests.post(url, json=payload, headers=headers).json()
 
         resp = CoPilotResponse(
-            natural_language_response=res.text,
+            natural_language_response=res["report"]["report"],
             answered_question=True,
-            response_type="report"
+            response_type="report",
+            query_sources={"reasoning": res["report"]["citations"]}
         )
 
         state["answer"] = resp
