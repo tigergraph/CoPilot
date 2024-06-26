@@ -1,3 +1,4 @@
+.env
 __pycache__/
 *_config*.json
 tigergraph-ml-*.json
@@ -33,3 +34,10 @@ run.sh
 configs
 venv
 .env
+
+hld
+times*
+a.md
+gen
+mq2s
+*par_times

@@ -4,7 +4,6 @@ import useWebSocket, {ReadyState} from 'react-use-websocket';
 import Loader from '../components/Loader';
 import { SelectedGraphContext } from '../components/Contexts';
 
-
 interface ActionProviderProps {
   createChatBotMessage: any;
   setState: any;

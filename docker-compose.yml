@@ -58,7 +58,6 @@ services:
       - ./chat-history/:/configs
     networks:
       - copilot_local
-
   # report-service:
   #   image: tigergraphml/report-service:latest
   #   container_name: report-service

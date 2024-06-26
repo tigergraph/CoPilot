@@ -23,7 +23,13 @@ from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
-from common.py_schemas.schemas import AgentProgess, CoPilotResponse, Message, ResponseType, Role
+from common.py_schemas.schemas import (
+    AgentProgess,
+    CoPilotResponse,
+    Message,
+    ResponseType,
+    Role,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -221,8 +227,6 @@ async def chat(
     conversation_history = []  # TODO: go get history instead of starting from 0
     convo_id = str(uuid.uuid4())
     agent = make_agent(graphname, conn, use_cypher, ws=websocket)
-
-    # from anyio import sleep as asleep
 
     prev_id = None
     try:
