@@ -1,10 +1,9 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useContext} from 'react';
 import {createClientMessage} from 'react-chatbot-kit';
 import useWebSocket, {ReadyState} from 'react-use-websocket';
 import Loader from '../components/Loader';
+import { SelectedGraphContext } from '../components/Contexts';
 
-
-const WS_URL = "/ui/pyTigerGraphRAG/chat";
 
 interface ActionProviderProps {
   createChatBotMessage: any;
@@ -36,23 +35,22 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   setState,
   children,
 }) => {
-  const [socketUrl, setSocketUrl] = useState(WS_URL);
+  const selectedGraph = useContext(SelectedGraphContext);
+  const WS_URL = "/ui/" + selectedGraph + "/chat";
   const [messageHistory, setMessageHistory] = useState<MessageEvent<Message>[]>(
     [],
   );
-  const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl);
+  const { sendMessage, lastMessage, readyState } = useWebSocket(WS_URL, {
+    onOpen: () => {
+      queryCopilotWs2(localStorage.getItem("creds")!);
+      console.log("WebSocket connection established to {WS_URL}.");
+    },
+  });
 
   // eslint-disable-next-line
   // @ts-ignore
   const queryCopilotWs2 = useCallback((msg: string) => {
     sendMessage(msg);
-  });
-
-  useWebSocket(WS_URL, {
-    onOpen: () => {
-      queryCopilotWs2(localStorage.getItem("creds")!);
-      console.log("WebSocket connection established.");
-    },
   });
 
   const updateState = (message: any) => {
