@@ -27,55 +27,14 @@ const SideMenu = ({ height }: { height?: string }) => {
           className="min-h-[32px] pt-5 pl-5 min-w-[144px]'"
         />
       </div>
-      <h1 className="Urbane-Medium text-lg pl-5 pt-5 text-black dark:text-white">
-        Menu
-      </h1>
-      <ul className="menu border-b border-gray-300 dark:border-[#3D3D3D] text-black mx-6">
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <BsGrid className="text-xl mr-3" /> Workgroups{" "}
-            <MdKeyboardArrowDown className="text-2xl ml-auto" />
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <IoDocumentTextOutline className="text-xl mr-3" />
-            Load Data
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <FiTerminal className="text-xl mr-3" /> GSQL Editor
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <FiLoader className="text-xl mr-3" />
-            Explore Graph
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <IoCartOutline className="text-xl mr-3" />
-            Marketplace <MdKeyboardArrowDown className="text-2xl ml-auto" />
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <FiKey className="text-xl mr-3" />
-            Admin <MdKeyboardArrowDown className="text-2xl ml-auto" />
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <IoIosHelpCircleOutline className="text-xl mr-3" />
-            Help <MdKeyboardArrowDown className="text-2xl ml-auto" />
-          </a>
-        </li>
-      </ul>
+
+      <div className="gradient rounded-lg h-[44px] flex items-center justify-center mx-5 mt-5 text-white">
+        + New Chat
+      </div>
+
       <h1 className="Urbane-Medium text-lg pl-4 pt-5 text-black dark:text-white flex">
         <img src="./tg-logo-bk.svg" className="mr-3 ml-2" />
-        <span>Copilot chat history</span>
+        <span>Chat history</span>
       </h1>
       <h4 className="Urbane-Medium text-lg pl-6 pt-5 text-black dark:text-white">
         Today
@@ -121,7 +80,7 @@ const SideMenu = ({ height }: { height?: string }) => {
           <div className="mr-4">
             Charles P.
             <br />
-            Charles.1980@gmai.com
+            Charles.1980@gmail.com
           </div>
           <IoIosArrowForward />
         </div>
