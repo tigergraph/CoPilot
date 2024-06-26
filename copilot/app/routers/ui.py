@@ -276,5 +276,5 @@ async def chat(
             )
     except WebSocketDisconnect as e:
         logger.info(f"Websocket disconnected: {str(e)}")
-    finally:
-        websocket.close()
+    except:
+        await websocket.close()
