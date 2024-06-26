@@ -13,7 +13,7 @@ import httpx
 import requests
 from agent.agent import TigerGraphAgent, make_agent
 from agent.Q import DONE
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status, WebSocketDisconnect
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
@@ -225,48 +225,52 @@ async def chat(
     # from anyio import sleep as asleep
 
     prev_id = None
-    while True:
-        data = await websocket.receive_text()
+    try:
+        while True:
+            data = await websocket.receive_text()
 
-        # make message from data
-        message = Message(
-            conversation_id=convo_id,
-            message_id=str(uuid.uuid4()),
-            parent_id=prev_id,
-            model=llm_config["model_name"],
-            content=data,
-            role=Role.USER,
-        )
-        # save message
-        await write_message_to_history(message, usr_auth)
-        prev_id = message.message_id
+            # make message from data
+            message = Message(
+                conversation_id=convo_id,
+                message_id=str(uuid.uuid4()),
+                parent_id=prev_id,
+                model=llm_config["model_name"],
+                content=data,
+                role=Role.USER,
+            )
+            # save message
+            await write_message_to_history(message, usr_auth)
+            prev_id = message.message_id
 
-        # generate response and keep track of response time
-        start = time.monotonic()
-        resp = await run_agent(agent, data, conversation_history, graphname, websocket)
-        elapsed = time.monotonic() - start
+            # generate response and keep track of response time
+            start = time.monotonic()
+            resp = await run_agent(agent, data, conversation_history, graphname, websocket)
+            elapsed = time.monotonic() - start
 
-        # save message
-        message = Message(
-            conversation_id=convo_id,
-            message_id=str(uuid.uuid4()),
-            parent_id=prev_id,
-            model=llm_config["model_name"],
-            content=resp.natural_language_response,
-            role=Role.SYSTEM,
-            response_time=elapsed,
-            answered_question=resp.answered_question,
-            response_type=resp.response_type,
-            query_sources=resp.query_sources,
-        )
-        await write_message_to_history(message, usr_auth)
-        prev_id = message.message_id
-        print(f"**** convo_id:\n{message.conversation_id}")
+            # save message
+            message = Message(
+                conversation_id=convo_id,
+                message_id=str(uuid.uuid4()),
+                parent_id=prev_id,
+                model=llm_config["model_name"],
+                content=resp.natural_language_response,
+                role=Role.SYSTEM,
+                response_time=elapsed,
+                answered_question=resp.answered_question,
+                response_type=resp.response_type,
+                query_sources=resp.query_sources,
+            )
+            await write_message_to_history(message, usr_auth)
+            prev_id = message.message_id
 
-        # reply
-        await websocket.send_text(message.model_dump_json())
+            # reply
+            await websocket.send_text(message.model_dump_json())
 
-        # append message to history
-        conversation_history.append(
-            {"query": data, "response": resp.natural_language_response}
-        )
+            # append message to history
+            conversation_history.append(
+                {"query": data, "response": resp.natural_language_response}
+            )
+    except WebSocketDisconnect as e:
+        logger.info(f"Websocket disconnected: {str(e)}")
+    finally:
+        websocket.close()
