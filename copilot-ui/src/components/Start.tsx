@@ -5,8 +5,16 @@ import { useTheme } from "@/components/ThemeProvider";
 console.log(localStorage.getItem('selectedGraph'));
 
 const questions =
-  localStorage.getItem('selectedGraph') === 'pyTigerGraphRAGpyTigerGraphRAG'
+  localStorage.getItem('selectedGraph') === 'pyTigerGraphRAG'
     ? [
+        {title: 'What can pyTG do?'},
+        {title: 'How do I authenticate with the DB?'},
+        {title: 'How do I run PageRank?'},
+        {title: 'Help me initialize a NodePiece model'},
+        {title: 'Can I load data with pyTG?'},
+        {title: 'Write a short python snippet to run a loading job'},
+      ]
+    : [
         {title: 'How many transactions are there?'},
         {title: 'Tell me about transaction fraud.'},
         {title: 'Describe flow of one transaction.'},
@@ -16,14 +24,6 @@ const questions =
         // { title: "What is William Torres' ID?" },
         // { title: "What's his email?" },
         // {title:"How do I get a count of vertices in Python?"}
-      ]
-    : [
-        {title: 'What can pyTG do?'},
-        {title: 'How do I authenticate with the DB?'},
-        {title: 'How do I run PageRank?'},
-        {title: 'Help me initialize a NodePiece model'},
-        {title: 'Can I load data with pyTG?'},
-        {title: 'Write a short python snippet to run a loading job'},
       ];
 
 interface Start {
