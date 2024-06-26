@@ -2,7 +2,6 @@ import { FC, useState } from "react";
 import { HiOutlineChatBubbleOvalLeft } from "react-icons/hi2";
 import { useTheme } from "@/components/ThemeProvider";
 
-console.log(localStorage.getItem('selectedGraph'));
 
 const questions =
   localStorage.getItem('selectedGraph') === 'pyTigerGraphRAG'
