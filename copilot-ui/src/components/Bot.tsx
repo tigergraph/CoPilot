@@ -41,15 +41,15 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
 
   return (
     <div className={layout}>
-      {layout === "fp" && (
+      {/* {layout === "fp" && ( */}
         <div className="border-b border-gray-300 dark:border-[#3D3D3D] h-[70px] flex justify-end items-center bg-white dark:bg-background z-50 rounded-tr-lg">
           <div className="text-sm pl-5 mr-auto">{currentDate}</div>
 
-          <div className="text-sm flex items-center border dark:border-[#3D3D3D] p-2 border-gray-300 rounded-md mr-5">
+          {/* <div className="text-sm flex items-center border dark:border-[#3D3D3D] p-2 border-gray-300 rounded-md mr-5">
             <img src="/workgroup-icon.svg" alt="" className="mr-2" />
             Workgroup-2024-04-24-uxWr...
             <MdKeyboardArrowDown className="text-2xl" />
-          </div>
+          </div> */}
 
           {/* <div className='text-sm flex items-center border p-2 border-gray-300 dark:border-[#3D3D3D] rounded-md mr-16'>
             <img src="/graph-icon.svg" alt="" className="mr-2"/>
@@ -83,7 +83,7 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      )}
+      {/*   )} */}
       
       <SelectedGraphContext.Provider value={selectedGraph}>
         <Chatbot
