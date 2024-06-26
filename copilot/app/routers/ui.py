@@ -13,7 +13,7 @@ import httpx
 import requests
 from agent.agent import TigerGraphAgent, make_agent
 from agent.Q import DONE
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status, WebSocketDisconnect
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
