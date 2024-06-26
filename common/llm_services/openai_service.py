@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from common.llm_services import LLM_Model
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAI(LLM_Model):
-    def __init__(self, config):
+    def __init__(self, config, graphname=None):
         super().__init__(config)
         for auth_detail in config["authentication_configuration"].keys():
             os.environ[auth_detail] = config["authentication_configuration"][
@@ -18,6 +19,10 @@ class OpenAI(LLM_Model):
         from langchain.chat_models import ChatOpenAI
 
         model_name = config["llm_model"]
+        if graphname == "Transaction_Fraud":
+            model_name = "gpt-4"
+        elif graphname == "pyTigerGraphRAG":
+            model_name = "gpt-4-0125-preview"
         self.llm = ChatOpenAI(
             temperature=config["model_kwargs"]["temperature"], model_name=model_name
         )
