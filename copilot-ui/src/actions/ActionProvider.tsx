@@ -43,7 +43,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   const { sendMessage, lastMessage, readyState } = useWebSocket(WS_URL, {
     onOpen: () => {
       queryCopilotWs2(localStorage.getItem("creds")!);
-      console.log("WebSocket connection established to {WS_URL}.");
+      console.log("WebSocket connection established to " + WS_URL);
     },
   });
 
