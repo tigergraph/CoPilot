@@ -212,10 +212,7 @@ class TigerGraphAgentGraph:
         logger.debug_pii(
             f"request_id={req_id_cv.get()} Generating answer for question: {state['question']}"
         )
-        print("*****")
-        print(state)
-        print(state["lookup_source"])
-        print("*****")
+
         if state["lookup_source"] == "supportai":
             answer = step.generate_answer(
                 state["question"], state["context"]["result"]["@@final_retrieval"]
@@ -312,9 +309,6 @@ class TigerGraphAgentGraph:
         """
         Check if the state has an error.
         """
-        print("*****")
-        print(state.get("context").get("error"))
-        print("*****")
         if (
             isinstance(state.get("context"), Exception)
             and state.get("context") is not None
