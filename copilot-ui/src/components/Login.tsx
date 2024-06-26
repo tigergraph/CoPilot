@@ -85,7 +85,7 @@ export function Login() {
         setToken(res);
         localStorage.setItem("site", JSON.stringify(res));
         localStorage.setItem("creds", creds);
-        navigate("/chat");
+        navigate("/chat-dialog");
         return;
       }
       throw new Error(res.message);
