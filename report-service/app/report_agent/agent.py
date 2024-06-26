@@ -7,6 +7,10 @@ from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain.pydantic_v1 import BaseModel, Field
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class Report(BaseModel):
     report: str = Field(description="A drareport based on the answers received from the data analyst. Include citations by adding `[x]` where x is the function call that was used to determine the answer.")
     citations: list[str] = Field(description="A list of citations used in the report. Each citation should be a string. The index of the citation should match the index of the `[x]` in the report.")
@@ -66,7 +70,7 @@ class TigerGraphReportAgent:
         Returns:
             A list of report sections.
         """
-
+        logger.info(f"Generating sections for {persona} on {topic}.")
         section_parser = PydanticOutputParser(pydantic_object=ReportSections)
         if message_context:
             SECTION_GENERATION_PROMPT = PromptTemplate(
@@ -129,6 +133,7 @@ class TigerGraphReportAgent:
         Returns:
             A report section.
         """
+        logger.info(f"Generating section {section.section} for {persona} on {topic}.")
         try:
             if section.actions:
                 # TODO: run queries specified in the section actions
@@ -139,9 +144,31 @@ class TigerGraphReportAgent:
         q_and_a = []
 
 
+        QUESTION_REPHRASE_PROMPT = PromptTemplate(
+            template = """You are a {persona} and are writing a report on {topic}.
+                          You are writing a section about {section_name}.
+                          Previously generated sections are as follows:
+                            {sections}
+                          The question is: {question}.
+                          Rephrase the question to be more specific, including IDs or names of entities mentioned in the previous sections.
+                    """,
+            input_variables=["persona", "topic", "section_name", "question", "sections"],
+        )
+
+        question_rephrase_chain = QUESTION_REPHRASE_PROMPT | self.llm.model | StrOutputParser()
+
+
         for question in section.questions:
             question_text = question.question
-            resp = self.conn.ai.query(question_text)
+            rephrased_q = question_rephrase_chain.invoke(
+                                            {"persona": persona,
+                                             "topic": topic,
+                                             "section_name": section.section,
+                                             "question": question_text,
+                                             "sections": "\n\n".join(gen_sections)}
+                                        )
+            logger.info(f"Generating answer for question: {rephrased_q}")
+            resp = self.conn.ai.query(rephrased_q)
             q_and_a.append({"question": question_text,
                             "answer": resp,
                             "question_reason": question.reasoning})
@@ -189,7 +216,7 @@ class TigerGraphReportAgent:
         Returns:
             The finalized report.
         """
-
+        logger.info(f"Finalizing report for {persona} on {topic}.")
         report_parser = PydanticOutputParser(pydantic_object=Report)
 
         FINALIZE_PROMPT = PromptTemplate(
