@@ -312,9 +312,11 @@ class TigerGraphAgentGraph:
         Check if the state has an error.
         """
         if (
-            # isinstance(state.get("context"), Exception) and
-            state.get("context") is not None
-            and state["context"].get("error") is not None
+            state.get("context") is not None and
+            (
+                isinstance(state.get("context"), Exception) or
+                state["context"].get("error") is not None
+            )
         ):
             return "error"
         else:
