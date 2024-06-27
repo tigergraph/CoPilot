@@ -11,8 +11,8 @@ CREATE DISTRIBUTED QUERY Scan_For_Updates(STRING v_type = "Document",
   seeds = {v_type};
   
   to_process = SELECT s FROM seeds:s
-               WHERE (s.epoch_processing == 0 AND s.epoch_added > 0)
-                     OR s.epoch_processing > s.epoch_added + expire_window
+               WHERE s.epoch_processed == 0 AND ((s.epoch_processing == 0 AND s.epoch_added > 0)
+                     OR datetime_to_epoch(now()) > s.epoch_processing + expire_window)
                POST-ACCUM @@ToProcess += ProcessInfo(s, s.epoch_added);
   
   FOREACH tup IN @@ToProcess DO
