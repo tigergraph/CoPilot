@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class EventualConsistencyChecker:
     def __init__(
         self,
-        interval_seconds,
+        process_interval_seconds,
         cleanup_interval_seconds,
         graphname,
         vertex_field,
@@ -29,7 +29,7 @@ class EventualConsistencyChecker:
         batch_size = 10,
         run_forever = True
     ):
-        self.interval_seconds = interval_seconds
+        self.process_interval_seconds = process_interval_seconds
         self.cleanup_interval_seconds = cleanup_interval_seconds
         self.graphname = graphname
         self.conn = conn
@@ -191,11 +191,13 @@ class EventualConsistencyChecker:
             ],
         )
 
+
     def fetch_and_process_vertex(self):
         v_types_to_scan = self.embedding_indices
         vertex_ids_content_map: dict = {}
         for v_type in v_types_to_scan:
-            LogWriter.info(f"Fetching vertex ids and content for vertex type: {v_type}")
+            start_time = time.time()
+            LogWriter.info(f"Fetching {self.batch_size} vertex ids and content for vertex type: {v_type}")
             vertex_ids_content_map = self.conn.runInstalledQuery(
                 "Scan_For_Updates", {"v_type": v_type, "num_samples": self.batch_size}
             )[0]["@@v_and_text"]
@@ -244,10 +246,14 @@ class EventualConsistencyChecker:
                     {"processed_vertices": vertex_ids},
                     usePost=True
                 )
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                LogWriter.info(f"Time elapsed for processing vertex_ids {vertex_ids}: {elapsed_time:.2f} seconds")
             else:
                 LogWriter.error(f"No changes detected for vertex type: {v_type}")
 
         return len(vertex_ids_content_map) != 0
+
 
     def verify_and_cleanup_embeddings(self):
         for v_type in self.embedding_indices:
@@ -273,12 +279,15 @@ class EventualConsistencyChecker:
         )
         self.is_initialized = True
         while True:
-            self.fetch_and_process_vertex()
+            worked = self.fetch_and_process_vertex()
 
             if not self.run_forever:
                 break
-            else:
-                time.sleep(self.interval_seconds)
+            elif not worked:
+                LogWriter.info(
+                    f"Eventual Consistency Check waiting to process for graphname {self.graphname} for {self.process_interval_seconds} seconds"
+                )
+                time.sleep(self.process_interval_seconds)
 
             
     def initialize_cleanup(self):
@@ -292,6 +301,9 @@ class EventualConsistencyChecker:
             if not self.run_forever:
                 break
             else:
+                LogWriter.info(
+                    f"Eventual Consistency Check waiting to cleanup for graphname {self.graphname} for {self.cleanup_interval_seconds} seconds"
+                )
                 time.sleep(self.cleanup_interval_seconds)
 
     def get_status(self):
