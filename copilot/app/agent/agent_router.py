@@ -37,9 +37,10 @@ class TigerGraphAgentRouter:
 You are an expert at routing a user question to a vectorstore or function calls.
 Use the vectorstore for questions on that would be best suited by text documents.
 Use the function calls for questions that ask about structured data, or operations on structured data.
+Use the report service for questions that ask about generating a report or longer analysis
 Keep in mind that some questions about documents such as "how many documents are there?" can be answered by function calls.
 The function calls can be used to answer questions about these entities: {v_types} and relationships: {e_types}.
-Otherwise, use vectorstore. Give a binary choice 'functions' or 'vectorstore' based on the question.
+Otherwise, use vectorstore. Give a choice of 'functions', 'vectorstore', or 'report' based on the question.
 Return the a JSON with a single key 'datasource' and no premable or explaination.
 Question to route: {question}
 Format: {format_instructions}\
