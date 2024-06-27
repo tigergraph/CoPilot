@@ -322,7 +322,54 @@ class TigerGraphAgentGraph:
 
         payload = {
             "topic": "Fraud Report",
-            "sections": [],
+            "sections": [
+                {
+                "section": "Transaction 100577 Basics",
+                "description": "Basic information about transaction 100577",
+                "questions": [
+                    {
+                    "question": "What are the basic details about the transaction?",
+                    "reasoning": "The transaction amount, date, and fraud status are key pieces of information for understanding the transaction."
+                    },
+                    {
+                    "question": "What merchant is involved in the transaction?",
+                    "reasoning": "The merchant involved in the transaction is a key piece of information for understanding the transaction."
+                    },
+                    {
+                    "question": "What card made the transaction?",
+                    "reasoning": "The card used in the transaction is a key piece of information for understanding the transaction."
+                    }
+                ]
+                },
+                {
+                "section": "Merchant Information for Transaction 100577 - fraud_Bailey-Morar",
+                "description": "Details about the merchant involved in transaction 100577",
+                "questions": [
+                    {
+                    "question": "How many transactions has the merchant fraud_Bailey-Morar processed?",
+                    "reasoning": "The number of transactions processed by the merchant is a key piece of information for understanding the merchant." 
+                    },
+                    {
+                    "question": "What category is the merchant fraud_Bailey-Morar in?",
+                    "reasoning": "The category of the merchant is a key piece of information for understanding the merchant."
+                    }
+                ]
+                },
+                {
+                "section": "Card Information for Transaction 100577 - 180077352287056",
+                "description": "Details about the card 180077352287056",
+                "questions": [
+                    {
+                    "question": "What is the pagerank of the card 180077352287056?",
+                    "reasoning": "The pagerank of the card is a key piece of information for understanding the card."
+                    },
+                    {
+                    "question": "How many transactions has the card 180077352287056 made?",
+                    "reasoning": "The number of transactions made by the card is a key piece of information for understanding the card."
+                    }
+                ]
+                }
+            ],
             "draft_iterations": 1,
             "message_context": json.loads(state["question"].replace("'", '"')),
             "persona": "fraud investigator"

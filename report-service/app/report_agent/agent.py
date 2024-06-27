@@ -78,6 +78,10 @@ class TigerGraphReportAgent:
                             You have access to the following data: {schema_rep}
                             Generate sections for the report. Use the following messages for additional context about the topic:
                             {message_context}
+
+                            Make sure to use the message context above to generate specifc questions for the report. 
+                            E.g. ids or names of entities mentioned in the conversation history should be used in the questions.
+
                             Each section should have a name, description, and a list of questions to answer in the section.
                             Format your outline as described below:
                             {format_instructions}""",
@@ -160,6 +164,7 @@ class TigerGraphReportAgent:
 
         for question in section.questions:
             question_text = question.question
+            '''
             rephrased_q = question_rephrase_chain.invoke(
                                             {"persona": persona,
                                              "topic": topic,
@@ -167,8 +172,9 @@ class TigerGraphReportAgent:
                                              "question": question_text,
                                              "sections": "\n\n".join(gen_sections)}
                                         )
-            logger.info(f"Generating answer for question: {rephrased_q}")
-            resp = self.conn.ai.query(rephrased_q)
+            '''
+            logger.info(f"Generating answer for question: {question_text}")
+            resp = self.conn.ai.query(question_text)
             q_and_a.append({"question": question_text,
                             "answer": resp,
                             "question_reason": question.reasoning})

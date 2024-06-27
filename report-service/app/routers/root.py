@@ -51,7 +51,7 @@ def create_report(graphname: str,
                                                create_report_request.topic,
                                                create_report_request.message_context).sections
         else:
-            # if copilot_fortify == True, then need to add more questions to the section.
+            # TODO: Add copilot fortify if needed
             generate_sections = False
     else:
         return JSONResponse(status_code=400, content={"error": """Invalid sections data type.

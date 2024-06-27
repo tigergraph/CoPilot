@@ -135,7 +135,7 @@ class ReportQuestions(BaseModel):
     reasoning: str
 
 class ReportSection(BaseModel):
-    section_name: str
+    section: str
     description: str
     questions: Optional[List[ReportQuestions]] = None
     copilot_fortify: bool = True
