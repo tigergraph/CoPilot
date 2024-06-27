@@ -129,8 +129,9 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
         consistency_checkers[graphname] = checker
 
         # start the longer cleanup process that will run in further spaced-out intervals
-        cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
-        cleanup_thread.start()
+        if milvus_config.get("cleanup_enabled", True):
+            cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
+            cleanup_thread.start()
 
         # start the main ECC process that searches for new vertices that need to be processed
         checker.initialize()
