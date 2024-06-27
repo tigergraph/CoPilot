@@ -33,6 +33,7 @@ const formSchema = z.object({
 // TODO
 // const AuthContext = createContext();
 const WS_URL = "/ui/ui-login";
+// const WS_URL = "http://localhost:8000/ui/ui-login";
 
 export function Login() {
   const { i18n, t } = useTranslation();
@@ -84,7 +85,7 @@ export function Login() {
         setToken(res);
         localStorage.setItem("site", JSON.stringify(res));
         localStorage.setItem("creds", creds);
-        navigate("/chat");
+        navigate("/chat-dialog");
         return;
       }
       throw new Error(res.message);

@@ -10,9 +10,10 @@ import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
 import { Feedback, Message } from "@/actions/ActionProvider";
+import Markdown from 'react-markdown'
 
-const COPILOT_URL = "http://0.0.0.0:8000";
-let graphName = "pyTigerGraphRAG"; //TODO: change to currently selected graph
+const COPILOT_URL = "";
+// const COPILOT_URL = "http://0.0.0.0:8000";
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
@@ -28,6 +29,31 @@ interface IChatbotMessageProps {
   customStyles: {
     backgroundColor: string;
   };
+}
+
+const urlRegex = /https?:\/\//
+const getReasoning = (msg) => {
+  // handle list
+  
+  if(msg.query_sources.reasoning instanceof Array) {
+    let sources:Array<JSX.Element> = []
+    for(let i = 0; i < msg.query_sources.reasoning.length; i++){
+      const src = msg.query_sources.reasoning[i]
+      if(urlRegex.test(src)){
+        const a = (<li key={src}><a href={src} target='_blank' className='underline overflow-auto'>{src}</a></li>)
+        sources.push(a)
+      } else{
+        const a = (<li key={src}>{src}</li>)
+        sources.push(a)
+      }
+    }
+    return (
+      <ul className='overflow-hidden'>
+        {sources}
+      </ul>
+    )
+  }
+  return msg.query_sources.reasoning
 }
 
 export const CustomChatMessage: FC<IChatbotMessageProps> = ({
@@ -102,7 +128,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
           {message.response_type === "progress" ? (
             <p className="copilot-thinking typewriter">{message.content}</p>
           ) : (
-            <p className="typewriter">{message.content}</p>
+            <Markdown className="typewriter">{message.content}</Markdown>
           )}
           <div className="flex mt-3">
             <div
@@ -155,15 +181,16 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
           </div>
 
           {showResult ? (
-            <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
-              <strong>Reasoning:</strong> {message.query_sources.reasoning}
+            <div className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
+              <strong>Reasoning:</strong> 
+              {getReasoning(message)}
               <span
                 className="absolute right-2 bottom-1 cursor-pointer"
                 onClick={() => setShowResult(false)}
               >
                 X
               </span>
-            </p>
+            </div>
           ) : null}
         </div>
       )}

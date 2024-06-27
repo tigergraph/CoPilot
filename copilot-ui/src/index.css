@@ -429,7 +429,7 @@
 }
 
 .button-image {
-  animation: up_down 2s ease infinite;
+  /* animation: up_down 2s ease infinite; */
 }
 
 @keyframes up_down {
