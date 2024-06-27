@@ -10,6 +10,7 @@ import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
 import { Feedback, Message } from "@/actions/ActionProvider";
+import Markdown from 'react-markdown'
 
 const COPILOT_URL = "";
 // const COPILOT_URL = "http://0.0.0.0:8000";
@@ -127,7 +128,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
           {message.response_type === "progress" ? (
             <p className="copilot-thinking typewriter">{message.content}</p>
           ) : (
-            <p className="typewriter">{message.content}</p>
+            <Markdown className="typewriter">{message.content}</Markdown>
           )}
           <div className="flex mt-3">
             <div
