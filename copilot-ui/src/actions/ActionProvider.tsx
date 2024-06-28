@@ -60,15 +60,15 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   };
 
   const defaultQuestions = (msg: string) => {
-    if (msg === 'Tell me about transaction fraud.') {
-      handleTransactionFraud(msg);
-    } else {
+    // if (msg === 'Tell me about transaction fraud.') {
+    //   handleTransactionFraud(msg);
+    // } else {
       const clientMessage = createClientMessage(msg, {
         delay: 300,
       });
       updateState(clientMessage);
       queryCopilotWs(msg);
-    }
+    // }
   };
 
   const queryCopilotWs = (msg) => {
@@ -83,31 +83,31 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     }));
   };
 
-  const handleTransactionFraud = (msg) => {
-    console.log(msg);
-    const clientMessage = createClientMessage(msg, {
-      delay: 3000,
-    });
-    updateState(clientMessage);
-    const loading = createChatBotMessage(<Loader />);
-    setState((prev: any) => ({
-      ...prev,
-      messages: [...prev.messages, loading],
-    }));
-    setTimeout(() => {
-      const botMessage = createChatBotMessage(
-        'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
-        {
-          delay: 0,
-          widget: 'transaction-fraud',
-        }
-      );
-      setState((prev) => {
-        const newPrevMsg = prev.messages.slice(0, -1);
-        return {...prev, messages: [...newPrevMsg, botMessage]};    
-      });
-    }, 2000);
-  };
+  // const handleTransactionFraud = (msg) => {
+  //   console.log(msg);
+  //   const clientMessage = createClientMessage(msg, {
+  //     delay: 3000,
+  //   });
+  //   updateState(clientMessage);
+  //   const loading = createChatBotMessage(<Loader />);
+  //   setState((prev: any) => ({
+  //     ...prev,
+  //     messages: [...prev.messages, loading],
+  //   }));
+  //   setTimeout(() => {
+  //     const botMessage = createChatBotMessage(
+  //       'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
+  //       {
+  //         delay: 0,
+  //         widget: 'transaction-fraud',
+  //       }
+  //     );
+  //     setState((prev) => {
+  //       const newPrevMsg = prev.messages.slice(0, -1);
+  //       return {...prev, messages: [...newPrevMsg, botMessage]};    
+  //     });
+  //   }, 2000);
+  // };
 
   useEffect(() => {
     if (lastMessage !== null) {
@@ -160,7 +160,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
         return React.cloneElement(child, {
           actions: {
             defaultQuestions,
-            handleTransactionFraud,
+            // handleTransactionFraud,
             queryCopilotWs,
           },
         });

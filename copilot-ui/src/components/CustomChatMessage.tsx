@@ -155,7 +155,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
                 <Markdown className="typewriter">{message.content}</Markdown>
               )}
               <div className="flex mt-3">
-                {message.query_sources?.result ? (
+                {message.query_sources?.result || message.query_sources?.cypher ? (
                   <>
                     <div
                       className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
@@ -232,7 +232,7 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
                   <DialogContent className="max-w-[1200px] h-[850px]">
                     <DialogHeader>
                       <DialogDescription>
-                        <div style={{ position: 'relative', width: '100%', height: '800px', border: '1px solid #000'}}>
+                        <div style={{ position: 'relative', width: '100%', height: '800px'}}>
                           {message.query_sources?.result ? (<KnowledgeGraphPro data={message.query_sources?.result} />) : null}
                         </div>
                       </DialogDescription>
@@ -271,6 +271,3 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
     </>
   );
 };
-
-
-            {/* <KnowledgeGraph data={dataArray} /> */}
