@@ -35,6 +35,11 @@ body {
     url(./assets/fonts/urbane/Urbane-DemiBold.woff2) format("woff2");
 }
 
-ol {
-  margin-left: 1.5em;
+ol.response li {
+  list-style: disc outside none;
+  margin-left: 2em;
+}
+
+ul, ol {
+  margin: 1em;
 }
