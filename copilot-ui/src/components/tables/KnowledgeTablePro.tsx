@@ -22,19 +22,12 @@ export const KnowledgeTablPro = ({ data }) => {
   useEffect(() => {
     setvId(sdata[0]?.rlt[0]?.v_id);
     if (typeof sdata === 'object') {
-      const rlt = {
-        "v_id": sdata[0]?.rlt[0]?.v_id,
-        "v_type": sdata[0]?.rlt[0]?.v_type,
-        "rlt.@count": sdata[0]?.rlt[0]?.attributes?.["rlt.@count"],
-      }
-
       if (sdata.length > 1) {
         const setresults = sdata[1]["@@edges"];
         console.log('setresults', setresults)
         setEdges(setresults);
         setdataArray({
-          "nodes": getNodes,
-          "rlt": rlt
+          "nodes": getNodes
         })
       } else null
     }
@@ -64,16 +57,16 @@ export const KnowledgeTablPro = ({ data }) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">v_id</TableHead>
+                  <TableHead>v_id</TableHead>
                   <TableHead>v_type</TableHead>
                   <TableHead >rlt.@count"</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                   <TableRow key='0'>
-                    <TableCell className="font-medium">{dataArray?.rlt?.v_id}</TableCell>
-                    <TableCell>{dataArray?.rlt?.v_type}</TableCell>
-                    <TableCell>{dataArray?.rlt?.attributes["rlt.@count"]}</TableCell>
+                    <TableCell>{sdata[0]?.rlt[0]?.v_id}</TableCell>
+                    <TableCell>{sdata[0]?.rlt[0]?.v_type}</TableCell>
+                    <TableCell>{sdata[0]?.rlt[0]?.attributes["rlt.@count"]}</TableCell>
                   </TableRow>
               </TableBody>
             </Table>
@@ -93,7 +86,7 @@ export const KnowledgeTablPro = ({ data }) => {
               <TableBody>
                 {dataArray?.nodes?.map((d:any) => (
                   <TableRow key='0'>
-                    <TableCell className="font-medium">{d.directed}</TableCell>
+                    <TableCell>{d.directed}</TableCell>
                     <TableCell>{d.e_type}</TableCell>
                     <TableCell>{d.from_id}</TableCell>
                     <TableCell>{d.from_type}</TableCell>

@@ -72,10 +72,9 @@ const getReasoning = (msg) => {
 export const CustomChatMessage: FC<IChatbotMessageProps> = ({
   message,
 }: IChatbotMessageProps) => {
-  const [showResult, setShowResult] = useState<any>(false);
-  const [showKgraph, setShowKgraph] = useState<any>(false);
-  const [showKtable, setShowKtable] = useState<any>(false);
-  const [showgNav, setshowgNav] = useState<any>(true);
+  const [showResult, setShowResult] = useState<boolean>(false);
+  const [showKgraph, setShowKgraph] = useState<boolean>(false);
+  const [showKtable, setShowKtable] = useState<boolean>(false);
   const [feedback, setFeedback] = useState(Feedback.NoFeedback);
 
   const explain = () => {
@@ -153,10 +152,10 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
               {message.response_type === "progress" ? (
                 <p className="copilot-thinking typewriter">{message.content}</p>
               ) : (
-                <p className="typewriter">{message.content}</p>
+                <Markdown className="typewriter">{message.content}</Markdown>
               )}
               <div className="flex mt-3">
-                {message.query_sources?.result && showgNav ? (
+                {message.query_sources?.result ? (
                   <>
                     <div
                       className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
@@ -223,9 +222,6 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
               </div>
             </div>
 
-
-
-            {/* // create pop-up window */}
             {showKgraph ? (
               <>
                 <div style={{ position: 'relative', width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
@@ -268,7 +264,6 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
                 </div>
               </>
             ) : null}
-
 
           </div>
         </>
