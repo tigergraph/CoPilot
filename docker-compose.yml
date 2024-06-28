@@ -49,6 +49,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - 8002:8002
+    depends_on:
+      - copilot
     environment:
       CONFIG: "/configs/config.json"
       LOGLEVEL: "INFO"
@@ -56,7 +58,6 @@ services:
       - ./chat-history/:/configs
     networks:
       - copilot_local
-
   # report-service:
   #   image: tigergraphml/report-service:latest
   #   container_name: report-service

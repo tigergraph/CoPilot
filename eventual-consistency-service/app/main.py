@@ -47,8 +47,9 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
         return consistency_checkers[graphname]
 
     try:
-        check_interval_seconds = milvus_config.get("sync_interval_seconds", 1800) # default 30 minutes
-        cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days
+        process_interval_seconds = milvus_config.get("process_interval_seconds", 1800) # default 30 minutes
+        cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days,
+        batch_size = milvus_config.get("batch_size", 10)
         vector_indices = {}
         vertex_field = None
 
@@ -69,7 +70,7 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
                     password=milvus_config.get("password", ""),
                     vector_field=milvus_config.get("vector_field", "document_vector"),
                     text_field=milvus_config.get("text_field", "document_content"),
-                    vertex_field=vertex_field,
+                    vertex_field=vertex_field
                 )
 
         if doc_processing_config.get("chunker") == "semantic":
@@ -113,7 +114,7 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
             raise ValueError("vertex_field is not defined. Ensure Milvus is enabled in the configuration.")
 
         checker = EventualConsistencyChecker(
-            check_interval_seconds,
+            process_interval_seconds,
             cleanup_interval_seconds,
             graphname,
             vertex_field,
@@ -123,12 +124,14 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
             conn,
             chunker,
             extractor,
+            batch_size
         )
         consistency_checkers[graphname] = checker
 
         # start the longer cleanup process that will run in further spaced-out intervals
-        cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
-        cleanup_thread.start()
+        if milvus_config.get("cleanup_enabled", True):
+            cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
+            cleanup_thread.start()
 
         # start the main ECC process that searches for new vertices that need to be processed
         checker.initialize()

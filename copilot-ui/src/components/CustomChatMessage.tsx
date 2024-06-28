@@ -25,7 +25,7 @@ import { ImEnlarge2 } from "react-icons/im";
 
 
 const COPILOT_URL = "http://0.0.0.0:8000";
-let graphName = "Transaction_Fraud"; //TODO: change to currently selected graph
+let graphName = "pyTigerGraphRAG"; //TODO: change to currently selected graph
 // interface IChatbotMessageProps {
 //   message?: any;
 // }
