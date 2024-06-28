@@ -89,14 +89,24 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
       delay: 3000,
     });
     updateState(clientMessage);
-    const botMessage = createChatBotMessage(
-      'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
-      {
-        delay: 2000,
-        widget: 'transaction-fraud',
-      }
-    );
-    updateState(botMessage);
+    const loading = createChatBotMessage(<Loader />);
+    setState((prev: any) => ({
+      ...prev,
+      messages: [...prev.messages, loading],
+    }));
+    setTimeout(() => {
+      const botMessage = createChatBotMessage(
+        'Transactions refer to the execution of a series of operations or exchanges between two or more parties. They are fundamental to various domains, particularly in economics, finance, and computer science. Here’s a detailed look at transactions in different contexts:',
+        {
+          delay: 0,
+          widget: 'transaction-fraud',
+        }
+      );
+      setState((prev) => {
+        const newPrevMsg = prev.messages.slice(0, -1);
+        return {...prev, messages: [...newPrevMsg, botMessage]};    
+      });
+    }, 2000);
   };
 
   useEffect(() => {
@@ -104,10 +114,9 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
       setMessageHistory((prev) => prev.concat(lastMessage));
       const botMessage = createChatBotMessage(JSON.parse(lastMessage.data));
       console.log(botMessage.message);
-
       setState((prev) => {
         const newPrevMsg = prev.messages.slice(0, -1);
-        return {...prev, messages: [...newPrevMsg, botMessage]};
+        return {...prev, messages: [...newPrevMsg, botMessage]};  
       });
     }
   }, [lastMessage]);

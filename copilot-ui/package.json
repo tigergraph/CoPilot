@@ -11,9 +11,14 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",
+    "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-popover": "^1.1.1",
+    "@radix-ui/react-radio-group": "^1.2.0",
+    "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "i18next": "^23.11.5",
@@ -29,6 +34,7 @@
     "react-markdown": "^9.0.1",
     "react-router-dom": "^6.23.1",
     "react-use-websocket": "^4.8.1",
+    "reagraph": "^4.19.1",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"
