@@ -76,6 +76,22 @@ export const KnowledgeGraph = ({ data }) => {
       />
     ) : '...loading'}
 
+    <div className='absolute top-0 right-0 w-[200px]'>
+      <button className='block w-full' onClick={() => ref.current?.centerGraph()}>Center</button>
+      <button className='block w-full' onClick={() => ref.current?.centerGraph([data.nodes[2].id])}>Center Node 2</button>
+      <button className='block w-full' onClick={() => ref.current?.fitNodesInView()}>Fit View</button>
+      <br />
+      <button className='block w-full' onClick={() => ref.current?.zoomIn()}>Zoom In</button>
+      <button className='block w-full' onClick={() => ref.current?.zoomOut()}>Zoom Out</button>
+      <button className='block w-full' onClick={() => ref.current?.dollyIn()}>Dolly In</button>
+      <button className='block w-full' onClick={() => ref.current?.dollyOut()}>Dolly Out</button>
+      <br />
+      <button className='block w-full' onClick={() => ref.current?.panDown()}>Pan Down</button>
+      <button className='block w-full' onClick={() => ref.current?.panUp()}>Pan Up</button>
+      <button className='block w-full' onClick={() => ref.current?.panLeft()}>Pan Left</button>
+      <button className='block w-full' onClick={() => ref.current?.panRight()}>Pan Right</button>
+    </div>
+
   {/* <div style={{
       position: 'absolute',
       top: 0,

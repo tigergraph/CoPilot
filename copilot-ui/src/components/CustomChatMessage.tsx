@@ -5,12 +5,24 @@ import {
   FaRegThumbsDown,
   FaThumbsDown,
 } from "react-icons/fa";
-import { PiGraph } from "react-icons/pi";
 import { IoMdCopy } from "react-icons/io";
 import { PiArrowsCounterClockwiseFill } from "react-icons/pi";
 import { LuInfo } from "react-icons/lu";
 import { Feedback, Message } from "@/actions/ActionProvider";
-import { KnowledgeGraph } from "./graphs/KnowledgeGraph";
+import { KnowledgeGraphPro } from "./graphs/KnowledgeGraphPro";
+import { KnowledgeTablPro } from "./tables/KnowledgeTablePro";
+import { PiGraph } from "react-icons/pi";
+import { FaTable } from "react-icons/fa";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { ImEnlarge2 } from "react-icons/im";
+
 
 const COPILOT_URL = "http://0.0.0.0:8000";
 let graphName = "Transaction_Fraud"; //TODO: change to currently selected graph
@@ -34,12 +46,22 @@ interface IChatbotMessageProps {
 export const CustomChatMessage: FC<IChatbotMessageProps> = ({
   message,
 }: IChatbotMessageProps) => {
-  const [showResult, setShowResult] = useState(false);
+  const [showResult, setShowResult] = useState<any>(false);
+  const [showKgraph, setShowKgraph] = useState<any>(false);
+  const [showKtable, setShowKtable] = useState<any>(false);
+  const [showgNav, setshowgNav] = useState<any>(true);
   const [feedback, setFeedback] = useState(Feedback.NoFeedback);
-  const [ghresult, setghResult] = useState();
 
   const explain = () => {
     setShowResult((prev) => !prev);
+  };
+
+  const table = () => {
+    setShowKtable((prev) => !prev);
+  };
+
+  const graph = () => {
+    setShowKgraph((prev) => !prev);
   };
 
   const sendFeedback = async (action: Feedback, message: Message) => {
@@ -55,40 +77,6 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
       },
     });
   };
-
-  // [
-  //   {
-  //      "rlt":[
-  //         {
-  //            "v_id":"4218196001337",
-  //            "v_type":"Card",
-  //            "attributes":{
-  //               "Transaction_Count":2564,
-  //               "Total_Transaction_Amount":163226.2,
-  //               "Maximum_Transaction_Amount":3389.92,
-  //               "Minimum_Transaction_Amount":1.01,
-  //               "Average_Transaction_Amount":63.66081123244933
-  //            }
-  //         }
-  //      ]
-  //    }
-  // ]
-
-
-  const renderResult = (result: any):any => { 
-    // setghResult(JSON.parse(result));
-    const determineType = JSON.parse(result)
-    console.log('determineType', determineType);
-    console.log(typeof determineType); //object
-    if(typeof determineType === 'string') {
-      console.log('STRING', determineType);
-    } else {
-      console.log('OTHER', determineType);
-    }
-  }
-
-  // TODO
-  // const determineContentType = (message: any) => {}
 
   return (
     <>
@@ -132,144 +120,132 @@ export const CustomChatMessage: FC<IChatbotMessageProps> = ({
       ) : message.key === null ? (
         message
       ) : (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          {message.response_type === "progress" ? (
-            <p className="copilot-thinking typewriter">{message.content}</p>
-          ) : (
-            <p className="typewriter">{message.content}</p>
-          )}
-          <div className="flex mt-3">
-            <div
-              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => {
-                if (feedback !== Feedback.LIKE) {
-                  sendFeedback(Feedback.LIKE, message);
-                } else {
-                  sendFeedback(Feedback.NoFeedback, message);
-                }
-              }}
-            >
-              {feedback === Feedback.LIKE ? <FaThumbsUp /> : <FaRegThumbsUp />}
-            </div>
-            <div
-              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => {
-                if (feedback !== Feedback.DISLIKE) {
-                  sendFeedback(Feedback.DISLIKE, message);
-                } else {
-                  sendFeedback(Feedback.NoFeedback, message);
-                }
-              }}
-            >
-              {feedback === Feedback.DISLIKE ? (
-                <FaThumbsDown />
+        //TODO: this width cap squishes the chart and table. 
+        <>
+          <div className="flex flex-col w-full relative">
+            <div className="text-sm w-full mt-7 mb-7">
+              {message.response_type === "progress" ? (
+                <p className="copilot-thinking typewriter">{message.content}</p>
               ) : (
-                <FaRegThumbsDown />
+                <p className="typewriter">{message.content}</p>
               )}
-            </div>
-            <div
-              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => alert("Copy!!")}
-            >
-              <IoMdCopy className="text-[15px]" />
-            </div>
-            <div
-              className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
-              onClick={() => alert("Regenerate!!")}
-            >
-              <PiArrowsCounterClockwiseFill className="text-[15px]" />
-            </div>
-            <div
-              className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer"
-              onClick={() => explain()}
-            >
-              <LuInfo className="text-[15px] mr-1" />
-              <span className="text-xs">Explain</span>
-            </div>
-          </div>
+              <div className="flex mt-3">
+                {message.query_sources?.result && showgNav ? (
+                  <>
+                    <div
+                      className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+                      onClick={() => {
+                        if (feedback !== Feedback.LIKE) {
+                          sendFeedback(Feedback.LIKE, message);
+                        } else {
+                          sendFeedback(Feedback.NoFeedback, message);
+                        }
+                      }}
+                    >
+                      {feedback === Feedback.LIKE ? <FaThumbsUp /> : <FaRegThumbsUp />}
+                    </div>
 
-          {showResult ? (
-            <>
-              {/* {message.query_sources.result} */}
+                    <div
+                      className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+                      onClick={() => {
+                        if (feedback !== Feedback.DISLIKE) {
+                          sendFeedback(Feedback.DISLIKE, message);
+                        } else {
+                          sendFeedback(Feedback.NoFeedback, message);
+                        }
+                      }}
+                    >
+                      {feedback === Feedback.DISLIKE ? (
+                        <FaThumbsDown />
+                      ) : (
+                        <FaRegThumbsDown />
+                      )}
+                    </div>
 
-              <div style={{ position: "relative", width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
-                {renderResult(message.query_sources.result)}
-                {/* {JSON.stringify(ghresult, null, 2)} */}
+                    <div
+                      className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+                      onClick={() => alert("Copy!!")}
+                    >
+                      <IoMdCopy className="text-[15px]" />
+                    </div>
+
+                    <div
+                      className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
+                      onClick={() => alert("Regenerate!!")}
+                    >
+                      <PiArrowsCounterClockwiseFill className="text-[15px]" />
+                    </div>
+
+                    <div
+                      className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer"
+                      onClick={() => explain()}
+                    >
+                      <LuInfo className="text-[15px] mr-1" />
+                      <span className="text-xs">Explain</span>
+                    </div>
+
+                    <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm ml-5 mr-1 cursor-pointer" onClick={() => graph()}>
+                      <PiGraph className="text-[15px]" />
+                    </div>
+
+                    <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => table()}>
+                      <FaTable className="text-[15px]" />
+                    </div>
+
+                  </>
+                ) : null}
               </div>
-
-              <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
-                <strong>Reasoning:</strong> {message.query_sources.reasoning}
-                <span
-                  className="absolute right-2 bottom-1 cursor-pointer"
-                  onClick={() => setShowResult(false)}
-                >
-                  X
-                </span>
-              </p>
-            </>
-          ) : null}
-
-
-
-
-
-        </div>
-      )}
-
-      {/* {message ? message : message.natural_language_response} */}
-      {/* {message ? (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">
-          <p className="type-writer">{message.natural_language_response}</p>
-          <div className="flex mt-3">
-
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Like!!')}>
-              <FaRegThumbsUp />
             </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('DisLike!!')}>
-              <FaRegThumbsDown />
-            </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Copy!!')}>
-              <IoMdCopy className='text-[15px]' />
-            </div>
-            <div className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer" onClick={() => alert('Regenerate!!')}>
-              <PiArrowsCounterClockwiseFill className='text-[15px]' />
-            </div>
-            <div className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer" onClick={() => alert('explain!!')}>
-              <LuInfo className='text-[15px] mr-1' />
-              <span className="text-xs">Explain</span>
-            </div>
-          
+
+
+
+            {/* // create pop-up window */}
+            {showKgraph ? (
+              <>
+                <div style={{ position: 'relative', width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
+                  {message.query_sources?.result ? (<KnowledgeGraphPro data={message.query_sources?.result} />) : null}
+                </div>
+                <Dialog>
+                  <DialogTrigger className="absolute top-[200px] left-[20px]"><ImEnlarge2 /></DialogTrigger>
+                  <DialogContent className="max-w-[1200px] h-[850px]">
+                    <DialogHeader>
+                      <DialogDescription>
+                        <div style={{ position: 'relative', width: '100%', height: '800px', border: '1px solid #000'}}>
+                          {message.query_sources?.result ? (<KnowledgeGraphPro data={message.query_sources?.result} />) : null}
+                        </div>
+                      </DialogDescription>
+                    </DialogHeader>
+                  </DialogContent>
+                </Dialog>
+              </>
+            ) : null}
+
+            {showKtable ? (
+              <>
+                <div style={{ width: '100%', height: 'auto', border: '1px solid #000'}} className="my-10">
+                  {message.query_sources?.result ? (<KnowledgeTablPro data={message.query_sources?.result} />) : null}
+                </div>
+              </>
+            ) : null}
+
+            {showResult ? (
+              <>
+                <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4 relative">
+                  <strong>Reasoning:</strong> {message.query_sources.reasoning}
+                  <span
+                    className="absolute right-2 bottom-1 cursor-pointer"
+                    onClick={() => setShowResult(false)}
+                  >
+                    X
+                  </span>
+                </p>
+              </>
+            ) : null}
+
+
           </div>
-        </div>
-      ) : <div>The chatbot is currently down for maintenance.</div>} */}
-      {/* OLD */}
-      {/* {message ? (
-        <div className="text-sm max-w-[230px] md:max-w-[80%] mt-7 mb-7">{message.natural_language_response ? (
-          <>
-            <p>{convertString(message.natural_language_response)}</p>
-
-            <div className="flex mt-3">
-              <FaRegThumbsUp className="mr-1" onClick={() => alert('Like!!')} />
-              <FaRegThumbsDown onClick={() => alert('DisLike!!')} />
-              <PiGraph className='text-[15px] mr-1' onClick={() => alert('graph!!')} />
-              <IoMdCopy className='text-[15px]' onClick={() => alert('copy!!')} />
-            </div>
-
-            {message.query_sources.reasoning ? (
-              <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4">
-                <strong>Reasoning:</strong> {message.query_sources.reasoning}
-              </p>
-            ) : null}
-
-            {message.query_sources.result ? (
-              <p className="text-[11px] rounded-md bg-[#ececec] dark:bg-shadeA mt-3 p-4 leading-4">
-                <strong>Result:</strong> {message.query_sources.result}
-              </p>
-            ) : null}
-
-          </>
-        ) : message}</div>
-      ) : null} */}
+        </>
+      )}
     </>
   );
 };

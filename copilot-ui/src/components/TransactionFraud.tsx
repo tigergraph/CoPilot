@@ -35,16 +35,6 @@ export const TransactionFraud: FC<Start> = () => {
   }, [sdata, edges]);
 
 
-  //            "v_id":"4218196001337",
-  //            "v_type":"Card",
-  //            "attributes":{
-  //               "Transaction_Count":2564,
-  //               "Total_Transaction_Amount":163226.2,
-  //               "Maximum_Transaction_Amount":3389.92,
-  //               "Minimum_Transaction_Amount":1.01,
-  //               "Average_Transaction_Amount":63.66081123244933
-  //            }
-
 // const nodes = [
 //     {
 //       id: '0',
