@@ -11,7 +11,7 @@ export const KnowledgeGraphPro = ({ data }) => {
 
   const darkTheme: any = {
     canvas: {
-      background: `${theme === "light" ? '#fff' : '#272022'}`,
+      // background: `${theme === "light" ? '#fff' : '#272022'}`,
       fog: '#fff'
     },
     node: {

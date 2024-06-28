@@ -1,5 +1,5 @@
 import { FC, useState, useEffect } from "react";
-import { KnowledgeGraph } from "./graphs/KnowledgeGraph";
+// import { KnowledgeGraph } from "./graphs/KnowledgeGraph";
 
 const mockData = {
   "natural_language_response": "The card with ID 4218196001337 has more than 800 transactions from 2021-04-01 to 2021-08-01, with a total of 870 transactions.",
@@ -101,7 +101,7 @@ export const TransactionFraud: FC<Start> = () => {
       </div>
 
       <div style={{ position: "relative", width: '100%', height: '550px', border: '1px solid #000'}} className="my-10">
-        <KnowledgeGraph data={dataArray} />
+        {/* <KnowledgeGraph data={dataArray} /> */}
       </div>
 
     </>
