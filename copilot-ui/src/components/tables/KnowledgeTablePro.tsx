@@ -46,7 +46,7 @@ export const KnowledgeTablPro = ({ data }) => {
 
  return (
   <>
-    {typeof sdata !== 'number' && typeof sdata !== 'string' && dataArray?.rlt && dataArray?.nodes ? (
+    {typeof sdata !== 'number' && typeof sdata !== 'string' && dataArray?.nodes ? (
       <>
         <Tabs defaultValue="v_" className="w-[100%] text-sm lg:text-lg">
           <TabsList className="w-[100%]">
