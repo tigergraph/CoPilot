@@ -429,7 +429,7 @@
 }
 
 .button-image {
-  animation: up_down 2s ease infinite;
+  /* animation: up_down 2s ease infinite; */
 }
 
 @keyframes up_down {
@@ -553,10 +553,10 @@
 
 @keyframes caret {
   0% {
-    color: var(--bgColor);
+    color: transparent;
   }
   100% {
-    color: black;
+    color: transparent;
   }
 }
 
@@ -577,6 +577,7 @@
   position: relative;
   width: var(--width);
   /* word-break: break-all; */
+  --bgColor: #fff;
 }
 
 .typewriter::before {
