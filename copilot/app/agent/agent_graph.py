@@ -341,15 +341,15 @@ class TigerGraphAgentGraph:
                 "description": "Basic information about transaction 100577",
                 "questions": [
                     {
-                    "question": "What are the basic details about the transaction?",
+                    "question": "What are the basic details about the transaction 100577?",
                     "reasoning": "The transaction amount, date, and fraud status are key pieces of information for understanding the transaction."
                     },
                     {
-                    "question": "What merchant is involved in the transaction?",
+                    "question": "What merchant is involved in the transaction 100577?",
                     "reasoning": "The merchant involved in the transaction is a key piece of information for understanding the transaction."
                     },
                     {
-                    "question": "What card made the transaction?",
+                    "question": "What card made the transaction 100577?",
                     "reasoning": "The card used in the transaction is a key piece of information for understanding the transaction."
                     }
                 ]
