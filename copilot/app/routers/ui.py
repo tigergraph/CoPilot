@@ -122,18 +122,19 @@ def add_feedback(
 
 
 @router.get(route_prefix + "/user/{user_id}")
-def get_user_conversations(
+async def get_user_conversations(
     user_id: str,
     creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
 ):
     creds = creds[1]
     auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
     try:
-        res = httpx.get(
-            f"{db_config['chat_history_api']}/user/{user_id}",
-            headers={"Authorization": f"Basic {auth}"},
-        )
-        res.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{db_config['chat_history_api']}/user/{user_id}",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            res.raise_for_status()
     except Exception as e:
         exc = traceback.format_exc()
         logger.debug_pii(
@@ -145,18 +146,19 @@ def get_user_conversations(
 
 
 @router.get(route_prefix + "/conversation/{conversation_id}")
-def get_conversation_contents(
+async def get_conversation_contents(
     conversation_id: str,
     creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
 ):
     creds = creds[1]
     auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
     try:
-        res = httpx.get(
-            f"{db_config['chat_history_api']}/conversation/{conversation_id}",
-            headers={"Authorization": f"Basic {auth}"},
-        )
-        res.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{db_config['chat_history_api']}/conversation/{conversation_id}",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            res.raise_for_status()
     except Exception as e:
         exc = traceback.format_exc()
         logger.debug_pii(
