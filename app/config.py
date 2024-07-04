@@ -2,6 +2,7 @@ import json
 import os
 
 from fastapi.security import HTTPBasic
+from pymilvus.exceptions import MilvusException
 
 from app.embeddings.embedding_services import (
     AWS_Bedrock_Embedding,
@@ -141,9 +142,12 @@ try:
         alias=milvus_config.get("alias", "default"),
     )
     service_status["embedding_store"] = {"status": "ok", "error": None}
+except MilvusException as e:
+    embedding_store = None
+    service_status["embedding_store"] = {"status": "milvus error", "error": str(e)}
 except Exception as e:
     embedding_store = None
-    service_status["embedding_store"] = {"status": "error", "error": str(e)}
+    service_status["embedding_store"] = {"status": "embedding error", "error": str(e)}
 
 support_collection_name = milvus_config.get("collection_name", "tg_support_documents")
 LogWriter.info(
@@ -165,9 +169,12 @@ try:
         alias=milvus_config.get("alias", "default"),
     )
     service_status["support_ai_embedding_store"] = {"status": "ok", "error": None}
+except MilvusException as e:
+    support_ai_embedding_store = None
+    service_status["support_ai_embedding_store"] = {"status": "milvus error", "error": str(e)}
 except Exception as e:
     support_ai_embedding_store = None
-    service_status["support_ai_embedding_store"] = {"status": "error", "error": str(e)}
+    service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
 
 
 if DOC_PROCESSING_CONFIG is None or (

@@ -18,20 +18,6 @@ def read_root():
 
 @router.get("/health")
 async def health():
-    try:
-        # Check if Milvus is up and running and if the required collections exist
-        connections.connect(host="milvus-standalone", port="19530")
-        # Check if the required collections exist
-        inquiry_collection_exists = utility.has_collection("tg_inquiry_documents")
-        support_collection_exists = utility.has_collection("tg_support_documents")
-
-        if inquiry_collection_exists or support_collection_exists:
-            service_status["milvus"] = {"status": "ok", "error": None}
-        else:
-            service_status["milvus"] = {"status": "error", "error": "Milvus is up and running, but no collection exists"}
-    except Exception as e:
-        service_status["milvus"] = {"status": "error", "error": str(e)}
-    
     status = {
         "status": "unhealthy" if any(v["error"] is not None for v in service_status.values()) else "healthy",
         "details": service_status
