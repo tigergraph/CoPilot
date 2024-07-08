@@ -3,7 +3,7 @@ name: Pre Merge Test
 on:
   pull_request:
     branches:
-      - dev
+      - cloud-dev
 
 env:
   AWS_REGION: us-west-1
@@ -16,7 +16,6 @@ permissions:
 jobs:
   cloud-api-test:
     name: Run Cloud API tests
-    # if: github.event.pull_request.base.ref == 'dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
