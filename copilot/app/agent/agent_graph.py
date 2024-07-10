@@ -10,7 +10,8 @@ from agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
 from agent.Q import DONE, Q
 from langgraph.graph import END, StateGraph
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
-from supportai.retrievers import HNSWOverlapRetriever
+from supportai.retrievers import (HNSWOverlapRetriever, HNSWRetriever,
+                                  HNSWSiblingRetriever)
 from tools import MapQuestionToSchemaException
 from typing_extensions import TypedDict
 
@@ -47,6 +48,7 @@ class TigerGraphAgentGraph:
         cypher_gen_tool=None,
         enable_human_in_loop=False,
         q: Q = None,
+        supportai_retriever="hnsw_overlap",
     ):
         self.workflow = StateGraph(GraphState)
         self.llm_provider = llm_provider
@@ -60,10 +62,11 @@ class TigerGraphAgentGraph:
         self.q = q
 
         self.supportai_enabled = True
+        self.supportai_retriever = supportai_retriever.lower()
         try:
             self.db_connection.getQueryMetadata("HNSW_Search_Sub")
         except TigerGraphException as e:
-            logger.info("HNSW_Overlap not found in the graph. Disabling supportai.")
+            logger.info("HNSW_Search_Sub not found in the graph. Disabling supportai.")
             self.supportai_enabled = False
 
     def emit_progress(self, msg):
@@ -202,7 +205,76 @@ class TigerGraphAgentGraph:
         }
         state["lookup_source"] = "supportai"
         return state
+    
+    def hnsw_search(self, state):
+        """
+        Run the agent vector search.
+        """
+        self.emit_progress("Searching the vector store")
+        retriever = HNSWRetriever(
+            self.embedding_model,
+            self.embedding_store,
+            self.llm_provider,
+            self.db_connection
+        )
 
+        step = retriever.search(
+            state["question"],
+            index="DocumentChunk",
+            top_k=5
+        )
+
+        state["context"] = {
+            "function_call": "HNSW_Search",
+            "result": step[0],
+            "query_output_format": self.db_connection.getQueryMetadata(
+                "HNSW_Search_Content"
+            )["output"],
+        }
+        state["lookup_source"] = "supportai"
+        return state
+    
+    def sibling_search(self, state):
+        """
+        Run the agent sibling search.
+        """
+        self.emit_progress("Searching the knowledge graph")
+        retriever = HNSWSiblingRetriever(
+            self.embedding_model,
+            self.embedding_store,
+            self.llm_provider.model,
+            self.db_connection,
+        )
+        step = retriever.search(
+            state["question"],
+            index="DocumentChunk",
+            top_k=3
+        )
+
+        state["context"] = {
+            "function_call": "HNSW_Chunk_Sibling_Search",
+            "result": step[0],
+            "query_output_format": self.db_connection.getQueryMetadata(
+                "HNSW_Chunk_Sibling_Search"
+            )["output"],
+        }
+        state["lookup_source"] = "supportai"
+        return state
+    
+    def supportai_search(self, state):
+        """
+        Run the agent supportai search.
+        """
+
+        if self.supportai_retriever == "hnsw_overlap":
+            return self.hnsw_overlap_search(state)
+        elif self.supportai_retriever == "hnsw":
+            return self.hnsw_search(state)
+        elif self.supportai_retriever == "sibling":
+            return self.sibling_search(state)
+        else:
+            raise ValueError(f"Invalid supportai retriever: {self.supportai_retriever}")
+    
     def generate_answer(self, state):
         """
         Run the agent generator.
@@ -330,7 +402,7 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("map_question_to_schema", self.map_question_to_schema)
         self.workflow.add_node("generate_function", self.generate_function)
         if self.supportai_enabled:
-            self.workflow.add_node("hnsw_overlap_search", self.hnsw_overlap_search)
+            self.workflow.add_node("supportai", self.supportai_search)
         self.workflow.add_node("rewrite_question", self.rewrite_question)
         self.workflow.add_node("apologize", self.apologize)
 
@@ -354,7 +426,7 @@ class TigerGraphAgentGraph:
                         "hallucination": "rewrite_question",
                         "grounded": END,
                         "inquiryai_not_useful": "generate_cypher",
-                        "cypher_not_useful": "hnsw_overlap_search",
+                        "cypher_not_useful": "supportai",
                         "supportai_not_useful": "map_question_to_schema",
                     },
                 )
@@ -383,7 +455,7 @@ class TigerGraphAgentGraph:
                         "hallucination": "rewrite_question",
                         "grounded": END,
                         "not_useful": "rewrite_question",
-                        "inquiryai_not_useful": "hnsw_overlap_search",
+                        "inquiryai_not_useful": "supportai",
                         "supportai_not_useful": "map_question_to_schema",
                     },
                 )
@@ -405,7 +477,7 @@ class TigerGraphAgentGraph:
                 "entry",
                 self.route_question,
                 {
-                    "supportai_lookup": "hnsw_overlap_search",
+                    "supportai_lookup": "supportai",
                     "inquiryai_lookup": "map_question_to_schema",
                     "apologize": "apologize",
                 },
@@ -422,7 +494,7 @@ class TigerGraphAgentGraph:
 
         self.workflow.add_edge("map_question_to_schema", "generate_function")
         if self.supportai_enabled:
-            self.workflow.add_edge("hnsw_overlap_search", "generate_answer")
+            self.workflow.add_edge("supportai", "generate_answer")
         self.workflow.add_edge("rewrite_question", "entry")
         self.workflow.add_edge("apologize", END)
 
