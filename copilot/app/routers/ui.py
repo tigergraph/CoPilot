@@ -263,6 +263,7 @@ async def write_message_to_history(message: Message, usr_auth: str):
 async def chat(
     graphname: str,
     websocket: WebSocket,
+    rag_pattern: str = "hnsw_overlap"
 ):
     """
     TODO:
@@ -281,7 +282,11 @@ async def chat(
     # create convo_id
     conversation_history = []  # TODO: go get history instead of starting from 0
     convo_id = str(uuid.uuid4())
-    agent = make_agent(graphname, conn, use_cypher, ws=websocket)
+
+    # create agent
+    # get retrieval pattern to use
+    rag_pattern = await websocket.receive_text()
+    agent = make_agent(graphname, conn, use_cypher, ws=websocket, supportai_retriever=rag_pattern)
 
     prev_id = None
     try:
