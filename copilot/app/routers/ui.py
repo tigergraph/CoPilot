@@ -262,8 +262,7 @@ async def write_message_to_history(message: Message, usr_auth: str):
 @router.websocket(route_prefix + "/{graphname}/chat")
 async def chat(
     graphname: str,
-    websocket: WebSocket,
-    rag_pattern: str = "hnsw_overlap"
+    websocket: WebSocket
 ):
     """
     TODO:

@@ -43,7 +43,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     onOpen: () => {
       queryCopilotWs2(localStorage.getItem("creds")!);
       console.log("WebSocket connection established to " + WS_URL);
-      sendMessage(localStorage.getItem("ragPattern")!);
+      sendMessage(localStorage.getItem("ragPattern") || "hnsw_overlap");
     },
   });
 
