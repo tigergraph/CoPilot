@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.security.http import HTTPBase
 
 from app.agent import TigerGraphAgent
-from app.config import embedding_service, embedding_store, llm_config, session_handler
+from app.config import embedding_service, embedding_store, llm_config, session_handler, service_status
 from app.llm_services import (
     AWS_SageMaker_Endpoint,
     AWSBedrock,
@@ -45,10 +45,14 @@ def retrieve_answer(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)]
 ) -> CoPilotResponse:
-    conn = conn.state.conn
     logger.debug_pii(
         f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}"
     )
+    if service_status["embedding_store"]["error"]:
+        return CoPilotResponse(
+            natural_language_response="Something wrong with CoPilot's embedding store. It could be caused by an invalid API key to the embedding service. Please contact support to check the system health for details.", answered_question=False, response_type="inquiryai"
+        )
+    conn = conn.state.conn
     logger.debug(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
