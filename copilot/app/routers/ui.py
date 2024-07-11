@@ -13,7 +13,14 @@ import httpx
 import requests
 from agent.agent import TigerGraphAgent, make_agent
 from agent.Q import DONE
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
@@ -114,6 +121,54 @@ def add_feedback(
     return {"message": "feedback saved", "message_id": message.message_id}
 
 
+@router.get(route_prefix + "/user/{user_id}")
+async def get_user_conversations(
+    user_id: str,
+    creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+):
+    creds = creds[1]
+    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{db_config['chat_history_api']}/user/{user_id}",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            res.raise_for_status()
+    except Exception as e:
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/ui/user/{user_id} request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        raise e
+
+    return res.json()
+
+
+@router.get(route_prefix + "/conversation/{conversation_id}")
+async def get_conversation_contents(
+    conversation_id: str,
+    creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+):
+    creds = creds[1]
+    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{db_config['chat_history_api']}/conversation/{conversation_id}",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            res.raise_for_status()
+    except Exception as e:
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/conversation/{conversation_id} request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        raise e
+
+    return res.json()
+
+
 async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
     # loop on q until done token emit events through ws
     msg = None
@@ -207,7 +262,7 @@ async def write_message_to_history(message: Message, usr_auth: str):
 @router.websocket(route_prefix + "/{graphname}/chat")
 async def chat(
     graphname: str,
-    websocket: WebSocket,
+    websocket: WebSocket
 ):
     """
     TODO:
@@ -226,7 +281,11 @@ async def chat(
     # create convo_id
     conversation_history = []  # TODO: go get history instead of starting from 0
     convo_id = str(uuid.uuid4())
-    agent = make_agent(graphname, conn, use_cypher, ws=websocket)
+
+    # create agent
+    # get retrieval pattern to use
+    rag_pattern = await websocket.receive_text()
+    agent = make_agent(graphname, conn, use_cypher, ws=websocket, supportai_retriever=rag_pattern)
 
     prev_id = None
     try:
@@ -248,7 +307,9 @@ async def chat(
 
             # generate response and keep track of response time
             start = time.monotonic()
-            resp = await run_agent(agent, data, conversation_history, graphname, websocket)
+            resp = await run_agent(
+                agent, data, conversation_history, graphname, websocket
+            )
             elapsed = time.monotonic() - start
 
             # save message
@@ -278,3 +339,4 @@ async def chat(
         logger.info(f"Websocket disconnected: {str(e)}")
     except:
         await websocket.close()
+

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class NaturalLanguageQuery(BaseModel):
     query: str
+    rag_method: Optional[str] = None
 
 
 class SupportAIQuestion(BaseModel):

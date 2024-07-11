@@ -40,7 +40,10 @@ def retrieve_answer(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
 
-    agent = make_agent(graphname, conn, use_cypher)
+    if query.rag_method:
+        agent = make_agent(graphname, conn, use_cypher, supportai_retriever=query.rag_method)
+    else:
+        agent = make_agent(graphname, conn, use_cypher)
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
@@ -100,7 +103,10 @@ def retrieve_answer_with_chathistory(
     )
 
     # TODO: This needs to be refactored just to use config.py
-    agent = make_agent(graphname, conn, use_cypher)
+    if query.rag_method:
+        agent = make_agent(graphname, conn, use_cypher, supportai_retriever=query.rag_method)
+    else:
+        agent = make_agent(graphname, conn, use_cypher)
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
@@ -211,13 +217,17 @@ def register_docs(
         )
 
         vec = embedding_service.embed_query(query_info.docstring)
+        param_types = conn.getQueryMetadata(query_info.function_header)["input"]
         res = embedding_store.add_embeddings(
-            [(query_info.docstring, vec)],
+            [(query_info.docstring + 
+                  ".\nRun with runInstalledQuery('" +
+                  query_info.function_header +
+                  "', params={})".format({list(x.keys())[0]: '<INSERT_PARAM_HERE>' for x in param_types}), vec)],
             [
                 {
                     "function_header": query_info.function_header,
                     "description": query_info.description,
-                    "param_types": query_info.param_types,
+                    "param_types": {list(x.keys())[0]: x[list(x.keys())[0]] for x in param_types},
                     "custom_query": True,
                     "graphname": query_info.graphname,
                 }
@@ -363,16 +373,19 @@ def upsert_docs(
             logger.debug(
                 f"/{graphname}/upsert_docs request_id={req_id_cv.get()} upserting document(s)"
             )
-
+            param_types = conn.getQueryMetadata(query_info.function_header)["input"]
             vec = embedding_service.embed_query(query_info.docstring)
             res = embedding_store.upsert_embeddings(
                 id,
-                [(query_info.docstring, vec)],
+                [(query_info.docstring + 
+                  ".\nRun with runInstalledQuery('" +
+                  query_info.function_header +
+                  "', params={})".format({list(x.keys())[0]: '<INSERT_PARAM_HERE>' for x in param_types}), vec)],
                 [
                     {
                         "function_header": query_info.function_header,
                         "description": query_info.description,
-                        "param_types": query_info.param_types,
+                        "param_types": {list(x.keys())[0]: x[list(x.keys())[0]] for x in param_types},
                         "custom_query": True,
                         "graphname": query_info.graphname,
                     }
