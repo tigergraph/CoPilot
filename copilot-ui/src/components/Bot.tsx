@@ -22,6 +22,7 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
   const [store, setStore] = useState<any>();
   const [currentDate, setCurrentDate] = useState('');
   const [selectedGraph, setSelectedGraph] = useState(localStorage.getItem("selectedGraph") || 'pyTigerGraphRAG');
+  const [ragPattern, setRagPattern] = useState(localStorage.getItem("ragPattern") || 'HNSW_Overlap');
 
   useEffect(() => {
     const parseStore = JSON.parse(localStorage.getItem("site") || "{}");
@@ -39,12 +40,42 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
     window.location.reload();
   };
 
+  const handleSelectRag = (value) => {
+    setRagPattern(value);
+    localStorage.setItem("ragPattern", value);
+    window.location.reload();
+  };
+
   return (
     <div className={layout}>
       {/* {layout === "fp" && ( */}
         <div className="border-b border-gray-300 dark:border-[#3D3D3D] h-[70px] flex justify-end items-center bg-white dark:bg-background z-50 rounded-tr-lg">
           <div className="text-sm pl-5 mr-auto">{currentDate}</div>
-          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild className="mr-20">
+              <Button
+                variant="outline"
+                className="!h-[48px] !outline-b !outline-gray-300 dark:!outline-[#3D3D3D] h-[70px] flex justify-end items-center bg-white dark:bg-background z-50 rounded-tr-lg"
+              >
+                <img src="/graph-icon.svg" alt="" className="mr-2" />
+                {ragPattern} <MdKeyboardArrowDown className="text-2xl" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Select a RAG Pattern</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {["HNSW", "HNSW_Overlap", "Sibling"].map((f, i) => (
+                  <DropdownMenuItem key={i} onSelect={() => handleSelectRag(f)}>
+                    {/* <User className="mr-2 h-4 w-4" /> */}
+                    <span>{f}</span>
+                    {/* <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut> */}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild className="mr-20">
               <Button

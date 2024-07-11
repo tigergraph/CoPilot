@@ -3,7 +3,7 @@ CREATE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_
   STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT lookback=3, INT lookahead=3) { 
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
-  MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@sibling_set;
+  MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@final_retrieval;
   OrAccum @touched;
   SetAccum<VERTEX> @@start_set;
   INT inc_top_k = top_k * 2;
@@ -45,10 +45,10 @@ CREATE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_
   res = SELECT s FROM all_chunks:s WHERE s.@touched == TRUE
         POST-ACCUM
           FOREACH (key, val) IN s.@distances DO
-            @@sibling_set += (key -> (s -> ("distance" -> to_string(val)))),
-            @@sibling_set += (key -> (s -> ("content" -> s.@content)))
+            @@final_retrieval += (key -> (s -> ("distance" -> to_string(val)))),
+            @@final_retrieval += (key -> (s -> ("content" -> s.@content)))
           END;
   
-  PRINT @@sibling_set;
+  PRINT @@final_retrieval;
   
 }

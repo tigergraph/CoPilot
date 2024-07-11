@@ -40,7 +40,10 @@ def retrieve_answer(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
 
-    agent = make_agent(graphname, conn, use_cypher)
+    if query.rag_method:
+        agent = make_agent(graphname, conn, use_cypher, supportai_retriever=query.rag_method)
+    else:
+        agent = make_agent(graphname, conn, use_cypher)
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
@@ -100,7 +103,10 @@ def retrieve_answer_with_chathistory(
     )
 
     # TODO: This needs to be refactored just to use config.py
-    agent = make_agent(graphname, conn, use_cypher)
+    if query.rag_method:
+        agent = make_agent(graphname, conn, use_cypher, supportai_retriever=query.rag_method)
+    else:
+        agent = make_agent(graphname, conn, use_cypher)
     resp = CoPilotResponse(
         natural_language_response="", answered_question=False, response_type="inquiryai"
     )
