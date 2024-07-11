@@ -66,13 +66,12 @@ def retrieve_answer(
         )
     except Exception:
         resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
-
-        resp.query_sources = {}
+        exc = traceback.format_exc()
+        resp.query_sources = {"error_traceback": exc}
         resp.answered_question = False
         LogWriter.warning(
             f"/{graphname}/query request_id={req_id_cv.get()} agent execution failed due to unknown exception"
         )
-        exc = traceback.format_exc()
         logger.debug_pii(
             f"/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
