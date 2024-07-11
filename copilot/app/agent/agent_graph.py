@@ -33,6 +33,7 @@ class GraphState(TypedDict):
     answer: Optional[CoPilotResponse]
     lookup_source: Optional[str]
     schema_mapping: Optional[MapQuestionToSchemaResponse]
+    error_history: list[dict] = []
     question_retry_count: int = 0
 
 
@@ -112,7 +113,7 @@ class TigerGraphAgentGraph:
             natural_language_response="I'm sorry, I don't know the answer to that question. Please try rephrasing your question.",
             answered_question=False,
             response_type="error",
-            query_sources={"error": "Question could not be routed to a datasource."},
+            query_sources={"error": True, "error_history": state["error_history"]},
         )
         return state
 
@@ -125,8 +126,11 @@ class TigerGraphAgentGraph:
             step = self.mq2s._run(state["question"])
             state["schema_mapping"] = step
             return state
-        except MapQuestionToSchemaException:
-            return "failure"
+        except MapQuestionToSchemaException as e:
+            state["context"] = {"error": True}
+            if state["error_history"] is None:
+                state["error_history"] = []
+            state["error_history"].append({"error_message": str(e), "error_step": "generate_function"})
 
     def generate_function(self, state):
         """
@@ -144,7 +148,10 @@ class TigerGraphAgentGraph:
             )
             state["context"] = step
         except Exception as e:
-            state["context"] = {"error": str(e)}
+            state["context"] = {"error": True}
+            if state["error_history"] is None:
+                state["error_history"] = []
+            state["error_history"].append({"error_message": str(e), "error_step": "generate_function"})
         state["lookup_source"] = "inquiryai"
         return state
 
@@ -170,9 +177,12 @@ class TigerGraphAgentGraph:
         except:
             state["context"] = {
                 "error": True,
-                "error_message": response,
                 "cypher": cypher,
             }
+            if state["error_history"] is None:
+                state["error_history"] = []
+            
+            state["error_history"].append({"error_message": response, "error_step": "generate_cypher"})
 
         state["lookup_source"] = "cypher"
         return state
@@ -314,7 +324,7 @@ class TigerGraphAgentGraph:
                 natural_language_response="I'm sorry, I don't know the answer to that question.",
                 answered_question=False,
                 response_type=state["lookup_source"],
-                query_sources={"error": str(e)},
+                query_sources={"error": True, "error_history": state["error_history"]},
             )
         state["answer"] = resp
 
