@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Dict, List, Optional
 
 from agent.agent_generation import TigerGraphAgentGenerator
 from agent.agent_hallucination_check import TigerGraphAgentHallucinationCheck
@@ -28,6 +28,7 @@ class GraphState(TypedDict):
     """
 
     question: str
+    conversation: Optional[List[Dict[str, str]]]
     generation: str
     context: str
     answer: Optional[CoPilotResponse]
@@ -122,7 +123,7 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Mapping your question to the graph's schema")
         try:
-            step = self.mq2s._run(state["question"])
+            step = self.mq2s._run(state["question"], state["conversation"])
             state["schema_mapping"] = step
             return state
         except MapQuestionToSchemaException:
@@ -290,7 +291,27 @@ class TigerGraphAgentGraph:
                 state["question"], state["context"]["result"]["@@final_retrieval"]
             )
         elif state["lookup_source"] == "inquiryai":
-            answer = step.generate_answer(state["question"], state["context"]["result"])
+
+            # question_str = state["question"]
+            # logger.info(f"question_str: {question_str}")
+
+            # corrected_question_str = question_str.replace("'", '"')
+            # logger.info(f"corrected_question_str: {corrected_question_str}")
+
+            # question_dict = json.loads(question_str)
+            # question = str(question_dict["input"])
+
+            # logger.info(f"only_question_str: {question}")
+            try:
+                context_data_str = json.dumps(state["context"]["result"])
+                logger.info(f"context_data_str: {context_data_str}")
+            except (TypeError, ValueError) as e:
+                logger.error(f"Failed to serialize context to JSON: {e}")
+                raise ValueError("Invalid context data format. Unable to convert to JSON.")
+
+            # answer = step.generate_answer(state["question"], state["context"]["result"])
+            answer = step.generate_answer(state["question"], context_data_str)
+
         elif state["lookup_source"] == "cypher":
             answer = step.generate_answer(state["question"], state["context"]["answer"])
         logger.debug_pii(
@@ -302,6 +323,7 @@ class TigerGraphAgentGraph:
 
             citations = [re.sub(r"_chunk_\d+", "", x) for x in answer.citation]
             state["context"]["reasoning"] = list(set(citations))
+            
         try:
             resp = CoPilotResponse(
                 natural_language_response=answer.generated_answer,
@@ -335,8 +357,16 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Checking the response is relevant")
         step = TigerGraphAgentHallucinationCheck(self.llm_provider)
+
+        try:
+            context_data_str = json.dumps(state["context"]["result"])
+            logger.info(f"context_data_str: {context_data_str}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"Failed to serialize context to JSON: {e}")
+            raise ValueError("Invalid context data format. Unable to convert to JSON.")
         hallucinations = step.check_hallucination(
-            state["answer"].natural_language_response, state["context"]
+            # state["answer"].natural_language_response, state["context"]["result"]
+            state["answer"].natural_language_response, context_data_str
         )
         if hallucinations.score == "yes":
             self.emit_progress(DONE)
@@ -365,17 +395,17 @@ class TigerGraphAgentGraph:
         if hallucinated == "hallucination":
             return "hallucination"
         else:
-            useful = self.check_answer_for_usefulness(state)
-            if useful == "useful":
-                self.emit_progress(DONE)
-                return "grounded"
-            else:
-                if state["lookup_source"] == "supportai":
-                    return "supportai_not_useful"
-                elif state["lookup_source"] == "inquiryai":
-                    return "inquiryai_not_useful"
-                elif state["lookup_source"] == "cypher":
-                    return "cypher_not_useful"
+            # useful = self.check_answer_for_usefulness(state)
+            # if useful == "useful":
+            self.emit_progress(DONE)
+            return "grounded"
+            # else:
+            #     if state["lookup_source"] == "supportai":
+            #         return "supportai_not_useful"
+            #     elif state["lookup_source"] == "inquiryai":
+            #         return "inquiryai_not_useful"
+            #     elif state["lookup_source"] == "cypher":
+            #         return "cypher_not_useful"
 
     def check_state_for_generation_error(self, state):
         """

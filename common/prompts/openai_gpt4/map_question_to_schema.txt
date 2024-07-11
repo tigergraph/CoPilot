@@ -11,4 +11,5 @@ Don't generate target_vertex_ids if there is no the term 'id' explicitly mention
 
 {format_instructions}
 QUESTION: {question}
+CONVERSATION: {conversation}
 
