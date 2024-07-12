@@ -25,7 +25,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
 
-from common.config import db_config, embedding_service, llm_config
+from common.config import db_config, embedding_service, llm_config, service_status
 from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
@@ -271,6 +271,12 @@ async def chat(
             initially retrieve the convo
             update the convo
     """
+    if service_status["embedding_store"]["error"]:
+        return HTTPException(
+            status_code=503,
+            detail=service_status["embedding_store"]["error"]
+        )
+    
     await websocket.accept()
 
     # AUTH
