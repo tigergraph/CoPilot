@@ -393,15 +393,8 @@ class TigerGraphAgentGraph:
         """
         step = TigerGraphAgentUsefulnessCheck(self.llm_provider)
 
-        question_str = state["question"]
-        logger.info(f"question_str: {question_str}")
-
-        question_dict = json.loads(question_str)
-        question = str(question_dict["input"])
-
         usefulness = step.check_usefulness(
-            # state["question"], state["answer"].natural_language_response
-            question, state["answer"].natural_language_response
+            state["question"], state["answer"].natural_language_response
         )
         if usefulness.score == "yes":
             return "useful"
@@ -417,19 +410,19 @@ class TigerGraphAgentGraph:
         if hallucinated == "hallucination":
             return "hallucination"
         else:
-            # useful = self.check_answer_for_usefulness(state)
-            # logger.info(f"useful: {useful}")
-            # if useful == "useful":
-            self.emit_progress(DONE)
-            return "grounded"
-            # else:
-            #     if state["lookup_source"] == "supportai":
-            #         return "supportai_not_useful"
-            #     elif state["lookup_source"] == "inquiryai":
-            #         logger.info(f"inquiryai_not_useful")
-            #         return "inquiryai_not_useful"
-            #     elif state["lookup_source"] == "cypher":
-            #         return "cypher_not_useful"
+            useful = self.check_answer_for_usefulness(state)
+            logger.info(f"useful: {useful}")
+            if useful == "useful":
+                self.emit_progress(DONE)
+                return "grounded"
+            else:
+                if state["lookup_source"] == "supportai":
+                    return "supportai_not_useful"
+                elif state["lookup_source"] == "inquiryai":
+                    logger.info(f"inquiryai_not_useful")
+                    return "inquiryai_not_useful"
+                elif state["lookup_source"] == "cypher":
+                    return "cypher_not_useful"
 
     def check_state_for_generation_error(self, state):
         """
