@@ -28,7 +28,7 @@ class GraphState(TypedDict):
     """
 
     question: str
-    # conversation: Optional[List[Dict[str, str]]]
+    conversation: Optional[List[Dict[str, str]]]
     generation: str
     context: str
     answer: Optional[CoPilotResponse]
@@ -124,7 +124,7 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Mapping your question to the graph's schema")
         try:
-            step = self.mq2s._run(state["question"])
+            step = self.mq2s._run(state["question"], state["conversation"])
             state["schema_mapping"] = step
             return state
         except MapQuestionToSchemaException as e:

@@ -140,8 +140,8 @@ class TigerGraphAgent:
                 logger.error(f"Failed to serialize input_data to JSON: {e}")
                 raise ValueError("Invalid input data format. Unable to convert to JSON.")
 
-            for output in self.agent.stream({"question": input_data_str}):
-            # for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
+            # for output in self.agent.stream({"question": input_data_str}):
+            for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
 
                 for key, value in output.items():
                     logger.info(f"testing steps {key}: {value}")
