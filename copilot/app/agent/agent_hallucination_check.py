@@ -27,14 +27,12 @@ class TigerGraphAgentHallucinationCheck:
         hallucination_parser = PydanticOutputParser(pydantic_object=HallucinationCheckResponse)        
 
         prompt = PromptTemplate(
-            template="""You are a grader assessing whether an answer is grounded in / supported by a set of facts. 
-            Make sure all facts in the context are covered in the generated answer.\n 
+            template="""You are a grader assessing whether an answer is grounded in / supported by a set of facts. \n
             Here are the facts:
             \n ------- \n
             {context} 
             \n ------- \n
             Here is the answer: {generation}
-            Verify if the answer is closely related to the provided context and if all facts are adequately addressed. \n
             Provide a binary score 'yes' or 'no' score to indicate whether the answer is grounded in / supported by a set of facts. \n
             Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.
             Format: {format_instructions}""",
@@ -43,6 +41,8 @@ class TigerGraphAgentHallucinationCheck:
                 "format_instructions": hallucination_parser.get_format_instructions()
             }
         )
+
+        logger.info(f"prompt: {prompt}")
 
         # Chain
         rag_chain = prompt | self.llm.model | hallucination_parser

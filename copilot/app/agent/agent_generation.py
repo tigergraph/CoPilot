@@ -44,10 +44,6 @@ class TigerGraphAgentGenerator:
                         Question: {question} \n
                         Answer: {context} \n
                         Format: {format_instructions}""",
-            # template="""Given the context, generate answer.\n
-            #             Make sure all facts in the context are covered in the generated answer.\n
-            #             Context: {context} \n
-            #             Format: {format_instructions}""",
             input_variables=["question", "context"],
             partial_variables={
                 "format_instructions": answer_parser.get_format_instructions()

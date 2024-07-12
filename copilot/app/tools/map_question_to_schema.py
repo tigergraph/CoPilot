@@ -45,7 +45,7 @@ class MapQuestionToSchema(BaseTool):
         self.llm = llm
         self.prompt = prompt
 
-    def _run(self, query: str, conversation: List[Dict[str, str]]) -> str:
+    def _run(self, query: str) -> str:
         """Run the tool.
         Args:
             query (str):
@@ -93,8 +93,7 @@ class MapQuestionToSchema(BaseTool):
                     "verticesAttrs": vertices_info,
                     "edges": edges,
                     "edgesInfo": edges_info,
-                    "question": query,
-                    "conversation": conversation
+                    "question": query
                 }
             ]
         )[0]["text"]

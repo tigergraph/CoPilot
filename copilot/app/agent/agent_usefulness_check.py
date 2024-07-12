@@ -27,7 +27,7 @@ class TigerGraphAgentUsefulnessCheck:
         usefulness_parser = PydanticOutputParser(pydantic_object=UsefulnessCheckResponse)
         
         prompt = PromptTemplate(
-            template="""You are a grader assessing whether an answer is useful to resolve a question and if it directly answers the question. \n 
+            template="""You are a grader assessing whether the generated answer is useful to resolve the question. \n 
             Here is the answer:
             \n ------- \n
             {generation} 
