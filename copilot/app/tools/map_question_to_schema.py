@@ -100,7 +100,7 @@ class MapQuestionToSchema(BaseTool):
         )[0]["text"]
 
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
-        logger.info(f"restate_q: {restate_q}")
+        # logger.info(f"restate_q: {restate_q}")
 
         parsed_q = parser.invoke(restate_q)
 
@@ -171,7 +171,7 @@ class MapQuestionToSchema(BaseTool):
             )
             raise e
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
-        logger.info(f"parsed_q: {parsed_q}")
+        # logger.info(f"parsed_q: {parsed_q}")
         return parsed_q
 
     async def _arun(self) -> str:

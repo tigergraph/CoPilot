@@ -301,21 +301,9 @@ class TigerGraphAgentGraph:
                 state["question"], state["context"]["result"]["@@final_retrieval"]
             )
         elif state["lookup_source"] == "inquiryai":
-
-            # question_str = state["question"]
-            # logger.info(f"question_str: {question_str}")
-
-            # corrected_question_str = question_str.replace("'", '"')
-            # logger.info(f"corrected_question_str: {corrected_question_str}")
-
-            # question_dict = json.loads(question_str)
-            # question = str(question_dict["input"])
-
-            # logger.info(f"only_question_str: {question}")
-
             try:
                 context_data_str = json.dumps(state["context"]["result"])
-                logger.info(f"context_data_str: {context_data_str}")
+                # logger.info(f"context_data_str: {context_data_str}")
             except (TypeError, ValueError) as e:
                 logger.error(f"Failed to serialize context to JSON: {e}")
                 raise ValueError("Invalid context data format. Unable to convert to JSON.")
@@ -360,7 +348,7 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Rephrasing the question")
         step = TigerGraphAgentRewriter(self.llm_provider)
-        logger.info(f"question for rewrite: {state['question']}")
+        # logger.info(f"question for rewrite: {state['question']}")
         question_str = state["question"]
         state["question"] = step.rewrite_question(question_str)
         return state
@@ -374,7 +362,7 @@ class TigerGraphAgentGraph:
 
         try:
             context_data_str = json.dumps(state["context"]["result"])
-            logger.info(f"context_data_str: {context_data_str}")
+            # logger.info(f"context_data_str: {context_data_str}")
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to serialize context to JSON: {e}")
             raise ValueError("Invalid context data format. Unable to convert to JSON.")
@@ -406,12 +394,12 @@ class TigerGraphAgentGraph:
         Run the agent usefulness and hallucination check.
         """
         hallucinated = self.check_answer_for_hallucinations(state)
-        logger.info(f"hallucinated: {hallucinated}")
+        # logger.info(f"hallucinated: {hallucinated}")
         if hallucinated == "hallucination":
             return "hallucination"
         else:
             useful = self.check_answer_for_usefulness(state)
-            logger.info(f"useful: {useful}")
+            # logger.info(f"useful: {useful}")
             if useful == "useful":
                 self.emit_progress(DONE)
                 return "grounded"
@@ -419,7 +407,7 @@ class TigerGraphAgentGraph:
                 if state["lookup_source"] == "supportai":
                     return "supportai_not_useful"
                 elif state["lookup_source"] == "inquiryai":
-                    logger.info(f"inquiryai_not_useful")
+                    # logger.info(f"inquiryai_not_useful")
                     return "inquiryai_not_useful"
                 elif state["lookup_source"] == "cypher":
                     return "cypher_not_useful"

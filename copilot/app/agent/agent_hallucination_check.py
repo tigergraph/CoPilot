@@ -42,7 +42,7 @@ class TigerGraphAgentHallucinationCheck:
             }
         )
 
-        logger.info(f"prompt: {prompt}")
+        # logger.info(f"prompt: {prompt}")
 
         # Chain
         rag_chain = prompt | self.llm.model | hallucination_parser

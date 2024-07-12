@@ -7,16 +7,6 @@ from langchain.pydantic_v1 import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-# # Define a function to calculate token length
-# def calculate_token_length(text):
-#     tokens = tokenizer.encode(text, add_special_tokens=False)
-#     return len(tokens)
-
-# Function to approximate token length by characters
-def approximate_token_length(text):
-    return len(text) // 4  # Assuming an average token length of 4 characters
-
-
 class CoPilotAnswerOutput(BaseModel):
     generated_answer: str = Field(description="The generated answer to the question. Make sure maintain a professional tone.")
     citation: list[str] = Field(description="The citation for the answer. List the information used.")
@@ -56,33 +46,12 @@ class TigerGraphAgentGenerator:
             format_instructions=answer_parser.get_format_instructions()
         )
 
-        logger.info(f"full_prompt: {full_prompt}")
-        # Calculate token lengths
-        context_token_length = approximate_token_length(context)
-        # Render the prompt to get the full string for token length calculation
-        prompt_token_length = approximate_token_length(full_prompt)
-        # Log the token lengths
-        logger.info(f"Context Token Length: {context_token_length}")
-        # logger.info(f"Prompt Token Length: {prompt_token_length}")
-        logger.info(f"Total Token Length: {prompt_token_length}")
-
-        # Ensure the total token length does not exceed the model's token limit
-        model_token_limit = 8192  # Replace with your model's token limit
-        if prompt_token_length > model_token_limit:
-            logger.warning("The combined length of context and prompt exceeds the model's token limit.")
-            # Truncate or simplify the context to fit within the token limit
-            # truncated_context = context[:model_token_limit - prompt_token_length - 1]
-            # full_prompt = generate_full_prompt(question, truncated_context, format_instructions)
-        else:
-            logger.info("The combined length of context and prompt is within the model's token limit.")
-        # logger.info(f"prompt: {prompt}")
-        # logger.info(f"answer_parser get_format_instructions: {answer_parser.get_format_instructions()}")
         # Chain
         rag_chain = prompt | self.llm.model | answer_parser
         generation = rag_chain.invoke({"question": question, "context": context})
 
-        logger.info(f"Generated Answer: {generation.generated_answer}")
-        logger.info(f"Citations: {generation.citation}")
+        # logger.info(f"Generated Answer: {generation.generated_answer}")
+        # logger.info(f"Citations: {generation.citation}")
 
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT generate_answer")
 

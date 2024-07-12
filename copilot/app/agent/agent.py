@@ -120,7 +120,7 @@ class TigerGraphAgent:
 
             input_data = {}
             input_data["input"] = question
-            logger.info(f"conversation: {conversation}")
+            # logger.info(f"conversation: {conversation}")
 
             if conversation is not None:
                 input_data["conversation"] = [
@@ -131,7 +131,7 @@ class TigerGraphAgent:
             else:
                 # Handle the case where conversation is None or empty
                 input_data["conversation"] = []
-            logger.info(f"input_data: {input_data}")
+            # logger.info(f"input_data: {input_data}")
 
             # Validate and convert input_data to JSON string
             try:
@@ -144,7 +144,7 @@ class TigerGraphAgent:
             for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
 
                 for key, value in output.items():
-                    logger.info(f"testing steps {key}: {value}")
+                    # logger.info(f"testing steps {key}: {value}")
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
