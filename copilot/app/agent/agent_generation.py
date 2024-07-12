@@ -50,9 +50,6 @@ class TigerGraphAgentGenerator:
         rag_chain = prompt | self.llm.model | answer_parser
         generation = rag_chain.invoke({"question": question, "context": context})
 
-        # logger.info(f"Generated Answer: {generation.generated_answer}")
-        # logger.info(f"Citations: {generation.citation}")
-
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT generate_answer")
 
         return generation

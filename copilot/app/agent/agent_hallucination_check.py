@@ -33,7 +33,8 @@ class TigerGraphAgentHallucinationCheck:
             {context} 
             \n ------- \n
             Here is the answer: {generation}
-            Provide a binary score 'yes' or 'no' score to indicate whether the answer is grounded in / supported by a set of facts. \n
+            Provide a binary score 'yes' or 'no' score to indicate whether the answer is grounded in / supported by a set of facts.
+            The score should be 'yes' if the information in the answer is found in the context. otherwise, the score should be 'no'. 
             Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.
             Format: {format_instructions}""",
             input_variables=["generation", "context"],
@@ -41,8 +42,6 @@ class TigerGraphAgentHallucinationCheck:
                 "format_instructions": hallucination_parser.get_format_instructions()
             }
         )
-
-        # logger.info(f"prompt: {prompt}")
 
         # Chain
         rag_chain = prompt | self.llm.model | hallucination_parser

@@ -369,6 +369,10 @@ class TigerGraphAgentGraph:
         hallucinations = step.check_hallucination(
             state["answer"].natural_language_response, context_data_str
         )
+        logger.info(f"hallucination checker")
+        logger.info(f"answer: {state['answer'].natural_language_response}")
+        logger.info(f"context: {context_data_str}")
+        logger.info(f"if grounded: {hallucinations}")
         if hallucinations.score == "yes":
             self.emit_progress(DONE)
             return "grounded"
@@ -384,22 +388,27 @@ class TigerGraphAgentGraph:
         usefulness = step.check_usefulness(
             state["question"], state["answer"].natural_language_response
         )
+        logger.info(f"usefulness checker")
+        logger.info(f"question: {state['question']}")
+        logger.info(f"answer: {state['answer'].natural_language_response}")
+        logger.info(f"if useful: {usefulness}")
         if usefulness.score == "yes":
             return "useful"
         else:
             return "not_useful"
+        # return "useful"
 
     def check_answer_for_usefulness_and_hallucinations(self, state):
         """
         Run the agent usefulness and hallucination check.
         """
         hallucinated = self.check_answer_for_hallucinations(state)
-        # logger.info(f"hallucinated: {hallucinated}")
+        logger.info(f"hallucinated: {hallucinated}")
         if hallucinated == "hallucination":
             return "hallucination"
         else:
             useful = self.check_answer_for_usefulness(state)
-            # logger.info(f"useful: {useful}")
+            logger.info(f"useful: {useful}")
             if useful == "useful":
                 self.emit_progress(DONE)
                 return "grounded"
@@ -407,7 +416,6 @@ class TigerGraphAgentGraph:
                 if state["lookup_source"] == "supportai":
                     return "supportai_not_useful"
                 elif state["lookup_source"] == "inquiryai":
-                    # logger.info(f"inquiryai_not_useful")
                     return "inquiryai_not_useful"
                 elif state["lookup_source"] == "cypher":
                     return "cypher_not_useful"
