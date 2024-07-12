@@ -10,4 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      '/ui': 'http://localhost:8000',
+      '^/ui/.*/chat': {
+        target: 'ws://localhost:8000',
+        ws: true,
+      }
+    }
+  },
 });
