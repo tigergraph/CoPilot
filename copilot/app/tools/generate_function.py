@@ -230,9 +230,7 @@ class GenerateFunction(BaseTool):
                 f"request_id={req_id_cv.get()} EXIT GenerateFunction._run() with exception={e}"
             )
             raise ToolException(
-                "The function {} did not execute correctly. Please rephrase your question and try again".format(
-                    generated
-                )
+                "The function {} did not execute correctly with error: {}".format(parsed_func, e)
             )
 
     async def _arun(self) -> str:
