@@ -51,6 +51,9 @@ aws_bedrock_config="./configs/bedrock_config.json"
 huggingface_llama3_script="test_huggingface_llama70b.py"
 huggingface_llama3_config="./configs/huggingface_llama70b_config.json"
 
+watsonx_mistral_large_script="test_watsonx_mistral-large.py"
+watsonx_mistral_large_config="./configs/ibm_watsonx_config.json"
+
 # Function to execute a service
 execute_service() {
 	local service="$1"
@@ -100,6 +103,9 @@ case "$llm_service" in
 "huggingface_llama3")
 	execute_service "$huggingface_llama3_script" "$huggingface_llama3_config"
 	;;
+"watsonx_mistral-large")
+	execute_service "$watsonx_mistral_large_script" "$watsonx_mistral_large_config"
+	;;
 "all")
 	echo "Executing all services..."
 	for service_script_pair in "$azure_gpt35_script $azure_gpt35_config" \
@@ -110,6 +116,7 @@ case "$llm_service" in
 		"$aws_bedrock_script $aws_bedrock_config" \
 		"$openai_gpt4o_script $openai_gpt4o_config" \
 		"$huggingface_llama3_script $huggingface_llama3_config" \
+		"$watsonx_mistral_large_script $watsonx_mistral_large_config" \
 		"$huggingface_phi3_script $huggingface_phi3_config"; do
 		execute_service $service_script_pair
 	done
