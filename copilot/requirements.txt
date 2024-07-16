@@ -64,6 +64,7 @@ langchain-community==0.0.28
 langchain-core==0.1.49
 langchain-experimental==0.0.54
 langchain-groq==0.1.3
+langchain-ibm==0.1.10
 langchain-text-splitters==0.0.1
 langchainhub==0.1.14
 langdetect==1.0.9
