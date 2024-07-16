@@ -72,7 +72,7 @@ langchain==0.2.8
 langchain-community==0.2.7
 langchain-core==0.2.19
 langchain-experimental==0.0.62
-langchain-groq==0.1.3
+langchain-groq==0.1.6
 langchain-ibm==0.1.10
 langchain-text-splitters==0.2.2
 langchainhub==0.1.14
