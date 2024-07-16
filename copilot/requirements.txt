@@ -77,7 +77,7 @@ langchain-ibm==0.1.10
 langchain-text-splitters==0.2.2
 langchainhub==0.1.14
 langdetect==1.0.9
-langgraph==0.0.40
+langgraph==0.1.8
 langsmith==0.1.86
 lomond==0.3.3
 lxml==4.9.3
