@@ -103,7 +103,7 @@ case "$llm_service" in
 "huggingface_llama3")
 	execute_service "$huggingface_llama3_script" "$huggingface_llama3_config"
 	;;
-"watsonx_mistral-large")
+"watsonx_mistral_large")
 	execute_service "$watsonx_mistral_large_script" "$watsonx_mistral_large_config"
 	;;
 "all")
