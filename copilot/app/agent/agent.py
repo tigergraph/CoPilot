@@ -165,7 +165,7 @@ class TigerGraphAgent:
 def make_agent(graphname, conn, use_cypher, ws: WebSocket = None, supportai_retriever="hnsw_overlap") -> TigerGraphAgent:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         llm_service_name = "openai"
-        llm_provider = OpenAI(llm_config["completion_service"], graphname=graphname)
+        llm_provider = OpenAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
         llm_service_name = "azure"
         llm_provider = AzureOpenAI(llm_config["completion_service"])
