@@ -47,7 +47,7 @@ class TigerGraphAgentGraph:
         embedding_store,
         mq2s_tool,
         gen_func_tool,
-        cypher_gen_tool=None,
+        # cypher_gen_tool=None,
         enable_human_in_loop=False,
         q: Q = None,
         supportai_retriever="hnsw_overlap",
@@ -59,7 +59,7 @@ class TigerGraphAgentGraph:
         self.embedding_store = embedding_store
         self.mq2s = mq2s_tool
         self.gen_func = gen_func_tool
-        self.cypher_gen = cypher_gen_tool
+        # self.cypher_gen = cypher_gen_tool
         self.enable_human_in_loop = enable_human_in_loop
         self.q = q
 
@@ -447,18 +447,18 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("rewrite_question", self.rewrite_question)
         self.workflow.add_node("apologize", self.apologize)
 
-        if self.cypher_gen:
-            self.workflow.add_node("generate_cypher", self.generate_cypher)
-            self.workflow.add_conditional_edges(
-                "generate_function",
-                self.check_state_for_generation_error,
-                {"error": "generate_cypher", "success": "generate_answer"},
-            )
-            self.workflow.add_conditional_edges(
-                "generate_cypher",
-                self.check_state_for_generation_error,
-                {"error": "apologize", "success": "generate_answer"},
-            )
+        # if self.cypher_gen:
+        #     self.workflow.add_node("generate_cypher", self.generate_cypher)
+        #     self.workflow.add_conditional_edges(
+        #         "generate_function",
+        #         self.check_state_for_generation_error,
+        #         {"error": "generate_cypher", "success": "generate_answer"},
+        #     )
+        #     self.workflow.add_conditional_edges(
+        #         "generate_cypher",
+        #         self.check_state_for_generation_error,
+        #         {"error": "apologize", "success": "generate_answer"},
+        #     )
             # remove hallucination and usefulness check
             # if self.supportai_enabled:
             #     self.workflow.add_conditional_edges(
@@ -483,12 +483,12 @@ class TigerGraphAgentGraph:
         #                 "cypher_not_useful": "apologize",
         #             },
         #         )
-        else:
-            self.workflow.add_conditional_edges(
-                "generate_function",
-                self.check_state_for_generation_error,
-                {"error": "rewrite_question", "success": "generate_answer"},
-            )
+        # else:
+        self.workflow.add_conditional_edges(
+            "generate_function",
+            self.check_state_for_generation_error,
+            {"error": "rewrite_question", "success": "generate_answer"},
+        )
 
         if self.supportai_enabled:
             self.workflow.add_conditional_edges(
