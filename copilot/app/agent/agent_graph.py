@@ -483,12 +483,12 @@ class TigerGraphAgentGraph:
         #                 "cypher_not_useful": "apologize",
         #             },
         #         )
-        # else:
-        self.workflow.add_conditional_edges(
-            "generate_function",
-            self.check_state_for_generation_error,
-            {"error": "rewrite_question", "success": "generate_answer"},
-        )
+        else:
+            self.workflow.add_conditional_edges(
+                "generate_function",
+                self.check_state_for_generation_error,
+                {"error": "rewrite_question", "success": "generate_answer"},
+            )
 
         if self.supportai_enabled:
             self.workflow.add_conditional_edges(
