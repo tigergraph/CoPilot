@@ -308,9 +308,7 @@ class TigerGraphAgentGraph:
                 logger.error(f"Failed to serialize context to JSON: {e}")
                 raise ValueError("Invalid context data format. Unable to convert to JSON.")
 
-            # answer = step.generate_answer(state["question"], state["context"]["result"])
             answer = step.generate_answer(state["question"], context_data_str)
-            # answer = step.generate_answer(question, context_data_str)
 
         elif state["lookup_source"] == "cypher":
             answer = step.generate_answer(state["question"], state["context"]["answer"])
@@ -348,11 +346,11 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Rephrasing the question")
         step = TigerGraphAgentRewriter(self.llm_provider)
-        # logger.info(f"question for rewrite: {state['question']}")
         question_str = state["question"]
         state["question"] = step.rewrite_question(question_str)
         return state
 
+    # remove halucinaton check, always return grounded
     def check_answer_for_hallucinations(self, state):
         """
         Run the agent hallucination check.
@@ -380,6 +378,7 @@ class TigerGraphAgentGraph:
         #     return "hallucination"
         return "grounded"
 
+    # remove usefulness check, always return useful
     def check_answer_for_usefulness(self, state):
         """
         Run the agent usefulness check.
@@ -404,12 +403,10 @@ class TigerGraphAgentGraph:
         Run the agent usefulness and hallucination check.
         """
         hallucinated = self.check_answer_for_hallucinations(state)
-        logger.info(f"hallucinated: {hallucinated}")
         if hallucinated == "hallucination":
             return "hallucination"
         else:
             useful = self.check_answer_for_usefulness(state)
-            logger.info(f"useful: {useful}")
             if useful == "useful":
                 self.emit_progress(DONE)
                 return "grounded"
@@ -462,6 +459,7 @@ class TigerGraphAgentGraph:
                 self.check_state_for_generation_error,
                 {"error": "apologize", "success": "generate_answer"},
             )
+            # remove hallucination and usefulness check
             # if self.supportai_enabled:
             #     self.workflow.add_conditional_edges(
             #         "generate_answer",
@@ -495,6 +493,7 @@ class TigerGraphAgentGraph:
         if self.supportai_enabled:
             self.workflow.add_conditional_edges(
                 "generate_answer", 
+                # alwasy return grounded
                 self.check_answer_for_usefulness_and_hallucinations,
                 {
                     "hallucination": "rewrite_question",
@@ -507,6 +506,7 @@ class TigerGraphAgentGraph:
         else:
             self.workflow.add_conditional_edges(
                 "generate_answer", 
+                # always return grounded
                 self.check_answer_for_usefulness_and_hallucinations,
                 {
                     "hallucination": "rewrite_question",

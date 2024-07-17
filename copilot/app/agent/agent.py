@@ -52,7 +52,7 @@ class TigerGraphAgent:
         db_connection: TigerGraphConnectionProxy,
         embedding_model: EmbeddingModel,
         embedding_store: EmbeddingStore,
-        # use_cypher: bool = False,
+        use_cypher: bool = False,
         ws=None,
         supportai_retriever="hnsw_overlap"
     ):
@@ -74,9 +74,9 @@ class TigerGraphAgent:
             embedding_store,
         )
 
-        # self.cypher_tool = None
-        # if use_cypher:
-        #     self.cypher_tool = GenerateCypher(self.conn, self.llm)
+        self.cypher_tool = None
+        if use_cypher:
+            self.cypher_tool = GenerateCypher(self.conn, self.llm)
 
         self.q = None
         if ws is not None:
@@ -91,7 +91,7 @@ class TigerGraphAgent:
             self.embedding_store,
             self.mq2s,
             self.gen_func,
-            # cypher_gen_tool=self.cypher_tool,
+            cypher_gen_tool=self.cypher_tool,
             q=self.q,
             supportai_retriever=supportai_retriever
         ).create_graph()
@@ -120,7 +120,6 @@ class TigerGraphAgent:
 
             input_data = {}
             input_data["input"] = question
-            # logger.info(f"conversation: {conversation}")
 
             if conversation is not None:
                 input_data["conversation"] = [
@@ -131,7 +130,6 @@ class TigerGraphAgent:
             else:
                 # Handle the case where conversation is None or empty
                 input_data["conversation"] = []
-            # logger.info(f"input_data: {input_data}")
 
             # Validate and convert input_data to JSON string
             try:
@@ -140,7 +138,6 @@ class TigerGraphAgent:
                 logger.error(f"Failed to serialize input_data to JSON: {e}")
                 raise ValueError("Invalid input data format. Unable to convert to JSON.")
 
-            # for output in self.agent.stream({"question": input_data_str}):
             for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
 
                 for key, value in output.items():
@@ -205,7 +202,7 @@ def make_agent(graphname, conn, use_cypher, ws: WebSocket = None, supportai_retr
         conn,
         embedding_service,
         embedding_store,
-        # use_cypher=use_cypher,
+        use_cypher=use_cypher,
         ws=ws,
         supportai_retriever=supportai_retriever
     )
