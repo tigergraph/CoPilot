@@ -47,7 +47,7 @@ class TigerGraphAgentGraph:
         embedding_store,
         mq2s_tool,
         gen_func_tool,
-        # cypher_gen_tool=None,
+        cypher_gen_tool=None,
         enable_human_in_loop=False,
         q: Q = None,
         supportai_retriever="hnsw_overlap",
@@ -59,7 +59,7 @@ class TigerGraphAgentGraph:
         self.embedding_store = embedding_store
         self.mq2s = mq2s_tool
         self.gen_func = gen_func_tool
-        # self.cypher_gen = cypher_gen_tool
+        self.cypher_gen = cypher_gen_tool
         self.enable_human_in_loop = enable_human_in_loop
         self.q = q
 
@@ -303,7 +303,6 @@ class TigerGraphAgentGraph:
         elif state["lookup_source"] == "inquiryai":
             try:
                 context_data_str = json.dumps(state["context"]["result"])
-                # logger.info(f"context_data_str: {context_data_str}")
             except (TypeError, ValueError) as e:
                 logger.error(f"Failed to serialize context to JSON: {e}")
                 raise ValueError("Invalid context data format. Unable to convert to JSON.")
@@ -447,48 +446,48 @@ class TigerGraphAgentGraph:
         self.workflow.add_node("rewrite_question", self.rewrite_question)
         self.workflow.add_node("apologize", self.apologize)
 
-        # if self.cypher_gen:
-        #     self.workflow.add_node("generate_cypher", self.generate_cypher)
-        #     self.workflow.add_conditional_edges(
-        #         "generate_function",
-        #         self.check_state_for_generation_error,
-        #         {"error": "generate_cypher", "success": "generate_answer"},
-        #     )
-        #     self.workflow.add_conditional_edges(
-        #         "generate_cypher",
-        #         self.check_state_for_generation_error,
-        #         {"error": "apologize", "success": "generate_answer"},
-        #     )
+        if self.cypher_gen:
+            self.workflow.add_node("generate_cypher", self.generate_cypher)
+            self.workflow.add_conditional_edges(
+                "generate_function",
+                self.check_state_for_generation_error,
+                {"error": "generate_cypher", "success": "generate_answer"},
+            )
+            self.workflow.add_conditional_edges(
+                "generate_cypher",
+                self.check_state_for_generation_error,
+                {"error": "apologize", "success": "generate_answer"},
+            )
             # remove hallucination and usefulness check
-            # if self.supportai_enabled:
-            #     self.workflow.add_conditional_edges(
-            #         "generate_answer",
-            #         self.check_answer_for_usefulness_and_hallucinations,
-            #         {
-            #             "hallucination": "rewrite_question",
-            #             "grounded": END,
-            #             "inquiryai_not_useful": "generate_cypher",
-            #             "cypher_not_useful": "supportai",
-            #             "supportai_not_useful": "map_question_to_schema",
-            #         },
-            #     )
-        #     else:
-        #         self.workflow.add_conditional_edges(
-        #             "generate_answer",
-        #             self.check_answer_for_usefulness_and_hallucinations,
-        #             {
-        #                 "hallucination": "rewrite_question",
-        #                 "grounded": END,
-        #                 "inquiryai_not_useful": "generate_cypher",
-        #                 "cypher_not_useful": "apologize",
-        #             },
-        #         )
-        # else:
-        self.workflow.add_conditional_edges(
-            "generate_function",
-            self.check_state_for_generation_error,
-            {"error": "rewrite_question", "success": "generate_answer"},
-        )
+            if self.supportai_enabled:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "inquiryai_not_useful": "generate_cypher",
+                        "cypher_not_useful": "supportai",
+                        "supportai_not_useful": "map_question_to_schema",
+                    },
+                )
+            else:
+                self.workflow.add_conditional_edges(
+                    "generate_answer",
+                    self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "inquiryai_not_useful": "generate_cypher",
+                        "cypher_not_useful": "apologize",
+                    },
+                )
+        else:
+            self.workflow.add_conditional_edges(
+                "generate_function",
+                self.check_state_for_generation_error,
+                {"error": "rewrite_question", "success": "generate_answer"},
+            )
 
         if self.supportai_enabled:
             self.workflow.add_conditional_edges(
