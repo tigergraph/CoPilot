@@ -141,7 +141,7 @@ class TigerGraphAgent:
             for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
 
                 for key, value in output.items():
-                    logger.info(f"testing steps {key}: {value}")
+                    # logger.info(f"testing steps {key}: {value}")
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
