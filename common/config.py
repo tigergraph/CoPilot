@@ -145,9 +145,11 @@ try:
 except MilvusException as e:
     embedding_store = None
     service_status["embedding_store"] = {"status": "milvus error", "error": str(e)}
+    raise
 except Exception as e:
     embedding_store = None
     service_status["embedding_store"] = {"status": "embedding error", "error": str(e)}
+    raise
 
 support_collection_name = milvus_config.get("collection_name", "tg_support_documents")
 LogWriter.info(
@@ -172,9 +174,11 @@ try:
 except MilvusException as e:
     support_ai_embedding_store = None
     service_status["support_ai_embedding_store"] = {"status": "milvus error", "error": str(e)}
+    raise
 except Exception as e:
     support_ai_embedding_store = None
     service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
+    raise
 
 
 if DOC_PROCESSING_CONFIG is None or (
