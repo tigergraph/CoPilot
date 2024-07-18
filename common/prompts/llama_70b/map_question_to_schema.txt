@@ -10,4 +10,6 @@ Generate the complete question with the appropriate replacements. Keep the case 
 Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
 
 {format_instructions}
-QUESTION: {question}
+question: {question}
+conversation: {conversation}
+

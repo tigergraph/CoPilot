@@ -45,7 +45,7 @@ class MapQuestionToSchema(BaseTool):
         self.llm = llm
         self.prompt = prompt
 
-    def _run(self, query: str) -> str:
+    def _run(self, query: str, conversation: List[Dict[str, str]]) -> str:
         """Run the tool.
         Args:
             query (str):
@@ -58,6 +58,7 @@ class MapQuestionToSchema(BaseTool):
             template=self.prompt,
             input_variables=[
                 "question",
+                "conversation",
                 "vertices",
                 "verticesAttrs",
                 "edges",
@@ -93,11 +94,13 @@ class MapQuestionToSchema(BaseTool):
                     "edges": edges,
                     "edgesInfo": edges_info,
                     "question": query,
+                    "conversation": conversation
                 }
             ]
         )[0]["text"]
 
         logger.debug(f"request_id={req_id_cv.get()} MapQuestionToSchema applied")
+        # logger.info(f"restate_q: {restate_q}")
 
         parsed_q = parser.invoke(restate_q)
 
@@ -168,6 +171,7 @@ class MapQuestionToSchema(BaseTool):
             )
             raise e
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT MapQuestionToSchema._run()")
+        # logger.info(f"parsed_q: {parsed_q}")
         return parsed_q
 
     async def _arun(self) -> str:

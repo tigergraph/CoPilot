@@ -27,13 +27,14 @@ class TigerGraphAgentUsefulnessCheck:
         usefulness_parser = PydanticOutputParser(pydantic_object=UsefulnessCheckResponse)
         
         prompt = PromptTemplate(
-            template="""You are a grader assessing whether an answer is useful to resolve a question. \n 
+            template="""You are a grader assessing whether the generated answer is useful to resolve the question. \n 
             Here is the answer:
             \n ------- \n
             {generation} 
             \n ------- \n
             Here is the question: {question}
-            Give a binary score 'yes' or 'no' to indicate whether the answer is useful to resolve a question. \n
+            Give a binary score 'yes' or 'no' to indicate whether the answer is useful to resolve a question.
+            An answer is considered useful if the answer mostly addresses the question reasonably.
             Provide the binary score as a JSON with a single key 'score' and no preamble or explanation.
             Answer in the format: {format_instructions}""",
             input_variables=["generation", "question"],
