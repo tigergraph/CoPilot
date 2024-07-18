@@ -10,4 +10,5 @@ Don't generate target_vertex_ids if there is no the term 'id' explicitly mention
 
 Respond in JSON (and only JSON). Follow the format instructions below:
 {format_instructions}
-QUESTION: {question}
+question: {question}
+conversation: {conversation}

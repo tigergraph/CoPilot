@@ -35,16 +35,16 @@ def validate_schema(conn, v_types, e_types, v_attrs, e_attrs):
             attrs = [x["AttributeName"] for x in conn.getVertexType(v)["Attributes"]]
             for attr in v_attrs.get(v, []):
                 if attr not in attrs and attr != "":
+                    if attr is None:
+                        attr = "None"
                     raise MapQuestionToSchemaException(
-                        attr
-                        + " is not found for "
-                        + v
-                        + " in the data schema. Run MapQuestionToSchema to validate schema."
+                        f"{attr} is not found for {v} in the data schema. Run MapQuestionToSchema to validate schema."
                     )
         else:
+            if v is None:
+                v = "None"
             raise MapQuestionToSchemaException(
-                v
-                + " is not found in the data schema. Run MapQuestionToSchema to validate schema."
+                f"{v} is not found in the data schema. Run MapQuestionToSchema to validate schema."
             )
 
     for e in e_types:
@@ -55,16 +55,16 @@ def validate_schema(conn, v_types, e_types, v_attrs, e_attrs):
             attrs = [x["AttributeName"] for x in conn.getEdgeType(e)["Attributes"]]
             for attr in e_attrs.get(e, []):
                 if attr not in attrs and attr != "":
+                    if attr is None:
+                        attr = "None"
                     raise MapQuestionToSchemaException(
-                        attr
-                        + " is not found for "
-                        + e
-                        + " in the data schema. Run MapQuestionToSchema to validate schema."
+                        f"{attr} is not found for {e} in the data schema. Run MapQuestionToSchema to validate schema."
                     )
         else:
+            if e is None:
+                e = "None"
             raise MapQuestionToSchemaException(
-                e
-                + " is not found in the data schema. Run MapQuestionToSchema to validate schema."
+                f"{e} is not found in the data schema. Run MapQuestionToSchema to validate schema."
             )
     LogWriter.info(f"request_id={req_id_cv.get()} EXIT validate_schema()")
     return True
