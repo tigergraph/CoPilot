@@ -489,32 +489,32 @@ class TigerGraphAgentGraph:
                 {"error": "rewrite_question", "success": "generate_answer"},
             )
 
-        if self.supportai_enabled:
-            self.workflow.add_conditional_edges(
-                "generate_answer", 
-                # alwasy return grounded
-                self.check_answer_for_usefulness_and_hallucinations,
-                {
-                    "hallucination": "rewrite_question",
-                    "grounded": END,
-                    "not_useful": "rewrite_question",
-                    "inquiryai_not_useful": "supportai",
-                    "supportai_not_useful": "map_question_to_schema",
-                },
-            )
-        else:
-            self.workflow.add_conditional_edges(
-                "generate_answer", 
-                # always return grounded
-                self.check_answer_for_usefulness_and_hallucinations,
-                {
-                    "hallucination": "rewrite_question",
-                    "grounded": END,
-                    "not_useful": "rewrite_question",
-                    "inquiryai_not_useful": "apologize",
-                    "supportai_not_useful": "map_question_to_schema",
-                },
-            )
+            if self.supportai_enabled:
+                self.workflow.add_conditional_edges(
+                    "generate_answer", 
+                    # alwasy return grounded
+                    self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "not_useful": "rewrite_question",
+                        "inquiryai_not_useful": "supportai",
+                        "supportai_not_useful": "map_question_to_schema",
+                    },
+                )
+            else:
+                self.workflow.add_conditional_edges(
+                    "generate_answer", 
+                    # always return grounded
+                    self.check_answer_for_usefulness_and_hallucinations,
+                    {
+                        "hallucination": "rewrite_question",
+                        "grounded": END,
+                        "not_useful": "rewrite_question",
+                        "inquiryai_not_useful": "apologize",
+                        "supportai_not_useful": "map_question_to_schema",
+                    },
+                )
 
         if self.supportai_enabled:
             self.workflow.add_conditional_edges(

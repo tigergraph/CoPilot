@@ -91,7 +91,7 @@ class TigerGraphAgent:
             self.embedding_store,
             self.mq2s,
             self.gen_func,
-            # cypher_gen_tool=self.cypher_tool,
+            cypher_gen_tool=self.cypher_tool,
             q=self.q,
             supportai_retriever=supportai_retriever
         ).create_graph()
