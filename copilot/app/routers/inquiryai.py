@@ -10,7 +10,7 @@ from fastapi import (APIRouter, Depends, HTTPException, Request,
 from fastapi.security.http import HTTPBase
 from tools.validation_utils import MapQuestionToSchemaException
 
-from common.config import embedding_service, embedding_store, session_handler
+from common.config import embedding_service, embedding_store, session_handler, service_status
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics as pmetrics
@@ -25,6 +25,14 @@ router = APIRouter(tags=["InquiryAI"])
 security = HTTPBase(scheme="basic", auto_error=False)
 
 
+def check_embedding_store_status():
+    if service_status["embedding_store"]["error"]:
+        return HTTPException(
+            status_code=503,
+            detail=service_status["embedding_store"]["error"]
+        )
+
+
 @router.post("/{graphname}/query")
 def retrieve_answer(
     graphname,
@@ -32,10 +40,11 @@ def retrieve_answer(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ) -> CoPilotResponse:
-    conn = conn.state.conn
     logger.debug_pii(
         f"/{graphname}/query request_id={req_id_cv.get()} question={query.query}"
     )
+    check_embedding_store_status()
+    conn = conn.state.conn
     logger.debug(
         f"/{graphname}/query request_id={req_id_cv.get()} database connection created"
     )
@@ -97,6 +106,7 @@ def retrieve_answer_with_chathistory(
     logger.debug_pii(
         f"/{graphname}/query_with_history request_id={req_id_cv.get()} question={query.query}"
     )
+    check_embedding_store_status()
     logger.debug(
         f"/{graphname}/query_with_history request_id={req_id_cv.get()} database connection created"
     )
@@ -164,6 +174,7 @@ def retrieve_answer_with_chathistory(
 def list_registered_queries(
     graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     if conn.getVer().split(".")[0] <= "3":
         query_descs = embedding_store.list_registered_documents(
@@ -198,6 +209,7 @@ def register_docs(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     # auth check
     try:
@@ -327,6 +339,7 @@ def upsert_docs(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     # auth check
     try:
@@ -459,6 +472,7 @@ def retrieve_docs(
     logger.debug_pii(
         f"/{graphname}/retrieve_docs request_id={req_id_cv.get()} top_k={top_k} question={query.query}"
     )
+    check_embedding_store_status()
     return embedding_store.retrieve_similar(
         embedding_service.embed_query(query.query), top_k=top_k
     )

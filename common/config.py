@@ -2,6 +2,7 @@ import json
 import os
 
 from fastapi.security import HTTPBasic
+from pymilvus.exceptions import MilvusException
 
 from common.embeddings.embedding_services import (
     AWS_Bedrock_Embedding,
@@ -27,6 +28,7 @@ from common.logs.logwriter import LogWriter
 security = HTTPBasic()
 session_handler = SessionHandler()
 status_manager = StatusManager()
+service_status = {}
 
 # Configs
 LLM_SERVICE = os.getenv("LLM_CONFIG", "configs/llm_config.json")
@@ -128,35 +130,55 @@ LogWriter.info(
 )
 
 LogWriter.info("Setting up Milvus embedding store for InquiryAI")
-embedding_store = MilvusEmbeddingStore(
-    embedding_service,
-    host=milvus_config["host"],
-    port=milvus_config["port"],
-    collection_name="tg_inquiry_documents",
-    support_ai_instance=False,
-    username=milvus_config.get("username", ""),
-    password=milvus_config.get("password", ""),
-    alias=milvus_config.get("alias", "default"),
-)
+try:
+    embedding_store = MilvusEmbeddingStore(
+        embedding_service,
+        host=milvus_config["host"],
+        port=milvus_config["port"],
+        collection_name="tg_inquiry_documents",
+        support_ai_instance=False,
+        username=milvus_config.get("username", ""),
+        password=milvus_config.get("password", ""),
+        alias=milvus_config.get("alias", "default"),
+    )
+    service_status["embedding_store"] = {"status": "ok", "error": None}
+except MilvusException as e:
+    embedding_store = None
+    service_status["embedding_store"] = {"status": "milvus error", "error": str(e)}
+    raise
+except Exception as e:
+    embedding_store = None
+    service_status["embedding_store"] = {"status": "embedding error", "error": str(e)}
+    raise
 
 support_collection_name = milvus_config.get("collection_name", "tg_support_documents")
 LogWriter.info(
     f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
 )
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
-support_ai_embedding_store = MilvusEmbeddingStore(
-    embedding_service,
-    host=milvus_config["host"],
-    port=milvus_config["port"],
-    support_ai_instance=True,
-    collection_name=support_collection_name,
-    username=milvus_config.get("username", ""),
-    password=milvus_config.get("password", ""),
-    vector_field=milvus_config.get("vector_field", "document_vector"),
-    text_field=milvus_config.get("text_field", "document_content"),
-    vertex_field=vertex_field,
-    alias=milvus_config.get("alias", "default"),
-)
+try:
+    support_ai_embedding_store = MilvusEmbeddingStore(
+        embedding_service,
+        host=milvus_config["host"],
+        port=milvus_config["port"],
+        support_ai_instance=True,
+        collection_name=support_collection_name,
+        username=milvus_config.get("username", ""),
+        password=milvus_config.get("password", ""),
+        vector_field=milvus_config.get("vector_field", "document_vector"),
+        text_field=milvus_config.get("text_field", "document_content"),
+        vertex_field=vertex_field,
+        alias=milvus_config.get("alias", "default"),
+    )
+    service_status["support_ai_embedding_store"] = {"status": "ok", "error": None}
+except MilvusException as e:
+    support_ai_embedding_store = None
+    service_status["support_ai_embedding_store"] = {"status": "milvus error", "error": str(e)}
+    raise
+except Exception as e:
+    support_ai_embedding_store = None
+    service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
+    raise
 
 
 if DOC_PROCESSING_CONFIG is None or (

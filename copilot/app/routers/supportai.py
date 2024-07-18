@@ -3,7 +3,7 @@ import logging
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
 from fastapi.security.http import HTTPBase
 from supportai.concept_management.create_concepts import (
     CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
@@ -13,7 +13,7 @@ from supportai.retrievers import (EntityRelationshipRetriever,
                                   HNSWSiblingRetriever)
 
 from common.config import (db_config, embedding_service, embedding_store,
-                           get_llm_service, llm_config)
+                           get_llm_service, llm_config, service_status)
 from common.logs.logwriter import LogWriter
 from common.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
                                        LoadingInfo, SupportAIQuestion)
@@ -23,6 +23,14 @@ router = APIRouter(tags=["SupportAI"])
 
 security = HTTPBase(scheme="basic", auto_error=False)
 
+
+def check_embedding_store_status():
+    if service_status["embedding_store"]["error"]:
+        return HTTPException(
+            status_code=503,
+            detail=service_status["embedding_store"]["error"]
+        )
+    
 
 @router.post("/{graphname}/supportai/initialize")
 def initialize(
@@ -262,6 +270,7 @@ def search(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
@@ -316,6 +325,7 @@ def answer_question(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
