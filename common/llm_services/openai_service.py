@@ -1,5 +1,6 @@
 import logging
 import os
+from langchain_openai import ChatOpenAI
 
 from common.llm_services import LLM_Model
 from common.logs.log import req_id_cv
@@ -16,7 +17,6 @@ class OpenAI(LLM_Model):
                 auth_detail
             ]
 
-        from langchain.chat_models import ChatOpenAI
 
         model_name = config["llm_model"]
         self.llm = ChatOpenAI(

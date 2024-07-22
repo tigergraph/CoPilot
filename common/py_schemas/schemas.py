@@ -15,11 +15,13 @@ class SupportAIQuestion(BaseModel):
     method_params: dict = {}
 
 
-class SupportAIInitConfig(BaseModel):
-    chunker: str
-    chunker_params: dict
-    extractor: str
-    extractor_params: dict
+class SupportAIMethod(enum.StrEnum):
+    SUPPORTAI = enum.auto()
+    GRAPHRAG = enum.auto()
+
+
+class EccConfig(BaseModel):
+    method: SupportAIMethod = SupportAIMethod.SUPPORTAI
 
 
 class GSQLQueryInfo(BaseModel):
@@ -126,14 +128,17 @@ class QueryUpsertRequest(BaseModel):
     id: Optional[str]
     query_info: Optional[GSQLQueryInfo]
 
+
 class MessageContext(BaseModel):
     # TODO: fix this to contain proper message context
     user: str
     content: str
 
+
 class ReportQuestions(BaseModel):
     question: str
     reasoning: str
+
 
 class ReportSection(BaseModel):
     section_name: str
@@ -142,6 +147,7 @@ class ReportSection(BaseModel):
     copilot_fortify: bool = True
     actions: Optional[List[str]] = None
 
+
 class ReportCreationRequest(BaseModel):
     topic: str
     sections: Union[List[ReportSection], str] = None
@@ -149,6 +155,7 @@ class ReportCreationRequest(BaseModel):
     persona: Optional[str] = None
     conversation_id: Optional[str] = None
     message_context: Optional[List[MessageContext]] = None
+
 
 class Role(enum.StrEnum):
     SYSTEM = enum.auto()

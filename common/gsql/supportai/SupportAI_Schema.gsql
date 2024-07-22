@@ -2,7 +2,7 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Document(PRIMARY_ID id STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, concept_type STRING, human_curated BOOL, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, description STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Relationship(PRIMARY_ID id STRING, definition STRING, short_name STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX Content(PRIMARY_ID id STRING, text STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
@@ -18,4 +18,18 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE HAS_CHILD(FROM Document, TO DocumentChunk) WITH REVERSE_EDGE="reverse_HAS_CHILD";
     ADD DIRECTED EDGE HAS_RELATIONSHIP(FROM Concept, TO Concept, relation_type STRING) WITH REVERSE_EDGE="reverse_HAS_RELATIONSHIP";
     ADD DIRECTED EDGE CONTAINS_DOCUMENT(FROM DocumentCollection, TO Document) WITH REVERSE_EDGE="reverse_CONTAINS_DOCUMENT";
+
+    // GraphRAG
+    ADD VERTEX Community(PRIMARY_ID id STRING, description INT) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, description STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+
+    ADD DIRECTED EDGE KNN(FROM Entity, TO Entity); // TODO: check where knn algo writes results
+    ADD DIRECTED EDGE RESOLVES_TO(FROM Entity, TO ResolvedEntity); // Connect ResolvedEntities with their children entities
+    ADD DIRECTED EDGE RESOLVED_RELATIONSHIP(FROM ResolvedEntity, TO ResolvedEntity, weight UINT); // store edges between entities after they're resolved
+    ADD DIRECTED EDGE IN_COMMUNITY(FROM ResolvedEntity, TO Community);
+
+    // TODO: louvain will be run on resolved entities, but stored in community then on communities until louvain runs out
+    // Hierarchical communities (Louvain/Leiden)
+    // ADD UNDIRECTED EDGE LINKS_TO(FROM Community, TO Community);
+    // ADD DIRECTED EDGE BELONGS_TO(FROM Community, TO Community);
 }

@@ -15,14 +15,15 @@ from common.llm_services import (
     AWSBedrock,
     AzureOpenAI,
     GoogleVertexAI,
-    OpenAI,
     Groq,
+    HuggingFaceEndpoint,
+    LLM_Model,
     Ollama,
-    HuggingFaceEndpoint
+    OpenAI,
 )
+from common.logs.logwriter import LogWriter
 from common.session import SessionHandler
 from common.status import StatusManager
-from common.logs.logwriter import LogWriter
 
 security = HTTPBasic()
 session_handler = SessionHandler()
@@ -102,7 +103,7 @@ else:
     raise Exception("Embedding service not implemented")
 
 
-def get_llm_service(llm_config):
+def get_llm_service(llm_config) -> LLM_Model:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         return OpenAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":

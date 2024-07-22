@@ -1,0 +1,39 @@
+USE GRAPH {graph_name}
+DROP QUERY {query_name}
+CREATE OR REPLACE DISTRIBUTED QUERY graphRAG_louvain_4a(
+  UINT layer=0
+) FOR GRAPH {graph_name} SYNTAX v1 {{
+  SumAccum<DOUBLE> @@sum_weight; // the sum of the weights of all the links in the network
+  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_total_weight_map; // community ID C -> the sum of the weights of the links incident to nodes in C
+  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_in_weight_map; // community ID -> the sum of the weights of the links inside the community
+  SumAccum<DOUBLE> @@modularity;
+
+  All_Nodes = {{{entity_vertex_name}.*}};
+  All_Nodes =
+    SELECT s
+    FROM   All_Nodes:s -({links_to_edge_name}:e)- :t
+    WHERE  e.layer_weight_map.containsKey(layer)
+    ACCUM  DOUBLE weight = e.layer_weight_map.get(layer),
+           IF s == t THEN
+             @@community_in_weight_map += (s -> weight)
+           END,
+           @@community_total_weight_map += (s -> weight),
+           @@sum_weight += weight
+  ;
+  LOG(TRUE, All_Nodes.size());
+  @@modularity = 0;
+  FOREACH (community, total_weight) IN @@community_total_weight_map DO
+    DOUBLE in_weight = 0;
+    IF @@community_in_weight_map.containsKey(community) THEN
+      in_weight = @@community_in_weight_map.get(community);
+    END;
+    @@modularity += in_weight / @@sum_weight - pow(total_weight / @@sum_weight, 2);
+  END;
+  // PRINT @@modularity, @@community_in_weight_map, @@community_total_weight_map, @@sum_weight;
+  PRINT layer;
+  PRINT @@modularity AS modularity;
+  PRINT @@community_total_weight_map.size() AS community_number;
+  PRINT All_Nodes.size();
+  @@community_in_weight_map.clear();
+  @@community_total_weight_map.clear();
+}}

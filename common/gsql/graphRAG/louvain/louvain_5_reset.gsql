@@ -1,0 +1,13 @@
+USE GRAPH {graph_name}
+DROP QUERY {query_name}
+CREATE OR REPLACE DISTRIBUTED QUERY graphRAG_louvain_5_reset(
+) FOR GRAPH {graph_name} SYNTAX v1 {{
+
+  // Initialization
+  Nodes = {{{entity_vertex_name}.*}};
+
+  // Top layer
+  DELETE e
+  FROM   Nodes:s -(({belongs_to_edge_name}|{links_to_edge_name}):e)- :t
+  ;
+}}
