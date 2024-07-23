@@ -1,10 +1,10 @@
-import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
 from threading import Thread
 from typing import Annotated, Callable
 
+import ecc_util
 import graphrag
 from eventual_consistency_checker import EventualConsistencyChecker
 from fastapi import BackgroundTasks, Depends, FastAPI, Response, status
@@ -98,35 +98,7 @@ def initialize_eventual_consistency_checker(
                     vertex_field=vertex_field,
                 )
 
-        if doc_processing_config.get("chunker") == "semantic":
-            from common.chunkers.semantic_chunker import SemanticChunker
-
-            chunker = SemanticChunker(
-                embedding_service,
-                doc_processing_config["chunker_config"].get("method", "percentile"),
-                doc_processing_config["chunker_config"].get("threshold", 0.95),
-            )
-        elif doc_processing_config.get("chunker") == "regex":
-            from common.chunkers.regex_chunker import RegexChunker
-
-            chunker = RegexChunker(
-                pattern=doc_processing_config["chunker_config"].get(
-                    "pattern", "\\r?\\n"
-                )
-            )
-        elif doc_processing_config.get("chunker") == "character":
-            from common.chunkers.character_chunker import CharacterChunker
-
-            chunker = CharacterChunker(
-                chunk_size=doc_processing_config["chunker_config"].get(
-                    "chunk_size", 1024
-                ),
-                overlap_size=doc_processing_config["chunker_config"].get(
-                    "overlap_size", 0
-                ),
-            )
-        else:
-            raise ValueError("Invalid chunker type")
+        chunker = ecc_util.get_chunker()
 
         if doc_processing_config.get("extractor") == "llm":
             from common.extractors import LLMEntityRelationshipExtractor
@@ -179,11 +151,6 @@ def start_func_in_thread(f: Callable, *args, **kwargs):
     )
     thread.start()
     LogWriter.info(f'Thread started for function: "{f.__name__}"')
-
-
-# def start_async_func(f: Callable, *args, **kwargs):
-#     asyncio.run(f(args, kwargs))
-#     LogWriter.info(f'Thread started for function: "{f.__name__}"')
 
 
 @app.get("/")

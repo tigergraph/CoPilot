@@ -1,42 +1,25 @@
 import asyncio
 import logging
 
-from graphrag.util import install_query
+import ecc_util
+from graphrag.util import install_query, stream_docs, upsert_chunk
 from graphrag.worker import worker
 from pyTigerGraph import TigerGraphConnection
 
-from common.chunkers import character_chunker, regex_chunker, semantic_chunker
 from common.chunkers.base_chunker import BaseChunker
-from common.config import (doc_processing_config, embedding_service,
-                           get_llm_service, llm_config, milvus_config)
+from common.config import (
+    doc_processing_config,
+    embedding_service,
+    get_llm_service,
+    llm_config,
+    milvus_config,
+)
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
-
-
-def get_chunker():
-    if doc_processing_config.get("chunker") == "semantic":
-        chunker = semantic_chunker.SemanticChunker(
-            embedding_service,
-            doc_processing_config["chunker_config"].get("method", "percentile"),
-            doc_processing_config["chunker_config"].get("threshold", 0.95),
-        )
-    elif doc_processing_config.get("chunker") == "regex":
-        chunker = regex_chunker.RegexChunker(
-            pattern=doc_processing_config["chunker_config"].get("pattern", "\\r?\\n")
-        )
-    elif doc_processing_config.get("chunker") == "character":
-        chunker = character_chunker.CharacterChunker(
-            chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
-            overlap_size=doc_processing_config["chunker_config"].get("overlap_size", 0),
-        )
-    else:
-        raise ValueError("Invalid chunker type")
-
-    return chunker
 
 
 async def install_queries(
@@ -51,11 +34,10 @@ async def install_queries(
     # add queries to be installed into the queue
     tq = asyncio.Queue()
     for q in requried_queries:
-        if q not in installed_queries:
+        q_name = q.split("/")[-1]
+        if q_name not in installed_queries:
             tq.put_nowait((install_query, (conn, q)))
-            # break
 
-    print("starting workers")
     # start workers
     for n in range(min(tq.qsize(), n_workers)):
         task = loop.create_task(worker(n, tq))
@@ -65,7 +47,28 @@ async def install_queries(
     await tq.join()
     for t in tasks:
         print(t.result())
+        # TODO: Check if anything had an error
     return "", "", ""
+
+
+async def process_doc(
+    conn: TigerGraphConnection, doc: dict[str, str], sem: asyncio.Semaphore
+):
+    # TODO: Embed document and chunks
+    chunker = ecc_util.get_chunker()
+    try:
+        print(">>>>>", doc["v_id"], len(doc["attributes"]["text"]))
+        # await asyncio.sleep(5)
+        chunks = chunker.chunk(doc["attributes"]["text"])
+        v_id = doc["v_id"]
+        # TODO: n chunks at a time
+        for i, chunk in enumerate(chunks):
+            await upsert_chunk(conn, v_id, f"{v_id}_chunk_{i}", chunk)
+            # break  # single chunk FIXME: delete
+    finally:
+        sem.release()
+
+    return doc["v_id"]
 
 
 async def init(
@@ -73,15 +76,19 @@ async def init(
 ) -> tuple[BaseChunker, dict[str, MilvusEmbeddingStore], BaseExtractor]:
     # install requried queries
     requried_queries = [
-        "Scan_For_Updates",
-        "Update_Vertices_Processing_Status",
-        "ECC_Status",
-        "Check_Nonexistent_Vertices",
+        # "common/gsql/supportai/Scan_For_Updates",
+        # "common/gsql/supportai/Update_Vertices_Processing_Status",
+        # "common/gsql/supportai/ECC_Status",
+        # "common/gsql/supportai/Check_Nonexistent_Vertices",
+        "common/gsql/graphRAG/StreamDocIds",
+        "common/gsql/graphRAG/StreamDocContent",
     ]
-    await install_queries(requried_queries, conn)
+    # await install_queries(requried_queries, conn)
+    return await install_queries(requried_queries, conn)
 
     # init processing tools
-    chunker = get_chunker()
+    chunker = ecc_util.get_chunker()
+
     vector_indices = {}
     vertex_field = milvus_config.get("vertex_field", "vertex_id")
     index_names = milvus_config.get(
@@ -131,8 +138,26 @@ async def run(graphname: str, conn: TigerGraphConnection):
 
     """
 
+    # init configurable objects
     chunker, vector_indices, extractor = await init(graphname, conn)
 
     # process docs
+    doc_workers = 48  # TODO: make configurable
+    doc_tasks = []
+    doc_sem = asyncio.Semaphore(doc_workers)
 
+    async with asyncio.TaskGroup() as tg:
+        async for content in stream_docs(conn):
+            # only n workers at a time -- held up by semaphore
+            print(">>>>>>>>>>>>>>>>>>>>>>>>\n", len(doc_tasks), "<<<<<<<<<")
+            await doc_sem.acquire()
+            task = tg.create_task(process_doc(conn, content, doc_sem))
+            doc_tasks.append(task)
+            break
+
+    # do something with doc_tasks
+    for t in doc_tasks:
+        print(t.result())
+
+    print("DONE")
     return f"hi from graph rag ecc: {conn.graphname} ({graphname})"
