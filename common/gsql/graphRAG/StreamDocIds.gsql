@@ -1,0 +1,10 @@
+CREATE QUERY StreamDocIds(INT current_batch, INT ttl_batches) {
+    ListAccum<STRING> @@doc_ids;
+    Docs = {Document.*};
+
+    Docs = SELECT d FROM Docs:d
+           WHERE vertex_to_int(d) % ttl_batches == current_batch
+           ACCUM @@doc_ids += d.id;
+    
+    PRINT @@doc_ids;
+}

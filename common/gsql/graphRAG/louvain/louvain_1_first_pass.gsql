@@ -1,0 +1,176 @@
+CREATE OR REPLACE DISTRIBUTED QUERY graphRAG_louvain_1(
+  UINT max_hop = 10,
+  UINT batch_num = 12,
+  UINT sample_edge_num = 100
+) FOR GRAPH {graph_name} SYNTAX v1 {
+
+  TYPEDEF TUPLE <DOUBLE delta_Q_add, VERTEX<{entity_vertex_name}> community, STRING ext_vid> MyTuple; --> this should be Community, I think
+  SumAccum<DOUBLE> @@m; // the sum of the weights of all the links in the network
+  MinAccum<VERTEX<{entity_vertex_name}>> @{community_id_attribute_name}; // the community ID of the node
+  MinAccum<STRING> @community_vid; // the community ID of the node
+  SumAccum<DOUBLE> @k; // the sum of the weights of the links incident to the node
+  SumAccum<DOUBLE> @k_in; // the sum of the weights of the links inside the previous community of the node
+  SumAccum<DOUBLE> @k_self_loop; // the weight of the self-loop link
+  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @community_k_in_map; // the community of the neighbors of the nodes -> the sum of the weights of the links inside the community
+  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_sum_total_map; // community ID C -> the sum of the weights of the links incident to nodes in C
+  SumAccum<DOUBLE> @community_sum_total; // the sum of the weights of the links incident to nodes in the community of the node
+  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_sum_in_map; // community ID -> the sum of the weights of the links inside the community
+  MapAccum<VERTEX<{entity_vertex_name}>, MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>>> @@source_target_k_in_map; // source community ID -> (target community ID -> the sum of the weights of the links from the source community to the target community)
+  SumAccum<DOUBLE> @delta_Q_remove; // delta Q to remove the node from the previous community
+  MaxAccum<MyTuple> @best_move; // best move of the node with the highest delta Q to move the isolated node into the new community
+  MaxAccum<DOUBLE> @@min_double; // used to reset the @best_move
+  SumAccum<INT> @@move_cnt;
+  OrAccum @to_change_community;
+  SumAccum<INT> @batch_id;
+  SumAccum<INT> @vid;
+
+  DOUBLE wt = 1.0;
+
+  // Initialization
+  All_Nodes = {{{entity_vertex_name}.*}};
+  All_Nodes = SELECT s FROM All_Nodes:s -({relation_edge_name}:e)- :t
+              ACCUM @@m += wt / 2,
+                    s.@k += wt,
+                    IF s == t THEN // self-loop link
+                      js.@k_self_loop += wt
+                    END
+              POST-ACCUM
+                s.@{community_id_attribute_name} = s,
+                s.@community_vid = to_string(s.id),
+                s.@vid = getvid(s),
+                s.@batch_id = s.@vid % batch_num;
+
+  IF @@m < 0.00000000001 THEN
+    PRINT "Warning: the sum of the weights in the edges should be greater than zero!";
+    RETURN;
+  END;
+
+  // Local moving
+  INT hop = 0;
+  Candidates = All_Nodes;
+  WHILE Candidates.size() > 0 AND hop < max_hop DO
+    hop = hop + 1;
+    LOG(TRUE, hop);
+    IF hop == 1 THEN // first iteration
+      ChangedNodes = SELECT s FROM Candidates:s -({relation_edge_name}:e)- :t
+                      WHERE s.@{community_id_attribute_name} != t.@{community_id_attribute_name}
+                      ACCUM s.@best_move += MyTuple(1 - s.@k * t.@k / (2 * @@m), t.@{community_id_attribute_name}, t.@community_vid)
+                      POST-ACCUM
+                        IF s.@best_move.delta_Q_add > 0 THEN // the gain (delta Q) is positive
+                          s.@to_change_community = TRUE
+                        END
+                      HAVING s.@to_change_community == TRUE;
+
+    ELSE // remaining iterations
+      // Calculate sum_total
+      Tmp = SELECT s FROM All_Nodes:s
+            POST-ACCUM
+              @@community_sum_total_map += (s.@{community_id_attribute_name} -> s.@k);
+      Tmp = SELECT s FROM All_Nodes:s
+            POST-ACCUM
+              s.@community_sum_total = @@community_sum_total_map.get(s.@{community_id_attribute_name});
+
+      @@community_sum_total_map.clear();
+      // Find the best move
+      ChangedNodes = {{}};
+      FOREACH batch_id IN RANGE[0, batch_num-1] DO
+        LOG(TRUE, batch_id);
+        // Calculate the delta Q to remove the node from the previous community
+        Nodes = SELECT s FROM Candidates:s -({relation_edge_name}:e)- :t
+                WHERE s.@batch_id == batch_id
+                ACCUM 
+                  IF s.@{community_id_attribute_name} == t.@{community_id_attribute_name} THEN
+                         s.@k_in += wt
+                  ELSE
+                    s.@community_k_in_map += (t.@{community_id_attribute_name} -> wt)
+                  END
+                POST-ACCUM
+                  s.@delta_Q_remove = 2 * s.@k_self_loop - 2 * s.@k_in + s.@k * (s.@community_sum_total - s.@k) / @@m,
+                  s.@k_in = 0,
+                  s.@best_move = MyTuple(@@min_double, s, to_string(s.id)) // reset the delta_Q_add
+        ;
+
+        // Find the best move
+        Nodes = SELECT s FROM Nodes:s -({relation_edge_name}:e)- :t
+                  //SAMPLE sample_edge_num EDGE WHEN s.outdegree("{relation_edge_name}") > sample_edge_num
+                  WHERE s.@{community_id_attribute_name} != t.@{community_id_attribute_name}
+                  ACCUM DOUBLE delta_Q_add = 2 * s.@community_k_in_map.get(t.@{community_id_attribute_name}) - s.@k * t.@community_sum_total / @@m,
+                    s.@best_move += MyTuple(delta_Q_add, t.@{community_id_attribute_name}, t.@community_vid)
+                  POST-ACCUM
+                    IF s.@delta_Q_remove + s.@best_move.delta_Q_add > 0 THEN // the gain (delta Q) is positive
+                      s.@to_change_community = TRUE
+                    END,
+                    s.@community_k_in_map.clear()
+                  HAVING s.@to_change_community == TRUE;
+
+        ChangedNodes = ChangedNodes UNION Nodes;
+      END;
+    END;
+    // If two nodes swap, only change the community of one of them
+    SwapNodes = SELECT s FROM ChangedNodes:s -({relation_edge_name}:e)- :t
+                  WHERE s.@best_move.community == t.@{community_id_attribute_name}
+                        AND t.@to_change_community == TRUE
+                        AND t.@best_move.community == s.@{community_id_attribute_name}
+                        // only change the one with larger delta Q or the one with smaller @vid if delta Q are the same
+                        AND (
+                          s.@delta_Q_remove + s.@best_move.delta_Q_add < t.@delta_Q_remove + t.@best_move.delta_Q_add
+                          OR (
+                            abs((s.@delta_Q_remove + s.@best_move.delta_Q_add) - (t.@delta_Q_remove + t.@best_move.delta_Q_add)) < 0.00000000001
+                            AND s.@vid > t.@vid
+                          )
+                        )
+                  POST-ACCUM
+                    s.@to_change_community = FALSE;
+
+    ChangedNodes = ChangedNodes MINUS SwapNodes;
+
+    // Place each node of ChangedNodes in the community in which the gain is maximum
+    ChangedNodes = SELECT s FROM ChangedNodes:s
+                   POST-ACCUM
+                     s.@{community_id_attribute_name} = s.@best_move.community,
+                     s.@community_vid = s.@best_move.ext_vid,
+                     s.@to_change_community = FALSE;
+      
+    @@move_cnt += ChangedNodes.size();
+
+    // Get all neighbours of the changed node that do not belong to the node’s new community
+    Candidates = SELECT t FROM ChangedNodes:s -({relation_edge_name}:e)- :t
+                 WHERE t.@{community_id_attribute_name} != s.@{community_id_attribute_name};
+  END;
+
+  PRINT @@move_cnt AS Delta;
+  
+  // Coarsening
+  UINT new_layer = 0;
+  @@community_sum_total_map.clear();
+  Tmp =
+    SELECT s FROM All_Nodes:s -({relation_edge_name}:e)- :t
+    ACCUM
+      IF s.@{community_id_attribute_name} == t.@{community_id_attribute_name} THEN
+        @@community_sum_in_map += (s.@{community_id_attribute_name} -> wt)
+      END
+    POST-ACCUM
+      //f_belongs_to.println(s.id, s.@{community_id_attribute_name}, new_layer),
+      INSERT INTO {belongs_to_edge_name} VALUES (s, str_to_int(s.@community_vid), new_layer),
+      IF @@community_sum_in_map.containsKey(s) THEN
+        //f_links_to.println(s.id, s.id, @@community_sum_in_map.get(s), new_layer)
+        INSERT INTO {links_to_edge_name} VALUES (s,s, (new_layer -> @@community_sum_in_map.get(s)))
+      END;
+  
+  @@community_sum_in_map.clear();
+
+  Tmp = SELECT s FROM All_Nodes:s -({relation_edge_name}:e)- :t
+      ACCUM
+        IF s.@{community_id_attribute_name} != t.@{community_id_attribute_name} THEN
+          @@source_target_k_in_map += (s.@{community_id_attribute_name} -> (t.@{community_id_attribute_name} -> wt))
+        END
+      POST-ACCUM
+        IF @@source_target_k_in_map.containsKey(s) THEN
+          FOREACH (target_community, k_in) IN @@source_target_k_in_map.get(s) DO
+            //f_links_to.println(s.id, target_community, k_in, new_layer)
+            INSERT INTO {links_to_edge_name} VALUES (s,target_community, (new_layer -> k_in))
+          END
+        END;
+
+  @@source_target_k_in_map.clear();
+}

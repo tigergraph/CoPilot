@@ -1,0 +1,5 @@
+CREATE QUERY StreamDocContent(Vertex<Document> doc) {
+    Doc = {doc};
+    DocContent = SELECT c FROM Doc:d -(HAS_CONTENT)-> Content:c;
+    PRINT DocContent;
+}
