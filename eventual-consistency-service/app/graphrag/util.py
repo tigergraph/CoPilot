@@ -5,6 +5,8 @@ import traceback
 from urllib.parse import quote_plus
 
 import httpx
+from aiochannel import Channel
+from app import ecc_util
 from pyTigerGraph import TigerGraphConnection
 
 from common.logs.logwriter import LogWriter
@@ -80,7 +82,11 @@ async def stream_doc_ids(
         return {"error": True, "message": str(e)}
 
 
-async def stream_docs(conn: TigerGraphConnection, ttl_batches: int = 10):
+async def stream_docs(
+    conn: TigerGraphConnection,
+    docs_chan: Channel,
+    ttl_batches: int = 10,
+):
     headers = make_headers(conn)
     for i in range(ttl_batches):
         doc_ids = await stream_doc_ids(conn, i, ttl_batches)
@@ -88,9 +94,6 @@ async def stream_docs(conn: TigerGraphConnection, ttl_batches: int = 10):
             print(doc_ids)
             break  # TODO: handle error
 
-        print("*******")
-        print(doc_ids)
-        print("*******")
         for d in doc_ids["ids"]:
             async with httpx.AsyncClient(timeout=None) as client:
                 res = await client.get(
@@ -98,11 +101,33 @@ async def stream_docs(conn: TigerGraphConnection, ttl_batches: int = 10):
                     params={"doc": d},
                     headers=headers,
                 )
-
                 # TODO: check for errors
-                yield res.json()["results"][0]["DocContent"][0]
-            return  # single doc test FIXME: delete
+                # this will block and wait if the channel is full
+                await docs_chan.put(res.json()["results"][0]["DocContent"][0])
+            # return  # single doc test FIXME: delete
         # return # single batch test FIXME: delete
+
+
+async def chunk_doc(
+    conn: TigerGraphConnection,
+    doc: dict[str, str],
+    chunk_chan: Channel,
+    embed_chan: Channel,
+):
+    # TODO: Embed document and chunks
+    chunker = ecc_util.get_chunker()
+    chunks = chunker.chunk(doc["attributes"]["text"])
+    v_id = doc["v_id"]
+    # TODO: n chunks at a time
+    for i, chunk in enumerate(chunks):
+        # send chunks to be upserted (func, args)
+        await chunk_chan.put((upsert_chunk, (conn, v_id, f"{v_id}_chunk_{i}", chunk)))
+
+        # send chunks to be embedded
+
+        # break  # single chunk FIXME: delete
+
+    return doc["v_id"]
 
 
 def map_attrs(attributes: dict):
@@ -124,7 +149,7 @@ async def upsert_vertex(
     conn: TigerGraphConnection,
     vertex_type: str,
     vertex_id: str,
-    attributes: dict = None,
+    attributes: dict,
 ):
     attrs = map_attrs(attributes)
     data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
@@ -133,23 +158,44 @@ async def upsert_vertex(
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
-        print(res)
+        print(res.json())
+
 
 async def upsert_edge(
     conn: TigerGraphConnection,
-    vertex_type: str,
-    vertex_id: str,
+    src_v_type: str,
+    src_v_id: str,
+    edge_type: str,
+    tgt_v_type: str,
+    tgt_v_id: str,
     attributes: dict = None,
 ):
-   TODO 
-    attrs = map_attrs(attributes)
-    data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
+    if attributes is None:
+        attrs = {}
+    else:
+        attrs = map_attrs(attributes)
+    data = json.dumps(
+        {
+            "edges": {
+                src_v_type: {
+                    src_v_id: {
+                        edge_type: {
+                            tgt_v_type: {
+                                tgt_v_id: attrs,
+                            }
+                        }
+                    },
+                }
+            }
+        }
+    )
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
-        print(res)
+        print(res.json())
+
 
 async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
     date_added = int(time.time())
@@ -165,13 +211,16 @@ async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
         chunk_id,
         attributes={"text": chunk, "epoch_added": date_added},
     )
-    conn.upsertEdge("DocumentChunk", chunk_id, "HAS_CONTENT", "Content", chunk_id)
-    # self.conn.upsertEdge("Document", doc_id, "HAS_CHILD", "DocumentChunk", chunk_id)
-    # if int(chunk_id.split("_")[-1]) > 0:
-    #     self.conn.upsertEdge(
-    #         "DocumentChunk",
-    #         chunk_id,
-    #         "IS_AFTER",
-    #         "DocumentChunk",
-    #         doc_id + "_chunk_" + str(int(chunk_id.split("_")[-1]) - 1),
-    #     )
+    await upsert_edge(
+        conn, "DocumentChunk", chunk_id, "HAS_CONTENT", "Content", chunk_id
+    )
+    await upsert_edge(conn, "Document", doc_id, "HAS_CHILD", "DocumentChunk", chunk_id)
+    if int(chunk_id.split("_")[-1]) > 0:
+        await upsert_edge(
+            conn,
+            "DocumentChunk",
+            chunk_id,
+            "IS_AFTER",
+            "DocumentChunk",
+            doc_id + "_chunk_" + str(int(chunk_id.split("_")[-1]) - 1),
+        )

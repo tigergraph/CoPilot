@@ -1,9 +1,10 @@
 import asyncio
 import logging
+import time
 
 import ecc_util
-from graphrag.util import install_query, stream_docs, upsert_chunk
-from graphrag.worker import worker
+from aiochannel import Channel
+from graphrag.util import chunk_doc, install_query, stream_docs
 from pyTigerGraph import TigerGraphConnection
 
 from common.chunkers.base_chunker import BaseChunker
@@ -25,50 +26,23 @@ consistency_checkers = {}
 async def install_queries(
     requried_queries: list[str], conn: TigerGraphConnection, n_workers=8
 ):
-    loop = asyncio.get_event_loop()
-    tasks: list[asyncio.Task] = []
-
     # queries that are currently installed
     installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
 
-    # add queries to be installed into the queue
-    tq = asyncio.Queue()
-    for q in requried_queries:
-        q_name = q.split("/")[-1]
-        if q_name not in installed_queries:
-            tq.put_nowait((install_query, (conn, q)))
+    tasks = []
+    async with asyncio.TaskGroup() as grp:
+        for q in requried_queries:
+            async with asyncio.Semaphore(n_workers):
+                q_name = q.split("/")[-1]
+                # if the query is not installed, install it
+                if q_name not in installed_queries:
+                    task = grp.create_task(install_query(conn, q))
+                    tasks.append(task)
 
-    # start workers
-    for n in range(min(tq.qsize(), n_workers)):
-        task = loop.create_task(worker(n, tq))
-        tasks.append(task)
-
-    # wait for workers to finish jobs
-    await tq.join()
     for t in tasks:
         print(t.result())
         # TODO: Check if anything had an error
     return "", "", ""
-
-
-async def process_doc(
-    conn: TigerGraphConnection, doc: dict[str, str], sem: asyncio.Semaphore
-):
-    # TODO: Embed document and chunks
-    chunker = ecc_util.get_chunker()
-    try:
-        print(">>>>>", doc["v_id"], len(doc["attributes"]["text"]))
-        # await asyncio.sleep(5)
-        chunks = chunker.chunk(doc["attributes"]["text"])
-        v_id = doc["v_id"]
-        # TODO: n chunks at a time
-        for i, chunk in enumerate(chunks):
-            await upsert_chunk(conn, v_id, f"{v_id}_chunk_{i}", chunk)
-            # break  # single chunk FIXME: delete
-    finally:
-        sem.release()
-
-    return doc["v_id"]
 
 
 async def init(
@@ -124,6 +98,62 @@ async def init(
     return chunker, vector_indices, extractor
 
 
+async def process_docs(
+    conn: TigerGraphConnection,
+    docs_chan: Channel,
+    embed_q: Channel,
+    chunk_q: Channel,
+):
+    doc_tasks = []
+    async with asyncio.TaskGroup() as grp:
+        async for content in stream_docs(conn):
+            # only n workers at a time -- held up by semaphore size
+            async with asyncio.Semaphore(doc_workers):
+                task = grp.create_task(chunk_doc(conn, content, chunk_q, embed_q))
+                doc_tasks.append(task)
+            break  # single doc  FIXME: delete
+
+    # do something with doc_tasks?
+    for t in doc_tasks:
+        print(t.result())
+
+
+async def embed(embed_q: Channel):
+    pass
+
+
+async def upsert(upsert_q: Channel):
+    """
+    queue expects:
+    (func, args) <- q.get()
+    """
+    while upsert_q.empty():
+        await asyncio.sleep(1)
+
+    # consume task queue
+    print("upsert started")
+    responses = []
+    while not upsert_q.empty():
+        # get the next task
+        func, args = await upsert_q.get()
+
+        # execute the task
+        response = await func(*args)
+
+        # append task results to worker results/response
+        responses.append(response)
+
+        # mark task as done
+        upsert_q.task_done()
+
+    print(f"upsert done")
+    return responses
+
+
+async def extract(extract_q: Channel):
+    pass
+
+
 async def run(graphname: str, conn: TigerGraphConnection):
     """
     ecc flow
@@ -139,25 +169,33 @@ async def run(graphname: str, conn: TigerGraphConnection):
     """
 
     # init configurable objects
-    chunker, vector_indices, extractor = await init(graphname, conn)
+    await init(graphname, conn)
+    # return
+    start = time.perf_counter()
 
-    # process docs
-    doc_workers = 48  # TODO: make configurable
-    doc_tasks = []
-    doc_sem = asyncio.Semaphore(doc_workers)
-
-    async with asyncio.TaskGroup() as tg:
-        async for content in stream_docs(conn):
-            # only n workers at a time -- held up by semaphore
-            print(">>>>>>>>>>>>>>>>>>>>>>>>\n", len(doc_tasks), "<<<<<<<<<")
-            await doc_sem.acquire()
-            task = tg.create_task(process_doc(conn, content, doc_sem))
-            doc_tasks.append(task)
-            break
-
-    # do something with doc_tasks
-    for t in doc_tasks:
-        print(t.result())
+    # TODO: make configurable
+    tasks = []
+    docs_chan = Channel(48)  # process n chunks at a time max
+    chunk_chan = Channel(100)  # process 100 chunks at a time max
+    embed_chan = Channel(100)
+    upsert_chan = Channel(100)
+    async with asyncio.TaskGroup() as grp:
+        # get docs
+        t = grp.create_task(stream_docs(conn, docs_chan,10))
+        tasks.append(t)
+        # process docs
+        t = grp.create_task(process_docs(conn, docs_chan, embed_chan, chunk_chan))
+        tasks.append(t)
+        # embed
+        t = grp.create_task(embed(conn, doc_workers, embed_chan, chunk_chan))
+        tasks.append(t)
+        # upsert chunks
+        t = grp.create_task(upsert(conn, doc_workers, embed_chan, chunk_chan))
+        tasks.append(t)
+        # extract entities
+        t = grp.create_task(extract(conn, doc_workers, embed_chan, chunk_chan))
+        tasks.append(t)
+    end = time.perf_counter()
 
     print("DONE")
-    return f"hi from graph rag ecc: {conn.graphname} ({graphname})"
+    print(end - start)

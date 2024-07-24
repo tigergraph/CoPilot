@@ -1,18 +1,11 @@
 import asyncio
 
-
-# class Channel(asyncio.Queue):
-#     def __init__(self, maxsize=0):
-#         self.is_open = True
-#         super().__init__(maxsize)
-#
-#     def close(self):
-#         self.is_open = False
+from aiochannel import Channel
 
 
 async def worker(
     n: int,
-    task_queue: asyncio.Queue,
+    task_queue: Channel,
 ):
     # init worker logging/reporting (TODO)
     worker_name = f"worker-{n+1}"
