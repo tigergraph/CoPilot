@@ -98,60 +98,111 @@ async def init(
     return chunker, vector_indices, extractor
 
 
-async def process_docs(
+async def chunk_docs(
     conn: TigerGraphConnection,
     docs_chan: Channel,
-    embed_q: Channel,
-    chunk_q: Channel,
+    embed_chan: Channel,
+    upsert_chan: Channel,
+    extract_chan: Channel,
 ):
+    """
+    Creates and starts one worker for each document
+    in the docs channel.
+    """
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
-        async for content in stream_docs(conn):
-            # only n workers at a time -- held up by semaphore size
-            async with asyncio.Semaphore(doc_workers):
-                task = grp.create_task(chunk_doc(conn, content, chunk_q, embed_q))
-                doc_tasks.append(task)
-            break  # single doc  FIXME: delete
+        async for content in docs_chan:
+            await embed_chan.put(content)  # send the document to be embedded
+            task = grp.create_task(
+                chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
+            )
+            doc_tasks.append(task)
+            # break  # single doc  FIXME: delete
 
     # do something with doc_tasks?
     for t in doc_tasks:
         print(t.result())
 
+    # FIXME: don't close these there, other functions will send to them
+    upsert_chan.close()
+    embed_chan.close()
 
-async def embed(embed_q: Channel):
-    pass
+    # close the extract chan -- chunk_doc is the only sender
+    # and chunk_doc calls are kicked off from here (this is technically the sender)
+    extract_chan.close()
 
 
-async def upsert(upsert_q: Channel):
+async def upsert(upsert_chan: Channel):
     """
+    Creates and starts one worker for each upsert job
     queue expects:
     (func, args) <- q.get()
     """
-    while upsert_q.empty():
-        await asyncio.sleep(1)
 
     # consume task queue
-    print("upsert started")
-    responses = []
-    while not upsert_q.empty():
-        # get the next task
-        func, args = await upsert_q.get()
+    upsert_tasks = []
+    async with asyncio.TaskGroup() as grp:
+        async for func, args in upsert_chan:
+            # print("func name >>>>>", func.__name__, args)
+            # grp.create_task(todo())
+            # continue
 
-        # execute the task
-        response = await func(*args)
-
-        # append task results to worker results/response
-        responses.append(response)
-
-        # mark task as done
-        upsert_q.task_done()
+            # execute the task
+            t = grp.create_task(func(*args))
+            upsert_tasks.append(t)
 
     print(f"upsert done")
+    # do something with doc_tasks?
+    for t in upsert_tasks:
+        print(t.result())
+
+
+async def embed(embed_chan: Channel):
+    """
+    Creates and starts one worker for each embed job
+    """
+
+    # consume task queue
+    responses = []
+    async with asyncio.TaskGroup() as grp:
+        async for item in embed_chan:
+            print("embed item>>>>>", type(item))
+            grp.create_task(todo())
+            continue
+            # execute the task
+            # response = await func(*args)
+
+            # append task results to worker results/response
+            # responses.append(response)
+
+    print(f"embed done")
     return responses
 
 
-async def extract(extract_q: Channel):
-    pass
+async def extract(extract_chan: Channel):
+    """
+    Creates and starts one worker for each extract job
+    """
+
+    # consume task queue
+    responses = []
+    async with asyncio.TaskGroup() as grp:
+        async for item in extract_chan:
+            print("extract item>>>>>", type(item))
+            grp.create_task(todo())
+            continue
+            # execute the task
+            # response = await func(*args)
+
+            # append task results to worker results/response
+            # responses.append(response)
+
+    print(f"embed done")
+    return responses
+
+
+async def todo():
+    await asyncio.sleep(1)
 
 
 async def run(graphname: str, conn: TigerGraphConnection):
@@ -175,25 +226,27 @@ async def run(graphname: str, conn: TigerGraphConnection):
 
     # TODO: make configurable
     tasks = []
-    docs_chan = Channel(48)  # process n chunks at a time max
-    chunk_chan = Channel(100)  # process 100 chunks at a time max
+    docs_chan = Channel(15)  # process n chunks at a time max
     embed_chan = Channel(100)
     upsert_chan = Channel(100)
+    extract_chan = Channel(100)
     async with asyncio.TaskGroup() as grp:
         # get docs
-        t = grp.create_task(stream_docs(conn, docs_chan,10))
+        t = grp.create_task(stream_docs(conn, docs_chan, 10))
         tasks.append(t)
         # process docs
-        t = grp.create_task(process_docs(conn, docs_chan, embed_chan, chunk_chan))
-        tasks.append(t)
-        # embed
-        t = grp.create_task(embed(conn, doc_workers, embed_chan, chunk_chan))
+        t = grp.create_task(
+            chunk_docs(conn, docs_chan, embed_chan, upsert_chan, extract_chan)
+        )
         tasks.append(t)
         # upsert chunks
-        t = grp.create_task(upsert(conn, doc_workers, embed_chan, chunk_chan))
+        t = grp.create_task(upsert(upsert_chan))
+        tasks.append(t)
+        # # embed
+        t = grp.create_task(embed(embed_chan))
         tasks.append(t)
         # extract entities
-        t = grp.create_task(extract(conn, doc_workers, embed_chan, chunk_chan))
+        t = grp.create_task(extract(extract_chan))
         tasks.append(t)
     end = time.perf_counter()
 

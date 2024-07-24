@@ -4,9 +4,9 @@ import time
 import traceback
 from urllib.parse import quote_plus
 
+import ecc_util
 import httpx
 from aiochannel import Channel
-from app import ecc_util
 from pyTigerGraph import TigerGraphConnection
 
 from common.logs.logwriter import LogWriter
@@ -87,13 +87,18 @@ async def stream_docs(
     docs_chan: Channel,
     ttl_batches: int = 10,
 ):
+    """
+    Streams the document contents into the docs_chan
+    """
     headers = make_headers(conn)
     for i in range(ttl_batches):
         doc_ids = await stream_doc_ids(conn, i, ttl_batches)
         if doc_ids["error"]:
-            print(doc_ids)
             break  # TODO: handle error
 
+        print("********")
+        print(doc_ids)
+        print("********")
         for d in doc_ids["ids"]:
             async with httpx.AsyncClient(timeout=None) as client:
                 res = await client.get(
@@ -104,26 +109,38 @@ async def stream_docs(
                 # TODO: check for errors
                 # this will block and wait if the channel is full
                 await docs_chan.put(res.json()["results"][0]["DocContent"][0])
-            # return  # single doc test FIXME: delete
-        # return # single batch test FIXME: delete
+        #     break  # single doc test FIXME: delete
+        # break  # single batch test FIXME: delete
+
+    # close the docs chan -- this function is the only sender
+    docs_chan.close()
 
 
 async def chunk_doc(
     conn: TigerGraphConnection,
     doc: dict[str, str],
-    chunk_chan: Channel,
+    upsert_chan: Channel,
     embed_chan: Channel,
+    extract_chan: Channel,
 ):
-    # TODO: Embed document and chunks
+    """
+    Chunks a document.
+    Places the resulting chunks into the upsert channel (to be upserted to TG)
+    and the embed channel (to be embedded and written to the vector store)
+    """
     chunker = ecc_util.get_chunker()
     chunks = chunker.chunk(doc["attributes"]["text"])
     v_id = doc["v_id"]
     # TODO: n chunks at a time
     for i, chunk in enumerate(chunks):
         # send chunks to be upserted (func, args)
-        await chunk_chan.put((upsert_chunk, (conn, v_id, f"{v_id}_chunk_{i}", chunk)))
+        await upsert_chan.put((upsert_chunk, (conn, v_id, f"{v_id}_chunk_{i}", chunk)))
 
         # send chunks to be embedded
+        await embed_chan.put(chunk)
+
+        # send chunks to have entities extracted
+        await extract_chan.put(chunk)
 
         # break  # single chunk FIXME: delete
 
@@ -158,7 +175,7 @@ async def upsert_vertex(
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
-        print(res.json())
+        print("upsert vertex>>>", res.json())
 
 
 async def upsert_edge(
@@ -194,7 +211,7 @@ async def upsert_edge(
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
-        print(res.json())
+        print("upsert edge >>>", res.json())
 
 
 async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
