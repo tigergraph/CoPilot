@@ -53,7 +53,7 @@ services:
       CONFIG: "/configs/config.json"
       LOGLEVEL: "INFO"
     volumes:
-      - ./chat-history/:/configs
+      - ./configs/:/configs
     networks:
       - copilot_local
   # report-service:

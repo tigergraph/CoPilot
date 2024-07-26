@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const Bot = ({ layout }: { layout?: string | undefined }) => {
+const Bot = ({ layout, getConversationId }: { layout?: string | undefined, getConversationId?:any }) => {
   const [store, setStore] = useState<any>();
   const [currentDate, setCurrentDate] = useState('');
   const [selectedGraph, setSelectedGraph] = useState(localStorage.getItem("selectedGraph") || 'pyTigerGraphRAG');
@@ -108,6 +108,7 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
           // @ts-ignore
           config={config}
           fullPage={layout}
+          getConversationId={getConversationId}
           messageParser={MessageParser}
           actionProvider={ActionProvider}
         />

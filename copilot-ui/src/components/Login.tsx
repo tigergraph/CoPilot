@@ -30,40 +30,14 @@ const formSchema = z.object({
   }),
 });
 
-// TODO
-// const AuthContext = createContext();
+
 const WS_URL = "/ui/ui-login";
-// const WS_URL = "http://localhost:8000/ui/ui-login";
 
 export function Login() {
   const { i18n, t } = useTranslation();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("site") || "");
   const navigate = useNavigate();
-
-  // useEffect(() => {
-  //   const fetchMe = async () => {
-  //     try {
-  //       const response = await fetch(WS_URL, {
-  //         method: 'POST',
-  //         headers: {
-  //           // Authorization: token,
-  //           Authorization: "Basic " + btoa('user_2' + ":" + '')
-  //         },
-  //       });
-  //       const res = await response.json();
-  //       console.log(res);
-  //       if (res) {
-  //         setUser(res);
-  //         return;
-  //       }
-  //       throw new Error(res.message);
-  //     } catch (err) {
-  //       console.error(err);
-  //     }
-  //   }
-  //   fetchMe();
-  // }, []);
 
   useEffect(() => console.log(localStorage), []);
 

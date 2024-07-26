@@ -17,7 +17,7 @@ const questions =
         {title: 'How many transactions are there?'},
         {title: 'Tell me about transaction fraud.'},
         {title: 'Describe flow of one transaction.'},
-        {title: 'How TigerGraph can help me?'},
+        {title: 'How TigerGraph can help me?'}
         // { title: "How to use visualization correctly?" },
         // { title: "How to detect fraud in transactions?" },
         // { title: "What is William Torres' ID?" },

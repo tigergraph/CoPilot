@@ -12,7 +12,6 @@ import { IoIosCloseCircleOutline } from "react-icons/io";
 import { Interactions } from "./Interact";
 import { KnowledgeGraphPro } from "./graphs/KnowledgeGraphPro";
 import { KnowledgeTablPro } from "./tables/KnowledgeTablePro";
-
 interface IChatbotMessageProps {
   message?: any;
   withAvatar?: boolean;

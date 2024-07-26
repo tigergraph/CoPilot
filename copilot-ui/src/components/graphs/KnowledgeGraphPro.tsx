@@ -13,18 +13,35 @@ export const KnowledgeGraphPro = ({ data }) => {
   useEffect(() => {
 
     if (typeof data === 'string') {
-      // do i need to parse for question 'show me 5 transacitons with details'
       const parseData = JSON.parse(data);
-      console.log('\n\n\n\n\n\n\n\n\n\n PARSED STRING', parseData);
       setEdges(parseData);
+      // do i need to parse for question 'show me 5 transacitons with details'
+      console.log('\n\n\n\n\n\n\n\n\n\n PARSED STRING', parseData);
+
+    //   {
+    //     "rlt": [
+    //         {
+    //             "v_id": "4218196001337",
+    //             "v_type": "Card",
+    //             "attributes": {
+    //                 "Transaction_Count": 2564,
+    //                 "Total_Transaction_Amount": 163226.2,
+    //                 "Maximum_Transaction_Amount": 3389.92,
+    //                 "Minimum_Transaction_Amount": 1.01,
+    //                 "Average_Transaction_Amount": 63.66081123244933
+    //             }
+    //         }
+    //     ]
+    // }
+
       // console.log('\n\n\n\n\n\n\n\n\n\n PARSED edges length', edges.length);
-      if (parseData.length > 0) {
-        // YES THERE ARE 5 from question 'show me 5 transacitons with details'
-        const setresults = parseData[1]["@@edges"];
-        console.log('\n\n\n\n\n\n\n\n\n\n @@edges', setresults);
-        // ^ this is valid for question 'what cards have more than 800 transactions between april 1 2021 to august 1 2021'
-        // set the nodess and edges state here
-      } else null
+      // if (parseData.length > 0) {
+      //   // YES THERE ARE 5 from question 'show me 5 transacitons with details'
+      //   const setresults = parseData[1]["@@edges"];
+      //   console.log('\n\n\n\n\n\n\n\n\n\n @@edges', setresults);
+      //   // ^ this is valid for question 'what cards have more than 800 transactions between april 1 2021 to august 1 2021'
+      //   // set the nodess and edges state here
+      // } else null
     }
 
     if (typeof data === 'object') {
@@ -42,7 +59,6 @@ export const KnowledgeGraphPro = ({ data }) => {
         setEdges(setresults);
         console.log('\n\n\n\n\n\n\n\n\n\n OBJECT edges', data);
         // THIS is a valid response for 'How do I run PageRank?'
-        
       }
     }
 
@@ -58,6 +74,10 @@ export const KnowledgeGraphPro = ({ data }) => {
     //   } else null
     // }
   }, [data]);
+
+  useEffect(() => {
+    console.log('\n\n\n\n\n\n\n\n\n\n PARSED edges', edges);
+  },[])
 
   // const getNodes = edges.map((d:any) => (
   //   {
@@ -83,7 +103,7 @@ export const KnowledgeGraphPro = ({ data }) => {
   // ]
 
  return (
-  <>tst
+  <>{edges ? JSON.stringify(edges) : 'no data'}
     {/* {edges} */}
     {/* {edges && <pre>{edges}</pre>} */}
     {/* {typeof sdata !== 'number' && typeof sdata !== 'string' && dataArray?.edgez && dataArray?.nodes ? (

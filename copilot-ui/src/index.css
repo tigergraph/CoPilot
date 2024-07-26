@@ -580,7 +580,7 @@
   --bgColor: #fff;
 }
 
-.typewriter p {
+/* .typewriter p {
   margin-top: 10px;
   margin-bottom: 10px;
 }
@@ -588,7 +588,7 @@
 .typewriter ol li {
   margin-top: 10px;
   margin-bottom: 10px;
-}
+} */
 
 .typewriter::before {
   content: "";
