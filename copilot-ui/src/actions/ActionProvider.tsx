@@ -61,7 +61,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     }));
   };
 
-  const updateLastMessage = (message) => {
+  const updateLastMessage = (_) => {
     setState(prev => ({
       ...prev,
       messages: [...prev.messages.slice(0, 1)]
