@@ -19,7 +19,8 @@ from common.llm_services import (
     OpenAI,
     Groq,
     Ollama,
-    HuggingFaceEndpoint
+    HuggingFaceEndpoint,
+    IBMWatsonX
 )
 from common.session import SessionHandler
 from common.status import StatusManager
@@ -121,6 +122,8 @@ def get_llm_service(llm_config):
         return Ollama(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
         return HuggingFaceEndpoint(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "watsonx":
+        return IBMWatsonX(llm_config["completion_service"])
     else:
         raise Exception("LLM Completion Service Not Supported")
 

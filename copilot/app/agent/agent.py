@@ -20,6 +20,7 @@ from common.llm_services import (
     HuggingFaceEndpoint,
     Ollama,
     OpenAI,
+    IBMWatsonX
 )
 from common.llm_services.base_llm import LLM_Model
 from common.logs.log import req_id_cv
@@ -187,6 +188,9 @@ def make_agent(graphname, conn, use_cypher, ws: WebSocket = None, supportai_retr
     elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
         llm_service_name = "huggingface"
         llm_provider = HuggingFaceEndpoint(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "watsonx":
+        llm_service_name = "watsonx"
+        llm_provider = IBMWatsonX(llm_config["completion_service"])
     else:
         LogWriter.error(
             f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"
