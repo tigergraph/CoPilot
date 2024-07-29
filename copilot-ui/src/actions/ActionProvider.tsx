@@ -50,6 +50,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
   // eslint-disable-next-line
   // @ts-ignore
   const queryCopilotWs2 = useCallback((msg: string) => {
+    console.log(msg)
     sendMessage(msg);
   });
 
@@ -60,16 +61,19 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     }));
   };
 
+  const updateLastMessage = (message) => {
+    setState(prev => ({
+      ...prev,
+      messages: [...prev.messages.slice(0, 1)]
+    }))
+  };
+
   const defaultQuestions = (msg: string) => {
-    // if (msg === 'Tell me about transaction fraud.') {
-    //   handleTransactionFraud(msg);
-    // } else {
-      const clientMessage = createClientMessage(msg, {
-        delay: 300,
-      });
-      updateState(clientMessage);
-      queryCopilotWs(msg);
-    // }
+    const clientMessage = createClientMessage(msg, {
+      delay: 300,
+    });
+    updateState(clientMessage);
+    queryCopilotWs(msg);
   };
 
   const queryCopilotWs = (msg) => {
@@ -84,6 +88,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     }));
   };
 
+  // FOR REFERENCE
   // const handleTransactionFraud = (msg) => {
   //   console.log(msg);
   //   const clientMessage = createClientMessage(msg, {
@@ -122,6 +127,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
     }
   }, [lastMessage]);
 
+  // FOR REFERENCE
   // const queryCopilot = async (usrMsg: string) => {
   //   const settings = {
   //     method: 'POST',
@@ -163,6 +169,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
             defaultQuestions,
             // handleTransactionFraud,
             queryCopilotWs,
+            updateLastMessage
           },
         });
       })}

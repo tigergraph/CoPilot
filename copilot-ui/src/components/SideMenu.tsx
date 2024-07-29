@@ -10,6 +10,7 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 import { IoIosArrowForward } from "react-icons/io";
 import { useTheme } from "@/components/ThemeProvider";
 import { GoGear } from "react-icons/go";
+import { useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -21,6 +22,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogClose,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -49,10 +51,120 @@ import {
 } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { FaPaperclip } from "react-icons/fa6";
+import { useEffect } from "react";
 
+// TODO make dynamic
+const WS_HISTORY_URL = "/ui/user/supportai";
+const WS_CONVO_URL = "/ui/conversation";
 
-const SideMenu = ({ height }: { height?: string }) => {
+const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetConversationId?: any }) => {
   const getTheme = useTheme().theme;
+  // const [conhistory, setConHistory] = useState([])
+  const [conversationId, setConversationId] = useState([])
+  const [conversationId2, setConversationId2] = useState([])
+  const [newSet, setNewSet] = useState([])
+
+  
+
+  const fetchHistory2 = async () => {
+    setConversationId([]);
+    const creds = localStorage.getItem("creds");
+    const settings = {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${creds}`,
+        "Content-Type": "application/json",
+      }
+    }
+    const response = await fetch(WS_HISTORY_URL, settings);
+    const data = await response.json();
+    data.map(async (item: any) => {
+      const response2 = await fetch(`${WS_CONVO_URL}/${item.conversation_id}`, settings);
+      const obj = {
+        conversation_id: item.conversation_id,
+        content: await response2.json(),
+        date: formatDate(item.create_ts)
+        // date:  item.create_ts.filter((val,id,array) => array.indexOf(val) == id)
+      }
+      // eslint-disable-next-line
+      // @ts-ignore
+      setConversationId(prev => [...prev, obj]);
+      // console.log('resp', conversationId);
+    });
+  }
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric" as const, month: "long" as const, day: "numeric" as const}
+    return new Date(dateString).toLocaleDateString(undefined, options)
+  }
+
+  // eslint-disable-next-line
+  // @ts-ignore
+  const resumeConvo = async (id):any => {
+    const creds = localStorage.getItem("creds");
+    const settings = {
+      method: 'GET',
+      headers: {
+        Authorization: `Basic ${creds}`,
+        "Content-Type": "application/json",
+      }
+    }
+    const response = await fetch(`${WS_CONVO_URL}/${id}`, settings);
+    const data = await response.json();
+    setConversationId2(data);
+  }
+
+  const renderConvoHistory = () => {
+    return (
+      <div className="mb-[200px]">
+        {newSet.map((item: any, i) => {
+          return (
+            <div key={i}>
+              <h4 className="Urbane-Medium text-lg pl-6 pt-5 text-black dark:text-white">
+                {item.date}
+              </h4>
+              <ul className="menu border-b border-gray-300 dark:border-[#3D3D3D] text-black mx-6">
+                 <li className="text-ellipsis">
+                   <Dialog>
+                     <DialogTrigger asChild>
+                       <a href="#" className="flex py-3 my-3 px-3 items-center" onClick={() => resumeConvo(item.conversation_id)}>
+                         <HiOutlineChatBubbleOvalLeft className="text-xl mr-3" />
+                         <div>{item.content.map((d) => d.content)}</div>
+                         {/* <div>{item.content.filter((value) => value % 2 !== 0).map((value) => value.content * 2)}</div> */}
+                         ;
+                       </a>
+                     </DialogTrigger>
+                     <DialogContent className="sm:max-w-md">
+                     </DialogContent>
+                   </Dialog>
+                 </li>
+              </ul>
+            </div>
+          )}
+        )}
+      </div>
+    )
+  }
+
+
+  useEffect(() => {
+    fetchHistory2();
+    setGetConversationId(conversationId);
+    const groupByDate = array => array.reduce((results, item) => {
+      const current = results.find(i => i.date === item.date);
+      if (current) {
+        for (let property in item) {
+          if (property !== 'date') {
+            current[property] = item[property];
+          }
+        }
+      } else {
+        results.push({...item});
+      }
+      return results;
+    }, []);
+    setNewSet(groupByDate(conversationId));
+  }, [])
 
   return (
     <div
@@ -240,40 +352,9 @@ const SideMenu = ({ height }: { height?: string }) => {
         <img src="./tg-logo-bk.svg" className="mr-3 ml-2" />
         <span>Chat history</span>
       </h1>
-      <h4 className="Urbane-Medium text-lg pl-6 pt-5 text-black dark:text-white">
-        Today
-      </h4>
-      <ul className="menu border-b border-gray-300 dark:border-[#3D3D3D] text-black mx-6">
-        <li className="text-ellipsis">
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <HiOutlineChatBubbleOvalLeft className="text-xl mr-3" />
-            How many transactions...
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <HiOutlineChatBubbleOvalLeft className="text-xl mr-3" />
-            Describe the flow of trans..
-          </a>
-        </li>
-      </ul>
-      <h4 className="Urbane-Medium text-lg pl-6 pt-5 text-black dark:text-white">
-        Yesterday
-      </h4>
-      <ul className="menu border-b border-gray-300 dark:border-[#3D3D3D] text-black mx-6 mb-20">
-        <li className="text-ellipsis">
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <HiOutlineChatBubbleOvalLeft className="text-xl mr-3" />
-            Tell me more about trans...
-          </a>
-        </li>
-        <li>
-          <a href="#" className="flex py-3 my-3 px-3 items-center">
-            <HiOutlineChatBubbleOvalLeft className="text-xl mr-3" />
-            How transaction #8910223..
-          </a>
-        </li>
-      </ul>
+
+      {renderConvoHistory()}
+
       <div
         className={`hidden md:block w-[320px] md:max-w-[320px] absolute bg-white dark:bg-background dark:border-[#3D3D3D] rounded-bl-3xl border-t ${height ? "open-dialog-avatar" : "bottom-0"}`}
       >
