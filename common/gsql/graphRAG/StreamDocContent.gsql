@@ -1,5 +1,6 @@
-CREATE QUERY StreamDocContent(Vertex<Document> doc) {
+CREATE DISTRIBUTED QUERY StreamDocContent(Vertex<Document> doc) {
     Doc = {doc};
-    DocContent = SELECT c FROM Doc:d -(HAS_CONTENT)-> Content:c;
+    DocContent = SELECT c FROM Doc:d -(HAS_CONTENT)-> Content:c
+                 POST-ACCUM d.epoch_processed = datetime_to_epoch(now());
     PRINT DocContent;
 }

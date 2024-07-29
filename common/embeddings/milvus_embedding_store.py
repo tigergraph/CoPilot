@@ -1,18 +1,17 @@
 import logging
+import traceback
 from time import sleep, time
 from typing import Iterable, List, Optional, Tuple
 
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
-from pymilvus import connections, utility
-from pymilvus.exceptions import MilvusException
+from pymilvus import MilvusException, connections, utility
 
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
-from common.metrics.prometheus_metrics import metrics
 from common.logs.logwriter import LogWriter
-from pymilvus import MilvusException
+from common.metrics.prometheus_metrics import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         while retry_attempt < self.max_retry_attempts:
             try:
                 connections.connect(**self.milvus_connection)
-                metrics.milvus_active_connections.labels(self.collection_name).inc
+                # metrics.milvus_active_connections.labels(self.collection_name).inc
                 LogWriter.info(
                     f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
                     port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, collection={self.collection_name}"""
@@ -212,6 +211,76 @@ class MilvusEmbeddingStore(EmbeddingStore):
         except Exception as e:
             error_message = f"An error occurred while registering document: {str(e)}"
             LogWriter.error(error_message)
+
+    async def aadd_embeddings(
+        self,
+        embeddings: Iterable[Tuple[str, List[float]]],
+        metadatas: List[dict] = None,
+    ):
+        """Async Add Embeddings.
+        Add embeddings to the Embedding store.
+        Args:
+            embeddings (Iterable[Tuple[str, List[float]]]):
+                Iterable of content and embedding of the document.
+            metadatas (List[Dict]):
+                List of dictionaries containing the metadata for each document.
+                The embeddings and metadatas list need to have identical indexing.
+        """
+        try:
+            if metadatas is None:
+                metadatas = []
+
+            # add fields required by Milvus if they do not exist
+            if self.support_ai_instance:
+                for metadata in metadatas:
+                    if self.vertex_field not in metadata:
+                        metadata[self.vertex_field] = ""
+            else:
+                for metadata in metadatas:
+                    if "seq_num" not in metadata:
+                        metadata["seq_num"] = 1
+                    if "source" not in metadata:
+                        metadata["source"] = ""
+
+            LogWriter.info(
+                f"request_id={req_id_cv.get()} Milvus ENTRY aadd_embeddings()"
+            )
+            texts = [text for text, _ in embeddings]
+
+            # operation_type = "add_texts"
+            # metrics.milvus_query_total.labels(
+            #     self.collection_name, operation_type
+            # ).inc()
+            # start_time = time()
+
+            added = await self.milvus.aadd_texts(texts=texts, metadatas=metadatas)
+
+            # duration = time() - start_time
+            # metrics.milvus_query_duration_seconds.labels(
+            #     self.collection_name, operation_type
+            # ).observe(duration)
+
+            LogWriter.info(
+                f"request_id={req_id_cv.get()} Milvus EXIT aadd_embeddings()"
+            )
+
+            # Check if registration was successful
+            if added:
+                success_message = f"Document registered with id: {added[0]}"
+                LogWriter.info(success_message)
+                return success_message
+            else:
+                error_message = f"Failed to register document {added}"
+                LogWriter.error(error_message)
+                raise Exception(error_message)
+
+        except Exception as e:
+            error_message = f"An error occurred while registering document:{metadatas} ({len(texts)},{len(metadatas)})\nErr: {str(e)}"
+            LogWriter.error(error_message)
+            exc = traceback.format_exc()
+            LogWriter.error(exc)
+            LogWriter.error(f"{texts}")
+            raise e
 
     def get_pks(
         self,
@@ -506,11 +575,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
             return None
 
         try:
-            query_result = self.milvus.col.query(
-                expr=expr, output_fields=output_fields
-            )
+            query_result = self.milvus.col.query(expr=expr, output_fields=output_fields)
         except MilvusException as exc:
-            LogWriter.error(f"Failed to get outputs: {self.milvus.collection_name} error: {exc}")
+            LogWriter.error(
+                f"Failed to get outputs: {self.milvus.collection_name} error: {exc}"
+            )
             raise exc
 
         return query_result

@@ -16,6 +16,56 @@ class GraphExtractor(BaseExtractor):
         )
 
     def extract(self, text) -> list[GraphDocument]:
+        """
+        returns a list of GraphDocument:
+        Each doc is:
+            nodes=[
+                Node(
+                    id='Marie Curie',
+                    type='Person',
+                    properties={
+                        'description': 'A Polish and naturalised-French physicist and chemist who conducted pioneering research on radioactivity.'
+                    }
+                ),
+                ...
+            ],
+            relationships=[
+                Relationship(
+                    source=Node(id='Marie Curie', type='Person'),
+                    target=Node(id='Pierre Curie', type='Person'),
+                    type='SPOUSE'
+                ),
+                ...
+            ]
+        """
         doc = Document(page_content=text)
         graph_docs = self.transformer.convert_to_graph_documents([doc])
+        translated_docs = self.translate(graph_docs)
+        return translated_docs
+
+    async def aextract(self, text:str) -> list[GraphDocument]:
+        """
+        returns a list of GraphDocument:
+        Each doc is:
+            nodes=[
+                Node(
+                    id='Marie Curie',
+                    type='Person',
+                    properties={
+                        'description': 'A Polish and naturalised-French physicist and chemist who conducted pioneering research on radioactivity.'
+                    }
+                ),
+                ...
+            ],
+            relationships=[
+                Relationship(
+                    source=Node(id='Marie Curie', type='Person'),
+                    target=Node(id='Pierre Curie', type='Person'),
+                    type='SPOUSE'
+                ),
+                ...
+            ]
+        """
+        doc = Document(page_content=text)
+        graph_docs = await self.transformer.aconvert_to_graph_documents([doc])
         return graph_docs

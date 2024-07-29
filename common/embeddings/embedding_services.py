@@ -1,11 +1,13 @@
-import os
-from typing import List
-from langchain.schema.embeddings import Embeddings
 import logging
+import os
 import time
+from typing import List
+
+from langchain.schema.embeddings import Embeddings
+
 from common.logs.log import req_id_cv
-from common.metrics.prometheus_metrics import metrics
 from common.logs.logwriter import LogWriter
+from common.metrics.prometheus_metrics import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,33 @@ class EmbeddingModel(Embeddings):
                 duration
             )
 
+    async def aembed_query(self, question: str) -> List[float]:
+        """Embed Query Async.
+        Embed a string.
+
+        Args:
+            question (str):
+                A string to embed.
+        """
+        # start_time = time.time()
+        # metrics.llm_inprogress_requests.labels(self.model_name).inc()
+
+        # try:
+        logger.debug_pii(f"aembed_query() embedding question={question}")
+        query_embedding = await self.embeddings.aembed_query(question)
+        # metrics.llm_success_response_total.labels(self.model_name).inc()
+        return query_embedding
+        # except Exception as e:
+        #     # metrics.llm_query_error_total.labels(self.model_name).inc()
+        #     raise e
+        # finally:
+        #     metrics.llm_request_total.labels(self.model_name).inc()
+        #     metrics.llm_inprogress_requests.labels(self.model_name).dec()
+        #     duration = time.time() - start_time
+        #     metrics.llm_request_duration_seconds.labels(self.model_name).observe(
+        #         duration
+        #     )
+
 
 class AzureOpenAI_Ada002(EmbeddingModel):
     """Azure OpenAI Ada-002 Embedding Model"""
@@ -124,8 +153,8 @@ class AWS_Bedrock_Embedding(EmbeddingModel):
     """AWS Bedrock Embedding Model"""
 
     def __init__(self, config):
-        from langchain_community.embeddings import BedrockEmbeddings
         import boto3
+        from langchain_community.embeddings import BedrockEmbeddings
 
         super().__init__(config=config, model_name=config["embedding_model"])
 

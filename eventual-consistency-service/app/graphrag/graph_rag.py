@@ -2,100 +2,59 @@ import asyncio
 import logging
 import time
 
-import ecc_util
+import httpx
 from aiochannel import Channel
-from graphrag.util import chunk_doc, install_query, stream_docs
+from graphrag import workers
+from graphrag.util import init, make_headers, stream_doc_ids,http_timeout
 from pyTigerGraph import TigerGraphConnection
 
-from common.chunkers.base_chunker import BaseChunker
-from common.config import (
-    doc_processing_config,
-    embedding_service,
-    get_llm_service,
-    llm_config,
-    milvus_config,
-)
+from common.config import embedding_service
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
-from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 
+http_logs = logging.getLogger("httpx")
+http_logs.setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
 consistency_checkers = {}
 
 
-async def install_queries(
-    requried_queries: list[str], conn: TigerGraphConnection, n_workers=8
+async def stream_docs(
+    conn: TigerGraphConnection,
+    docs_chan: Channel,
+    ttl_batches: int = 10,
 ):
-    # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    """
+    Streams the document contents into the docs_chan
+    """
+    logger.info("streaming docs")
+    headers = make_headers(conn)
+    for i in range(ttl_batches):
+        doc_ids = await stream_doc_ids(conn, i, ttl_batches)
+        if doc_ids["error"]:
+            continue  # TODO: handle error
 
-    tasks = []
-    async with asyncio.TaskGroup() as grp:
-        for q in requried_queries:
-            async with asyncio.Semaphore(n_workers):
-                q_name = q.split("/")[-1]
-                # if the query is not installed, install it
-                if q_name not in installed_queries:
-                    task = grp.create_task(install_query(conn, q))
-                    tasks.append(task)
+        logger.info("********doc_ids")
+        logger.info(doc_ids)
+        logger.info("********")
+        for d in doc_ids["ids"]:
+            async with httpx.AsyncClient(timeout=http_timeout) as client:
+                res = await client.get(
+                    f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
+                    params={"doc": d},
+                    headers=headers,
+                )
+                # TODO: check for errors
+                # this will block and wait if the channel is full
+                logger.info("steam_docs writes to docs")
+                await docs_chan.put(res.json()["results"][0]["DocContent"][0])
+            # break  # single doc test FIXME: delete
+        # break  # single batch test FIXME: delete
 
-    for t in tasks:
-        print(t.result())
-        # TODO: Check if anything had an error
-    return "", "", ""
-
-
-async def init(
-    graphname: str, conn: TigerGraphConnection
-) -> tuple[BaseChunker, dict[str, MilvusEmbeddingStore], BaseExtractor]:
-    # install requried queries
-    requried_queries = [
-        # "common/gsql/supportai/Scan_For_Updates",
-        # "common/gsql/supportai/Update_Vertices_Processing_Status",
-        # "common/gsql/supportai/ECC_Status",
-        # "common/gsql/supportai/Check_Nonexistent_Vertices",
-        "common/gsql/graphRAG/StreamDocIds",
-        "common/gsql/graphRAG/StreamDocContent",
-    ]
-    # await install_queries(requried_queries, conn)
-    return await install_queries(requried_queries, conn)
-
-    # init processing tools
-    chunker = ecc_util.get_chunker()
-
-    vector_indices = {}
-    vertex_field = milvus_config.get("vertex_field", "vertex_id")
-    index_names = milvus_config.get(
-        "indexes",
-        ["Document", "DocumentChunk", "Entity", "Relationship"],
-    )
-    for index_name in index_names:
-        vector_indices[graphname + "_" + index_name] = MilvusEmbeddingStore(
-            embedding_service,
-            host=milvus_config["host"],
-            port=milvus_config["port"],
-            support_ai_instance=True,
-            collection_name=graphname + "_" + index_name,
-            username=milvus_config.get("username", ""),
-            password=milvus_config.get("password", ""),
-            vector_field=milvus_config.get("vector_field", "document_vector"),
-            text_field=milvus_config.get("text_field", "document_content"),
-            vertex_field=vertex_field,
-        )
-
-    if doc_processing_config.get("extractor") == "llm":
-        extractor = GraphExtractor()
-    elif doc_processing_config.get("extractor") == "llm":
-        extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
-    else:
-        raise ValueError("Invalid extractor type")
-
-    if vertex_field is None:
-        raise ValueError(
-            "vertex_field is not defined. Ensure Milvus is enabled in the configuration."
-        )
-
-    return chunker, vector_indices, extractor
+    logger.info("stream_docs done")
+    # close the docs chan -- this function is the only sender
+    logger.info("****** closing docs chan")
+    docs_chan.close()
 
 
 async def chunk_docs(
@@ -109,100 +68,120 @@ async def chunk_docs(
     Creates and starts one worker for each document
     in the docs channel.
     """
+    logger.info("Reading from docs channel")
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for content in docs_chan:
-            await embed_chan.put(content)  # send the document to be embedded
+            logger.info("*********reading from docs chan")
+            # continue
+            v_id = content["v_id"]
+            txt = content["attributes"]["text"]
+            # send the document to be embedded
+            logger.info("chunk writes to extract")
+            await embed_chan.put((v_id, txt, "Document"))
+
             task = grp.create_task(
-                chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
+                workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
             )
             doc_tasks.append(task)
             # break  # single doc  FIXME: delete
+            logger.info("*********done reading from docs chan")
 
+    logger.info("chunk_docs done")
     # do something with doc_tasks?
-    for t in doc_tasks:
-        print(t.result())
-
-    # FIXME: don't close these there, other functions will send to them
-    upsert_chan.close()
-    embed_chan.close()
+    # for t in doc_tasks:
+    # logger.info(t.result())
 
     # close the extract chan -- chunk_doc is the only sender
-    # and chunk_doc calls are kicked off from here (this is technically the sender)
+    # and chunk_doc calls are kicked off from here
+    logger.info("********closing extract chan")
     extract_chan.close()
 
 
 async def upsert(upsert_chan: Channel):
     """
     Creates and starts one worker for each upsert job
-    queue expects:
+    chan expects:
     (func, args) <- q.get()
     """
 
+    logger.info("Reading from upsert channel")
     # consume task queue
     upsert_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for func, args in upsert_chan:
-            # print("func name >>>>>", func.__name__, args)
-            # grp.create_task(todo())
+            logger.info("*********reading from upsert chan")
+            logger.info(f"{func.__name__}, {args[1]}")
             # continue
-
             # execute the task
             t = grp.create_task(func(*args))
             upsert_tasks.append(t)
+            logger.info("*********done reading from upsert chan")
 
-    print(f"upsert done")
+    logger.info(f"upsert done")
     # do something with doc_tasks?
-    for t in upsert_tasks:
-        print(t.result())
+    # for t in upsert_tasks:
+    #     logger.info(t.result())
 
 
-async def embed(embed_chan: Channel):
+async def embed(
+    embed_chan: Channel, index_stores: dict[str, MilvusEmbeddingStore], graphname: str
+):
     """
     Creates and starts one worker for each embed job
+    chan expects:
+    (v_id, content, index_name) <- q.get()
     """
-
-    # consume task queue
-    responses = []
+    logger.info("Reading from embed channel")
     async with asyncio.TaskGroup() as grp:
-        async for item in embed_chan:
-            print("embed item>>>>>", type(item))
-            grp.create_task(todo())
-            continue
-            # execute the task
-            # response = await func(*args)
+        # consume task queue
+        async for v_id, content, index_name in embed_chan:
+            logger.info("*********reading from embed chan")
+            # continue
+            embedding_store = index_stores[f"{graphname}_{index_name}"]
+            logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
+            grp.create_task(
+                workers.embed(
+                    embedding_service,
+                    embedding_store,
+                    v_id,
+                    content,
+                )
+            )
+            logger.info("*********done reading from embed chan")
 
-            # append task results to worker results/response
-            # responses.append(response)
-
-    print(f"embed done")
-    return responses
+    logger.info(f"embed done")
 
 
-async def extract(extract_chan: Channel):
+async def extract(
+    extract_chan: Channel,
+    upsert_chan: Channel,
+    embed_chan: Channel,
+    extractor: BaseExtractor,
+    conn: TigerGraphConnection,
+):
     """
     Creates and starts one worker for each extract job
+    chan expects:
+    (chunk , chunk_id) <- q.get()
     """
-
+    logger.info("Reading from extract channel")
     # consume task queue
-    responses = []
     async with asyncio.TaskGroup() as grp:
         async for item in extract_chan:
-            print("extract item>>>>>", type(item))
-            grp.create_task(todo())
-            continue
-            # execute the task
-            # response = await func(*args)
-
+            logger.info("*********reading from extract chan")
+            logger.info("*********done reading from extract chan")
+            grp.create_task(
+                workers.extract(upsert_chan, embed_chan, extractor, conn, *item)
+            )
             # append task results to worker results/response
-            # responses.append(response)
+            logger.info("*********done reading from extract chan")
 
-    print(f"embed done")
-    return responses
+    logger.info(f"extract done")
 
-
-async def todo():
-    await asyncio.sleep(1)
+    logger.info("****closing upsert and embed chan")
+    upsert_chan.close()
+    embed_chan.close()
 
 
 async def run(graphname: str, conn: TigerGraphConnection):
@@ -219,14 +198,13 @@ async def run(graphname: str, conn: TigerGraphConnection):
 
     """
 
-    # init configurable objects
-    await init(graphname, conn)
+    extractor, index_stores = await init(conn)
     # return
     start = time.perf_counter()
 
     # TODO: make configurable
     tasks = []
-    docs_chan = Channel(15)  # process n chunks at a time max
+    docs_chan = Channel(1)  # process n chunks at a time max
     embed_chan = Channel(100)
     upsert_chan = Channel(100)
     extract_chan = Channel(100)
@@ -243,12 +221,14 @@ async def run(graphname: str, conn: TigerGraphConnection):
         t = grp.create_task(upsert(upsert_chan))
         tasks.append(t)
         # # embed
-        t = grp.create_task(embed(embed_chan))
+        t = grp.create_task(embed(embed_chan, index_stores, graphname))
         tasks.append(t)
         # extract entities
-        t = grp.create_task(extract(extract_chan))
+        t = grp.create_task(
+            extract(extract_chan, upsert_chan, embed_chan, extractor, conn)
+        )
         tasks.append(t)
     end = time.perf_counter()
 
-    print("DONE")
-    print(end - start)
+    logger.info("DONE")
+    logger.info(end - start)
