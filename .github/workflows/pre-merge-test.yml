@@ -1,0 +1,77 @@
+name: Pre Merge Test
+
+on:
+  pull_request:
+    branches:
+      - cloud-dev
+
+env:
+  AWS_REGION: us-west-1
+  AWS_S3_BUCKET: tgcloud-test
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  cloud-api-test:
+    name: Run Cloud API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone the cloud repo
+        uses: actions/checkout@v4
+        with:
+          repository: 'tigergraph/cloud-universe'
+          token: ${{ secrets.CICD_GITHUB_TOKEN }}
+          path: cloud-universe
+          ref: TCE-4416-v2
+
+      - name: Run API test
+        run: |
+          cd cloud-universe
+          bash tests/run_cloud_api.sh "copilot_test" "" "org=qe-dev"
+
+      - name: configure aws credentials
+        if: always()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.S3_ROLE_DEV }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Generate API Allure report and upload it to S3
+        if: always()
+        run: |
+          cd cloud-universe
+          wget --no-verbose -O /tmp/allure-commandline.zip https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.19.0/allure-commandline-2.19.0.zip && unzip /tmp/allure-commandline.zip
+          mkdir tests/allure-report
+          allure-2.19.0/bin/allure generate tests/alluredir/cloud_api -o tests/allure-report
+          aws s3 sync tests/allure-report s3://${{ env.AWS_S3_BUCKET }}/allure-report/${{ github.run_id }}-${{ github.run_attempt }}/api --follow-symlinks --delete
+          echo "### API Test Report URL:" >> $GITHUB_STEP_SUMMARY
+          echo "http://${{ env.AWS_S3_BUCKET }}.s3.us-west-1.amazonaws.com/allure-report/${{ github.run_id }}-${{ github.run_attempt }}/api/index.html" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cp -r /tmp/e2e/log tests/ 2>/dev/null || :
+          if [ -n "$(find tests/junit -maxdepth 1 -name 'test-results*.xml' 2>/dev/null)" ]; then
+              echo "Files matching 'test-results*.xml' found in tests/junit directory."
+              ls -l tests/junit/
+          else
+              echo "No files matching 'test-results*.xml' found in tests/log directory."
+              mkdir -p tests/junit
+              touch tests/junit/test-results.xml
+          fi
+
+      - name: Upload API test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-test-api
+          path: |
+            cloud-universe/tests/environment.properties
+            cloud-universe/tests/prepare_env_log*
+            cloud-universe/tests/junit/test-results*.xml
+            cloud-universe/tests/latest_logs/
+            cloud-universe/tests/alluredir/
+            cloud-universe/tests/data/log/*.log
+            cloud-universe/tests/log/
