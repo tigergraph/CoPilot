@@ -1,6 +1,6 @@
 services:
   copilot:
-    image: tigergraphml/copilot:latest 
+    image: tigergraphml/copilot:dev 
     container_name: copilot
     build:
       context: .
@@ -18,10 +18,9 @@ services:
       USE_CYPHER: "true"
     volumes:
       - ./configs/:/code/configs
-      - ./common:/code/common
 
   eventual-consistency-service:
-    image: tigergraphml/ecc:latest
+    image: tigergraphml/ecc:dev
     container_name: eventual-consistency-service
     build:
       context: .
@@ -35,10 +34,9 @@ services:
       LOGLEVEL: "INFO"
     volumes:
       - ./configs/:/code/configs
-      - ./common:/code/common
 
   chat-history:
-    image: tigergraphml/chat-history:latest
+    image: tigergraphml/chat-history:dev
     container_name: chat-history
     build:
       context: chat-history/
@@ -69,7 +67,7 @@ services:
   #     - ./common:/code/common
       
   ui:
-    image: tigergraphml/copilot-ui:latest 
+    image: tigergraphml/copilot-ui:dev 
     container_name: ui 
     build:
       context: copilot-ui
@@ -88,7 +86,7 @@ services:
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+      - milvus_etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
@@ -104,19 +102,19 @@ services:
       MINIO_SECRET_KEY: minioadmin
     ports:
       - "9001:9001"
-      - "9002:9000"
+      - "9000:9000"
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+      - milvus_minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9002/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
 
   milvus-standalone:
     container_name: milvus-standalone
-    image: milvusdb/milvus:v2.3.10
+    image: milvusdb/milvus:v2.4.6
     command: ["milvus", "run", "standalone"]
     security_opt:
     - seccomp:unconfined
@@ -124,7 +122,7 @@ services:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+      - milvus:/var/lib/milvus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: 30s
@@ -148,3 +146,8 @@ services:
     depends_on:
       - ui
       - copilot
+
+volumes:
+  milvus_etcd:
+  milvus_minio:
+  milvus:
