@@ -2,7 +2,7 @@ import logging
 from time import sleep, time
 from typing import Iterable, List, Optional, Tuple
 
-from langchain_community.vectorstores import Milvus
+from langchain_milvus.vectorstores import Milvus
 from langchain_core.documents.base import Document
 from pymilvus import connections, utility
 from pymilvus.exceptions import MilvusException
