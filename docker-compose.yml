@@ -1,6 +1,6 @@
 services:
   copilot:
-    image: tigergraphml/copilot:dev 
+    image: tigergraphml/copilot:latest 
     container_name: copilot
     build:
       context: .
@@ -20,7 +20,7 @@ services:
       - ./configs/:/code/configs
 
   eventual-consistency-service:
-    image: tigergraphml/ecc:dev
+    image: tigergraphml/ecc:latest
     container_name: eventual-consistency-service
     build:
       context: .
@@ -37,7 +37,7 @@ services:
       - ./configs/:/code/configs
 
   chat-history:
-    image: tigergraphml/chat-history:dev
+    image: tigergraphml/chat-history:latest
     container_name: chat-history
     build:
       context: chat-history/
@@ -68,7 +68,7 @@ services:
   #     - ./common:/code/common
       
   ui:
-    image: tigergraphml/copilot-ui:dev 
+    image: tigergraphml/copilot-ui:latest 
     container_name: ui 
     build:
       context: copilot-ui
