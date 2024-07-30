@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	configPath:= os.Getenv("CONFIG")
+	configPath := os.Getenv("CONFIG")
 	config, err := config.LoadConfig(configPath)
 	if err != nil {
 		panic(err)
@@ -30,6 +30,7 @@ func main() {
 	router.HandleFunc("GET /user/{userId}", routes.GetUserConversations)
 	router.HandleFunc("GET /conversation/{conversationId}", routes.GetConversation)
 	router.HandleFunc("POST /conversation", routes.UpdateConversation)
+	router.HandleFunc("GET /get_feedback", routes.GetFeedback)
 
 	// create server with middleware
 	dev := strings.ToLower(os.Getenv("DEV")) == "true"

@@ -131,6 +131,18 @@ func UpdateConversationById(message structs.Message) (*structs.Conversation, err
 	return &convo, nil
 }
 
+// GetAllMessages retrieves all messages from the database
+func GetAllMessages() ([]structs.Message, error) {
+	var messages []structs.Message
+
+	// Use GORM to query all messages
+	if err := db.Find(&messages).Error; err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
+
 func populateDB() {
 	mu.Lock()
 	defer mu.Unlock()

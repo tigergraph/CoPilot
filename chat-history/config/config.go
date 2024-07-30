@@ -11,13 +11,15 @@ type LLMConfig struct {
 }
 
 type DbConfig struct {
-	Port      string `json:"apiPort"`
-	DbPath    string `json:"dbPath"`
-	DbLogPath string `json:"dbLogPath"`
-	LogPath   string `json:"logPath"`
+	Port                    string   `json:"apiPort"`
+	DbPath                  string   `json:"dbPath"`
+	DbLogPath               string   `json:"dbLogPath"`
+	LogPath                 string   `json:"logPath"`
+	TgDbPath                string   `json:"TGDBPath"`
+	ConversationAccessRoles []string `json:"tgDbPath"`
 	// DbHostname string `json:"hostname"`
-	// Username string `json:"username"`
-	// Password string `json:"password"`
+	// Username   string `json:"username"`
+	// Password   string `json:"password"`
 	// GetToken string `json:"getToken"`
 	// DefaultTimeout       string `json:"default_timeout"`
 	// DefaultMemThreshold string `json:"default_mem_threshold"`

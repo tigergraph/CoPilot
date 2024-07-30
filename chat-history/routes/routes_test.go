@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -393,6 +394,134 @@ func messageEquals(m, msg structs.Message) bool {
 		return true
 	}
 	return false
+}
+
+func TestExecuteGSQL(t *testing.T) {
+	// Replace these values with your actual TigerGraph details
+	host := "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io"
+	username := "supportai"
+	password := "supportai"
+	query := "SHOW USER" // Replace with an actual GSQL query
+
+	response, err := executeGSQL(host, username, password, query)
+	if err != nil {
+		t.Fatalf("Failed to execute GSQL query: %v", err)
+	}
+
+	// Check for common errors or issues in the response
+	if strings.Contains(response, "400 Bad Request") {
+		t.Error("Received '400 Bad Request' error. Please check the query and server configuration.")
+	}
+
+	if strings.Contains(response, "401 Unauthorized") {
+		t.Error("Received '401 Unauthorized' error. Please check the credentials and access permissions.")
+	}
+
+	if strings.Contains(response, "403 Forbidden") {
+		t.Error("Received '403 Forbidden' error. The user may not have sufficient permissions to execute the query.")
+	}
+
+	if strings.Contains(response, "500 Internal Server Error") {
+		t.Error("Received '500 Internal Server Error'. This indicates a server-side issue.")
+	}
+
+	// Add any additional checks on the response here
+	// For example:
+	if response == "" {
+		t.Error("Received empty response from GSQL query")
+	}
+
+	// Check if the response contains "Name" and "Global Roles"
+	if !strings.Contains(response, "Name") {
+		t.Error("Response does not contain 'Name'.")
+	}
+
+	if !strings.Contains(response, "Global Roles") {
+		t.Error("Response does not contain 'Global Roles'.")
+	}
+}
+
+func TestParseUserRoles(t *testing.T) {
+	userInfo := `
+  - Name: feedbackauthtest
+    - Global Roles: globalobserver
+    - Graph 'EarningsCallRAG' Roles: queryreader
+    - Graph 'Transaction_Fraud' Roles: designer, queryreader
+    - Graph 'pyTigerGraphRAG' Roles: queryreader, querywriter
+    - Secret: ad9****v7p
+      - Alias: AUTO_GENERATED_ALIAS_suv6mm5
+      - GraphName: Transaction_Fraud
+    - LastSuccessLogin: Mon Jul 22 06:57:29 UTC 2024
+    - NextValidLogin: Mon Jul 22 06:57:29 UTC 2024
+    - FailedAttempts: 0
+    - ShowAlterPasswordWarning: false
+
+  - Name: richard@epsilla.com
+    - Global Roles: globalobserver
+    - LastSuccessLogin: Tue Jul 23 16:35:45 UTC 2024
+    - NextValidLogin: Tue Jul 23 16:35:45 UTC 2024
+    - FailedAttempts: 0
+    - ShowAlterPasswordWarning: false
+	`
+
+	expectedRoles := []string{"globalobserver"}
+
+	roles := parseUserRoles(userInfo, "feedbackauthtest")
+
+	fmt.Println("Extracted Roles:", roles)
+
+	if len(roles) != len(expectedRoles) {
+		t.Fatalf("expected %d roles, got %d", len(expectedRoles), len(roles))
+	}
+
+	for i, role := range expectedRoles {
+		if roles[i] != role {
+			t.Errorf("expected role %s, got %s", role, roles[i])
+		}
+	}
+}
+
+func TestGetFeedback(t *testing.T) {
+	setupDB(t, true)
+	// Create a request with Basic Auth
+	req, err := http.NewRequest("GET", "/get_feedback", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.SetBasicAuth("supportai", "supportai") // Use a valid username and password for testing
+
+	// Record the response
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(GetFeedback)
+
+	// Serve the request
+	handler.ServeHTTP(rr, req)
+
+	// Check the response status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Check the response body for expected messages
+	var messages []structs.Message
+	if err := json.Unmarshal(rr.Body.Bytes(), &messages); err != nil {
+		t.Errorf("Failed to parse response body: %v", err)
+	}
+
+	// Print the messages for debugging
+	fmt.Println("Retrieved messages:", messages)
+	// Validate that the messages are as expected
+	expectedMessagesCount := 2 // Based on populateDB function
+	if len(messages) != expectedMessagesCount {
+		t.Errorf("Expected %d messages, got %d", expectedMessagesCount, len(messages))
+	}
+
+	// Additional checks to ensure the response contains the correct data
+	if len(messages) > 0 {
+		if messages[0].Content != "This is the first message, there is no parent" {
+			t.Errorf("Unexpected message content: %v", messages[0].Content)
+		}
+	}
 }
 
 // helpers
