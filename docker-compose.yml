@@ -32,6 +32,7 @@ services:
       DB_CONFIG: "/code/configs/db_config.json"
       MILVUS_CONFIG: "/code/configs/milvus_config.json"
       LOGLEVEL: "INFO"
+      INIT_EMBED_STORE: "false"
     volumes:
       - ./configs/:/code/configs
 
