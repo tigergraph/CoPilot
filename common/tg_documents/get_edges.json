@@ -1,0 +1,16 @@
+{
+    "function_header": "getEdges",
+    "description": "Return edges from the database that comply with certain conditions",
+    "docstring": "`getEdges(sourceVertexType: str, sourceVertexId: Union[str, int], edgeType: str = '', targetVertexType: str = '', targetVertexId: Union[str, int] = '', where: str = '', limit: Union[int, str] = None, sort: str = '')` → Union[dict, str, pd.DataFrame]\nRetrieves edges of the given edge type originating from a specific source vertex.\nOnly sourceVertexType and sourceVertexId are required. If targetVertexId is specified, then targetVertexType must also be specified. If targetVertexType is specified, then edgeType must also be specified.\nParameters:\nsourceVertexType: The name of the source vertex type.\nsourceVertexId: The primary ID value of the source vertex instance.\nedgeType: The name of the edge type.\ntargetVertexType: The name of the target vertex type.\ntargetVertexId: The primary ID value of the target vertex instance.\nwhere: Comma separated list of conditions that are all applied on each edge’s attributes. The conditions are in logical conjunction (i.e. they are 'AND’ed' together).\nsort: Comma separated list of attributes the results should be sorted by.\nlimit: Maximum number of edge instances to be returned (after sorting).\nReturns:\nThe (selected) details of the (matching) edge instances (sorted, limited) as JSON.",
+    "param_types": {
+        "sourceVertexType": "str",
+        "sourceVertexId": "Union[str, int]",
+        "edgeType": "str",
+        "targetVertexType": "str",
+        "targetVertexId": "Union[str, int]",
+        "where": "str",
+        "limit": "Union[int, str]",
+        "sort": "str"
+    },
+    "custom_query": false
+}

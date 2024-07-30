@@ -82,6 +82,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
                     port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, collection={self.collection_name}"""
                 )
+                LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 self.milvus = Milvus(
                     embedding_function=self.embedding_service,
                     collection_name=self.collection_name,
@@ -120,7 +121,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             LogWriter.info("Milvus add initial load documents init()")
             loader = DirectoryLoader(
-                "./tg_documents/",
+                "./common/tg_documents/",
                 glob="*.json",
                 loader_cls=JSONLoader,
                 loader_kwargs={

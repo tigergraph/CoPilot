@@ -1,0 +1,10 @@
+{
+    "function_header": "getVertexStats",
+    "description": "Get the statistics of vertex attributes.",
+    "docstring": "`getVertexStats(vertexTypes: Union[str, list], skipNA: bool = False) → dict`\nReturns vertex attribute statistics.\nParameters:\nvertexTypes: A single vertex type name or a list of vertex types names or '*' for all vertex types.\nskipNA: Skip those non-applicable vertices that do not have attributes or none of their attributes have statistics gathered.\nReturns:\nA dictionary of various vertex stats for each vertex type specified.",
+    "param_types": {
+        "vertexTypes": "Union[str, list]",
+        "skipNA": "bool"
+    },
+    "custom_query": false
+}
