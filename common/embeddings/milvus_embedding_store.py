@@ -109,7 +109,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
     def load_documents(self):
         if not self.check_collection_exists():
-            from langchain.document_loaders import DirectoryLoader, JSONLoader
+            from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
                 metadata["function_header"] = record.get("function_header")
@@ -131,6 +131,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 },
             )
             docs = loader.load()
+
+            logger.info(f"docs: {docs}")
 
             operation_type = "load_upsert"
             metrics.milvus_query_total.labels(
