@@ -6,15 +6,14 @@ from urllib.parse import quote_plus
 import ecc_util
 import httpx
 from aiochannel import Channel
-from graphrag import util  # import upsert_edge, upsert_vertex
-from langchain_community.graphs.graph_document import GraphDocument
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
+from graphrag import util  # import upsert_edge, upsert_vertex
+from langchain_community.graphs.graph_document import GraphDocument
+from pyTigerGraph import TigerGraphConnection
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
@@ -36,7 +35,7 @@ INSTALL QUERY {query_name}"""
     tkn = base64.b64encode(f"{conn.username}:{conn.password}".encode()).decode()
     headers = {"Authorization": f"Basic {tkn}"}
 
-    async with httpx.AsyncClient(timeout=util.http_timeout) as client:
+    async with httpx.AsyncClient(timeout=None) as client:
         res = await client.post(
             conn.gsUrl + "/gsqlserver/gsql/file",
             data=quote_plus(query.encode("utf-8")),
@@ -70,26 +69,24 @@ async def chunk_doc(
     chunks = chunker.chunk(doc["attributes"]["text"])
     v_id = doc["v_id"]
     logger.info(f"Chunking {v_id}")
-    # TODO: n chunks at a time
     for i, chunk in enumerate(chunks):
         chunk_id = f"{v_id}_chunk_{i}"
         # send chunks to be upserted (func, args)
-        logger.info("chunk writes to upsert")
+        logger.info("chunk writes to upsert_chan")
         await upsert_chan.put((upsert_chunk, (conn, v_id, chunk_id, chunk)))
 
         # send chunks to be embedded
-        logger.info("chunk writes to embed")
+        logger.info("chunk writes to embed_chan")
         await embed_chan.put((v_id, chunk, "DocumentChunk"))
 
         # send chunks to have entities extracted
-        logger.info("chunk writes to extract")
+        logger.info("chunk writes to extract_chan")
         await extract_chan.put((chunk, chunk_id))
 
     return doc["v_id"]
 
 
 async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
-    logger.info(f"Upserting chunk {chunk_id}")
     logger.info(f"Upserting chunk {chunk_id}")
     date_added = int(time.time())
     await util.upsert_vertex(
@@ -142,7 +139,7 @@ async def embed(
         index_name: str
             the vertex index to write to
     """
-    logger.info(f"Embedding {v_id}, {content}")
+    logger.info(f"Embedding {v_id}")
 
     vec = await embed_svc.aembed_query(content)
     await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
@@ -161,8 +158,7 @@ async def extract(
     # upsert nodes and edges to the graph
     for doc in extracted:
         for node in doc.nodes:
-            logger.info("extract writes entity vert to upsert")
-            logger.info(f"Node: {node.id}| props: {node.properties}")
+            logger.info(f"extract writes entity vert to upsert\nNode: {node.id}")
             v_id = str(node.id)
             desc = node.properties.get("description", "")
             await upsert_chan.put(
@@ -203,8 +199,9 @@ async def extract(
             await embed_chan.put((v_id, desc, "Entity"))
 
         for edge in doc.relationships:
-            logger.info("extract writes relates edge to upsert")
-            logger.info(f"{edge}")
+            logger.info(
+                f"extract writes relates edge to upsert\n{edge.source.id} -({edge.type})->  {edge.target.id}"
+            )
             await upsert_chan.put(
                 (
                     util.upsert_edge,
@@ -221,6 +218,3 @@ async def extract(
             )
             # embed "Relationship",
             # (v_id, content, index_name)
-
-    # TODO:
-    # embed the extracted entities

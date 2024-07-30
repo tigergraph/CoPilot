@@ -136,7 +136,7 @@ class OpenAI_Embedding(EmbeddingModel):
         )
         from langchain.embeddings import OpenAIEmbeddings
 
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = OpenAIEmbeddings().aembed_query
 
 
 class VertexAI_PaLM_Embedding(EmbeddingModel):

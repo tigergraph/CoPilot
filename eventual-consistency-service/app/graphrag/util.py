@@ -5,9 +5,6 @@ import logging
 import traceback
 
 import httpx
-from graphrag import workers
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import (
     doc_processing_config,
     embedding_service,
@@ -19,6 +16,8 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
+from graphrag import workers
+from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
@@ -33,6 +32,7 @@ async def install_queries(
     tasks = []
     async with asyncio.TaskGroup() as grp:
         for q in requried_queries:
+            # only install n queries at a time (n=n_workers)
             async with asyncio.Semaphore(n_workers):
                 q_name = q.split("/")[-1]
                 # if the query is not installed, install it
@@ -41,8 +41,17 @@ async def install_queries(
                     tasks.append(task)
 
     for t in tasks:
-        logger.info(t.result())
-        # TODO: Check if anything had an error
+        res = t.result()
+        # stop system if a required query doesn't install
+        if res["error"]:
+            raise Exception(res["message"])
+
+
+async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
+    content = "init"
+    vec = embedding_service.embed_query(content)
+    await s.aadd_embeddings([(content, vec)], [{vertex_field: content}])
+    s.remove_embeddings(expr=f"{vertex_field} in ['{content}']")
 
 
 async def init(
@@ -78,28 +87,28 @@ async def init(
         ],
     )
     index_stores = {}
-    content = "init"
-    # TODO:do concurrently 
-    for index_name in index_names:
-        name = conn.graphname + "_" + index_name
-        s = MilvusEmbeddingStore(
-            embedding_service,
-            host=milvus_config["host"],
-            port=milvus_config["port"],
-            support_ai_instance=True,
-            collection_name=name,
-            username=milvus_config.get("username", ""),
-            password=milvus_config.get("password", ""),
-            vector_field=milvus_config.get("vector_field", "document_vector"),
-            text_field=milvus_config.get("text_field", "document_content"),
-            vertex_field=vertex_field,
-        )
-        # TODO: only do this if collection doesn't exist
-        vec = embedding_service.embed_query(content)
-        LogWriter.info(f"Initializing {name}")
-        s.add_embeddings([(content, vec)], [{vertex_field: content}])
-        s.remove_embeddings(expr=f"{vertex_field} in ['{content}']")
-        index_stores[name] = s
+    async with asyncio.TaskGroup() as tg:
+        for index_name in index_names:
+            name = conn.graphname + "_" + index_name
+            s = MilvusEmbeddingStore(
+                embedding_service,
+                host=milvus_config["host"],
+                port=milvus_config["port"],
+                support_ai_instance=True,
+                collection_name=name,
+                username=milvus_config.get("username", ""),
+                password=milvus_config.get("password", ""),
+                vector_field=milvus_config.get("vector_field", "document_vector"),
+                text_field=milvus_config.get("text_field", "document_content"),
+                vertex_field=vertex_field,
+            )
+
+            LogWriter.info(f"Initializing {name}")
+            # init collection if it doesn't exist
+            if not s.check_collection_exists():
+                tg.create_task(init_embedding_index(s, vertex_field))
+            
+            index_stores[name] = s
 
     return extractor, index_stores
 

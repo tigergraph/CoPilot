@@ -1,16 +1,16 @@
 import asyncio
 import logging
 import time
+import traceback
 
 import httpx
 from aiochannel import Channel
-from graphrag import workers
-from graphrag.util import init, make_headers, stream_doc_ids,http_timeout
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import embedding_service
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
+from graphrag import workers
+from graphrag.util import http_timeout, init, make_headers, stream_doc_ids
+from pyTigerGraph import TigerGraphConnection
 
 http_logs = logging.getLogger("httpx")
 http_logs.setLevel(logging.WARNING)
@@ -32,28 +32,32 @@ async def stream_docs(
     for i in range(ttl_batches):
         doc_ids = await stream_doc_ids(conn, i, ttl_batches)
         if doc_ids["error"]:
-            continue  # TODO: handle error
+            # continue to the next batch.
+            # These docs will not be marked as processed, so the ecc will process it eventually.
+            continue
 
-        logger.info("********doc_ids")
-        logger.info(doc_ids)
-        logger.info("********")
         for d in doc_ids["ids"]:
             async with httpx.AsyncClient(timeout=http_timeout) as client:
-                res = await client.get(
-                    f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
-                    params={"doc": d},
-                    headers=headers,
-                )
-                # TODO: check for errors
-                # this will block and wait if the channel is full
-                logger.info("steam_docs writes to docs")
-                await docs_chan.put(res.json()["results"][0]["DocContent"][0])
-            # break  # single doc test FIXME: delete
-        # break  # single batch test FIXME: delete
+                try:
+                    res = await client.get(
+                        f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
+                        params={"doc": d},
+                        headers=headers,
+                    )
+                    if res.status_code != 200:
+                        # continue to the next doc.
+                        # This doc will not be marked as processed, so the ecc will process it eventually.
+                        continue
+                    logger.info("steam_docs writes to docs")
+                    await docs_chan.put(res.json()["results"][0]["DocContent"][0])
+                except Exception as e:
+                    exc = traceback.format_exc()
+                    logger.error(f"Error retrieving doc: {d} --> {e}\n{exc}")
+                    continue  # try retrieving the next doc
 
     logger.info("stream_docs done")
     # close the docs chan -- this function is the only sender
-    logger.info("****** closing docs chan")
+    logger.info("closing docs chan")
     docs_chan.close()
 
 
@@ -72,8 +76,6 @@ async def chunk_docs(
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for content in docs_chan:
-            logger.info("*********reading from docs chan")
-            # continue
             v_id = content["v_id"]
             txt = content["attributes"]["text"]
             # send the document to be embedded
@@ -84,17 +86,12 @@ async def chunk_docs(
                 workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
             )
             doc_tasks.append(task)
-            # break  # single doc  FIXME: delete
-            logger.info("*********done reading from docs chan")
 
     logger.info("chunk_docs done")
-    # do something with doc_tasks?
-    # for t in doc_tasks:
-    # logger.info(t.result())
 
     # close the extract chan -- chunk_doc is the only sender
     # and chunk_doc calls are kicked off from here
-    logger.info("********closing extract chan")
+    logger.info("closing extract_chan")
     extract_chan.close()
 
 
@@ -110,13 +107,11 @@ async def upsert(upsert_chan: Channel):
     upsert_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for func, args in upsert_chan:
-            logger.info("*********reading from upsert chan")
             logger.info(f"{func.__name__}, {args[1]}")
             # continue
             # execute the task
             t = grp.create_task(func(*args))
             upsert_tasks.append(t)
-            logger.info("*********done reading from upsert chan")
 
     logger.info(f"upsert done")
     # do something with doc_tasks?
@@ -136,7 +131,6 @@ async def embed(
     async with asyncio.TaskGroup() as grp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
-            logger.info("*********reading from embed chan")
             # continue
             embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
@@ -148,7 +142,6 @@ async def embed(
                     content,
                 )
             )
-            logger.info("*********done reading from embed chan")
 
     logger.info(f"embed done")
 
@@ -169,17 +162,13 @@ async def extract(
     # consume task queue
     async with asyncio.TaskGroup() as grp:
         async for item in extract_chan:
-            logger.info("*********reading from extract chan")
-            logger.info("*********done reading from extract chan")
             grp.create_task(
                 workers.extract(upsert_chan, embed_chan, extractor, conn, *item)
             )
-            # append task results to worker results/response
-            logger.info("*********done reading from extract chan")
 
     logger.info(f"extract done")
 
-    logger.info("****closing upsert and embed chan")
+    logger.info("closing upsert and embed chan")
     upsert_chan.close()
     embed_chan.close()
 
@@ -202,9 +191,8 @@ async def run(graphname: str, conn: TigerGraphConnection):
     # return
     start = time.perf_counter()
 
-    # TODO: make configurable
     tasks = []
-    docs_chan = Channel(1)  # process n chunks at a time max
+    docs_chan = Channel(1)
     embed_chan = Channel(100)
     upsert_chan = Channel(100)
     extract_chan = Channel(100)
@@ -230,5 +218,4 @@ async def run(graphname: str, conn: TigerGraphConnection):
         tasks.append(t)
     end = time.perf_counter()
 
-    logger.info("DONE")
-    logger.info(end - start)
+    logger.info(f"DONE. graphrag.run elapsed: {end-start}")
