@@ -132,7 +132,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             )
             docs = loader.load()
 
-            logger.info(f"docs: {docs}")
+            # logger.info(f"docs: {docs}")
 
             operation_type = "load_upsert"
             metrics.milvus_query_total.labels(
