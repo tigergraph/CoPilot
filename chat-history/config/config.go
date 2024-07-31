@@ -16,6 +16,7 @@ type DbConfig struct {
 	DbLogPath               string   `json:"dbLogPath"`
 	LogPath                 string   `json:"logPath"`
 	TgDbHost                string   `json:"tgDbHost"`
+	TgCloud                 bool     `json:tgCloud`
 	ConversationAccessRoles []string `json:"conversationAccessRoles"`
 	// DbHostname string `json:"hostname"`
 	// Username   string `json:"username"`

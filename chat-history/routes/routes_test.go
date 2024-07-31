@@ -403,7 +403,7 @@ func TestExecuteGSQL(t *testing.T) {
 	password := "supportai"
 	query := "SHOW USER" // Replace with an actual GSQL query
 
-	response, err := executeGSQL(host, username, password, query)
+	response, err := executeGSQL(host, username, password, query, true)
 	if err != nil {
 		t.Fatalf("Failed to execute GSQL query: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestGetFeedback(t *testing.T) {
 
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback(testTgDbHost, testConversationAccessRoles))
+	handler := http.HandlerFunc(GetFeedback(testTgDbHost, testConversationAccessRoles, true))
 
 	// Serve the request
 	handler.ServeHTTP(rr, req)
