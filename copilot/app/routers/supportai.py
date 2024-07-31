@@ -407,7 +407,7 @@ def ecc(
     from httpx import get as http_get
 
     ecc = (
-        db_config.get("ecc", "http://localhost:8001")
+        db_config.get("ecc", "http://eventual-consistency-service:8001")
         + f"/{graphname}/consistency_status"
     )
     LogWriter.info(f"Sending ECC request to: {ecc}")
