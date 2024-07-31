@@ -8,6 +8,10 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	pth := setup(t)
+
+	// Print the path for debugging
+	fmt.Println("Configuration file path:", pth)
+
 	cfg, err := LoadConfig(pth)
 	if err != nil {
 		t.Fatal(err)
@@ -23,25 +27,23 @@ func TestLoadConfig(t *testing.T) {
 
 func setup(t *testing.T) string {
 	tmp := t.TempDir()
-	pth := fmt.Sprintf("%s/%s", tmp, "config.json")
+	pth := fmt.Sprintf("%s/%s", tmp, "chat_config.json")
 	dat := `
-
 {
-    "apiPort":"8000",
-    "hostname": "http://localhost:14240",
-    "dbPath": "chats.db",
-    "dbLogPath": "db.log",
-    "logPath": "requestLogs.jsonl",
-    "username": "tigergraph",
-    "password": "tigergraph",
-    "getToken": false,
-    "default_timeout": 300,
-    "default_mem_threshold": 5000,
-    "default_thread_limit": 8
+	"apiPort":"8000",
+	"dbPath": "chats.db",
+	"dbLogPath": "db.log",
+	"logPath": "requestLogs.jsonl",
+	"tgCloud": true,
+	"conversationAccessRoles": ["superuser", "globaldesigner"]
+	"username": "tigergraph",
+	"password": "tigergraph",
 }`
-	err := os.WriteFile(pth, []byte(dat), 0644)
-	if err != nil {
-		t.Fatal("error setting up config.json")
+
+	if err := os.WriteFile(pth, []byte(dat), 0644); err != nil {
+		t.Fatal("error setting upconfig.json")
 	}
+
 	return pth
+
 }

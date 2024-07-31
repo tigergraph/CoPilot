@@ -15,12 +15,11 @@ type DbConfig struct {
 	DbPath                  string   `json:"dbPath"`
 	DbLogPath               string   `json:"dbLogPath"`
 	LogPath                 string   `json:"logPath"`
-	TgDbHost                string   `json:"hostname"`
 	TgCloud                 bool     `json:"tgCloud"`
 	ConversationAccessRoles []string `json:"conversationAccessRoles"`
-	// DbHostname string `json:"hostname"`
-	// Username   string `json:"username"`
-	// Password   string `json:"password"`
+	TgDbHost                string   `json:"hostname"`
+	Username                string   `json:"username"`
+	Password                string   `json:"password"`
 	// GetToken string `json:"getToken"`
 	// DefaultTimeout       string `json:"default_timeout"`
 	// DefaultMemThreshold string `json:"default_mem_threshold"`
@@ -38,7 +37,7 @@ func LoadConfig(paths ...string) (Config, error) {
 		var b []byte
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			// file doesn't exist read from env
-			cfg := os.Getenv("CONFIG")
+			cfg := os.Getenv("CONFIG_FILES")
 			if cfg == "" {
 				fmt.Println("CONFIG path is not found nor is the CONFIG json env variable defined")
 				os.Exit(1)
@@ -56,9 +55,4 @@ func LoadConfig(paths ...string) (Config, error) {
 		}
 	}
 	return cfg, nil
-
-	// var cfg Config
-	// json.Unmarshal(b, &cfg)
-
-	// return cfg, nil
 }

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"chat-history/config"
 	"chat-history/db"
 	"chat-history/structs"
 	"encoding/base64"
@@ -397,13 +398,20 @@ func messageEquals(m, msg structs.Message) bool {
 }
 
 func TestExecuteGSQL(t *testing.T) {
-	// Replace these values with your actual TigerGraph details
-	host := "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io"
-	username := "supportai"
-	password := "supportai"
-	query := "SHOW USER" // Replace with an actual GSQL query
 
-	response, err := executeGSQL(host, username, password, query, true)
+	os.Setenv("CONFIG_FILES", "../chat_config.json,../db_config.json")
+
+	configPath := os.Getenv("CONFIG_FILES")
+	// Split the paths into a slice
+	configPaths := strings.Split(configPath, ",")
+
+	cfg, err := config.LoadConfig(configPaths...)
+	if err != nil {
+		panic(err)
+	}
+	query := "SHOW USER"
+
+	response, err := executeGSQL(cfg.TgDbHost, cfg.Username, cfg.Password, query, cfg.TgCloud)
 	if err != nil {
 		t.Fatalf("Failed to execute GSQL query: %v", err)
 	}
@@ -481,21 +489,29 @@ func TestParseUserRoles(t *testing.T) {
 }
 
 func TestGetFeedback(t *testing.T) {
+
+	os.Setenv("CONFIG_FILES", "../chat_config.json,../db_config.json")
+
 	setupDB(t, true)
 
-	testTgDbHost := "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io"
-	testConversationAccessRoles := []string{"superuser", "globaldesigner"}
+	configPath := os.Getenv("CONFIG_FILES")
+	// Split the paths into a slice
+	configPaths := strings.Split(configPath, ",")
 
+	cfg, err := config.LoadConfig(configPaths...)
+	if err != nil {
+		panic(err)
+	}
 	// Create a request with Basic Auth
 	req, err := http.NewRequest("GET", "/get_feedback", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.SetBasicAuth("supportai", "supportai")
+	req.SetBasicAuth(cfg.Username, cfg.Password)
 
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback(testTgDbHost, testConversationAccessRoles, true))
+	handler := http.HandlerFunc(GetFeedback(cfg.TgDbHost, cfg.ConversationAccessRoles, cfg.TgCloud))
 
 	// Serve the request
 	handler.ServeHTTP(rr, req)
