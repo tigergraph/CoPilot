@@ -1,0 +1,10 @@
+{
+    "function_header": "getVerticesById",
+    "description": "Get vertex information by vertex ID",
+    "docstring": "`getVerticesById(vertexType: str, vertexIds: Union[int, str, list])` → Union[list, str, pd.DataFrame]\nRetrieves vertices of the given vertex type, identified by their ID.\nParameters:\nvertexType: The name of the vertex type.\nvertexIds: A single vertex ID or a list of vertex IDs.\nReturns:\nThe (selected) details of the (matching) vertex instances as JSON.",
+    "param_types": {
+        "vertexType": "str",
+        "vertexIds": "Union[int, str, List[Union[int, str]]"
+    },
+    "custom_query": false
+}

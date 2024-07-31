@@ -1,0 +1,10 @@
+{
+    "function_header": "getEdgeStats",
+    "description": "Retrieves edge attribute statistics",
+    "docstring": "`getEdgeStats(edgeTypes: Union[str, list], skipNA: bool = False)` → dict\nReturns edge attribute statistics.\nParameters:\nedgeTypes: A single edge type name or a list of edges types names or '*' for all edges types.\nskipNA: Skip those edges that do not have attributes or none of their attributes have statistics gathered.\nReturns:\nAttribute statistics of edges; a dictionary of dictionaries.",
+    "param_types": {
+        "edgeTypes": "Union[str, list]",
+        "skipNA": "bool"
+    },
+    "custom_query": false
+}

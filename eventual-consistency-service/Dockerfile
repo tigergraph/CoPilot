@@ -1,7 +1,7 @@
 FROM python:3.11.8
 WORKDIR /code
 
-COPY eventual-consistency-service/requirements.txt requirements.txt
+COPY common/requirements.txt requirements.txt
  
 RUN apt-get update && apt-get upgrade -y
 RUN pip install -r requirements.txt

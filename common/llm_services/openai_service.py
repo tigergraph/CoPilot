@@ -16,8 +16,8 @@ class OpenAI(LLM_Model):
                 auth_detail
             ]
 
-        from langchain.chat_models import ChatOpenAI
-
+        from langchain_community.chat_models import ChatOpenAI
+        
         model_name = config["llm_model"]
         self.llm = ChatOpenAI(
             temperature=config["model_kwargs"]["temperature"], model_name=model_name
