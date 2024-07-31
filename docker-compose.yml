@@ -50,7 +50,7 @@ services:
     ports:
       - 8002:8002
     environment:
-      CONFIG: "/configs/config.json"
+      CONFIG: "/configs/chat_config.json"
       LOGLEVEL: "INFO"
     volumes:
       - ./configs/:/configs
