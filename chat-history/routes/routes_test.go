@@ -411,7 +411,7 @@ func TestExecuteGSQL(t *testing.T) {
 	}
 	query := "SHOW USER"
 
-	response, err := executeGSQL(cfg.TgDbHost, cfg.Username, cfg.Password, query, cfg.TgCloud)
+	response, err := executeGSQL(cfg.TgDbHost, cfg.Username, cfg.Password, query, cfg.GsPort, cfg.TgCloud)
 	if err != nil {
 		t.Fatalf("Failed to execute GSQL query: %v", err)
 	}
@@ -511,7 +511,7 @@ func TestGetFeedback(t *testing.T) {
 
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback(cfg.TgDbHost, cfg.ConversationAccessRoles, cfg.TgCloud))
+	handler := http.HandlerFunc(GetFeedback(cfg.TgDbHost, cfg.GsPort, cfg.ConversationAccessRoles, cfg.TgCloud))
 
 	// Serve the request
 	handler.ServeHTTP(rr, req)

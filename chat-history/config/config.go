@@ -20,6 +20,7 @@ type DbConfig struct {
 	TgDbHost                string   `json:"hostname"`
 	Username                string   `json:"username"`
 	Password                string   `json:"password"`
+	GsPort                  string   `json:"gsPort"`
 	// GetToken string `json:"getToken"`
 	// DefaultTimeout       string `json:"default_timeout"`
 	// DefaultMemThreshold string `json:"default_mem_threshold"`

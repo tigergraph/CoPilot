@@ -158,13 +158,13 @@ func auth(userId string, r *http.Request) (string, int, []byte, bool) {
 }
 
 // executeGSQL sends a GSQL query to TigerGraph with basic authentication and returns the response
-func executeGSQL(host, username, password, query string, tgcloud bool) (string, error) {
+func executeGSQL(host, username, password, query, gsPort string, tgcloud bool) (string, error) {
 	var requestURL string
 	// Construct the URL for the GSQL query endpoint
 	if tgcloud {
 		requestURL = fmt.Sprintf("%s:443/gsqlserver/gsql/file", host)
 	} else {
-		requestURL = fmt.Sprintf("%s:14240/gsqlserver/gsql/file", host)
+		requestURL = fmt.Sprintf("%s:%s/gsqlserver/gsql/file", host, gsPort)
 	}
 	// Prepare the query data
 	data := url.QueryEscape(query) // Encode query using URL encoding
@@ -235,7 +235,7 @@ func parseUserRoles(userInfo string, userName string) []string {
 
 // GetFeedback retrieves feedback data for conversations
 // "Get /get_feedback"
-func GetFeedback(tgDbHost string, conversationAccessRoles []string, tgCloud bool) http.HandlerFunc {
+func GetFeedback(tgDbHost, gsPort string, conversationAccessRoles []string, tgCloud bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		usr, pass, ok := r.BasicAuth()
 		if !ok {
@@ -246,7 +246,7 @@ func GetFeedback(tgDbHost string, conversationAccessRoles []string, tgCloud bool
 		}
 
 		// Verify if the user has the required role
-		userInfo, err := executeGSQL(tgDbHost, usr, pass, "SHOW USER", tgCloud)
+		userInfo, err := executeGSQL(tgDbHost, usr, pass, "SHOW USER", gsPort, tgCloud)
 		if err != nil {
 			reason := []byte(`{"reason":"failed to retrieve feedback data"}`)
 			w.Header().Add("Content-Type", "application/json")
