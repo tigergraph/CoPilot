@@ -1,0 +1,12 @@
+{
+    "function_header": "tg_bfs",
+    "description": "The BFS or breath first search algorithm finds the nodes that are reachable or connected within a specified number of edges from a source vertex.  It will find unweighted shortest path distances from a source node up to a limited distance away.",
+    "docstring": "This query finds the unweighted shortest path distances from a source vertex called v_start to all nodes with types v_type_set that are up to max_hops hops away, using edge types that are e_type_set.  Run the query with `gds.featurizer().runAlgorithm('tg_bfs', params={'v_type_set': ['INSERT_v_types_HERE'], 'e_type_set': ['INSERT_e_types_HERE'], 'max_hops': 'INSERT_max_hops_HERE', 'v_start': { 'id': 'INSERT_ID_HERE', 'type':'INSERT_v_type_here' } })`, where the parameters are: \n 'v_type_set': The set of vertex types to run the algorithm on. \n 'e_type_set':  The set of edge types to run the algorithm on.  \n 'max_hops': The maximum number of hops or distance away to run the algorithm on. \n 'v_start': The source node to run the algorithm from. ",
+    "param_types": {
+        "v_type_set" : "LIST<STRING>",
+        "e_type_set" : "LIST<STRING>",
+        "max_hops" : "INT",
+        "v_start" : "VERTEX"
+    },
+    "custom_query": false
+}
