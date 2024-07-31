@@ -15,8 +15,8 @@ type DbConfig struct {
 	DbPath                  string   `json:"dbPath"`
 	DbLogPath               string   `json:"dbLogPath"`
 	LogPath                 string   `json:"logPath"`
-	TgDbHost                string   `json:"tgDbHost"`
-	TgCloud                 bool     `json:tgCloud`
+	TgDbHost                string   `json:"hostname"`
+	TgCloud                 bool     `json:"tgCloud"`
 	ConversationAccessRoles []string `json:"conversationAccessRoles"`
 	// DbHostname string `json:"hostname"`
 	// Username   string `json:"username"`
@@ -32,25 +32,33 @@ type Config struct {
 	// LLMConfig
 }
 
-func LoadConfig(path string) (Config, error) {
-	var b []byte
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// file doesn't exist read from env
-		cfg := os.Getenv("CONFIG")
-		if cfg == "" {
-			fmt.Println("CONFIG path is not found nor is the CONFIG json env variable defined")
-			os.Exit(1)
+func LoadConfig(paths ...string) (Config, error) {
+	var cfg Config
+	for _, path := range paths {
+		var b []byte
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			// file doesn't exist read from env
+			cfg := os.Getenv("CONFIG")
+			if cfg == "" {
+				fmt.Println("CONFIG path is not found nor is the CONFIG json env variable defined")
+				os.Exit(1)
+			}
+			b = []byte(cfg)
+		} else {
+			b, err = os.ReadFile(path)
+			if err != nil {
+				return Config{}, err
+			}
 		}
-		b = []byte(cfg)
-	} else {
-		b, err = os.ReadFile(path)
-		if err != nil {
+
+		if err := json.Unmarshal(b, &cfg); err != nil {
 			return Config{}, err
 		}
 	}
-
-	var cfg Config
-	json.Unmarshal(b, &cfg)
-
 	return cfg, nil
+
+	// var cfg Config
+	// json.Unmarshal(b, &cfg)
+
+	// return cfg, nil
 }

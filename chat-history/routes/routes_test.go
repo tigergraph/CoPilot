@@ -455,7 +455,7 @@ func TestParseUserRoles(t *testing.T) {
     - FailedAttempts: 0
     - ShowAlterPasswordWarning: false
 
-  - Name: richard@epsilla.com
+  - Name: Lu Zhou
     - Global Roles: globalobserver
     - LastSuccessLogin: Tue Jul 23 16:35:45 UTC 2024
     - NextValidLogin: Tue Jul 23 16:35:45 UTC 2024

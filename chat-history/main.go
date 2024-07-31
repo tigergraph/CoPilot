@@ -12,12 +12,15 @@ import (
 )
 
 func main() {
-	configPath := os.Getenv("CONFIG")
-	config, err := config.LoadConfig(configPath)
+	configPath := os.Getenv("CONFIG_FILES")
+	// Split the paths into a slice
+	configPaths := strings.Split(configPath, ",")
+
+	cfg, err := config.LoadConfig(configPaths...)
 	if err != nil {
 		panic(err)
 	}
-	db.InitDB(config.DbPath, config.DbLogPath)
+	db.InitDB(cfg.DbPath, cfg.DbLogPath)
 
 	// make router
 	router := http.NewServeMux()
@@ -30,15 +33,15 @@ func main() {
 	router.HandleFunc("GET /user/{userId}", routes.GetUserConversations)
 	router.HandleFunc("GET /conversation/{conversationId}", routes.GetConversation)
 	router.HandleFunc("POST /conversation", routes.UpdateConversation)
-	router.HandleFunc("GET /get_feedback", routes.GetFeedback(config.TgDbHost, config.ConversationAccessRoles, config.TgCloud))
+	router.HandleFunc("GET /get_feedback", routes.GetFeedback(cfg.TgDbHost, cfg.ConversationAccessRoles, cfg.TgCloud))
 
 	// create server with middleware
 	dev := strings.ToLower(os.Getenv("DEV")) == "true"
 	var port string
 	if dev {
-		port = fmt.Sprintf("localhost:%s", config.Port)
+		port = fmt.Sprintf("localhost:%s", cfg.Port)
 	} else {
-		port = fmt.Sprintf(":%s", config.Port)
+		port = fmt.Sprintf(":%s", cfg.Port)
 	}
 
 	handler := middleware.ChainMiddleware(router,

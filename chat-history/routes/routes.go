@@ -159,19 +159,11 @@ func auth(userId string, r *http.Request) (string, int, []byte, bool) {
 
 // executeGSQL sends a GSQL query to TigerGraph with basic authentication and returns the response
 func executeGSQL(host, username, password, query string, tgcloud bool) (string, error) {
-	// Extract the hostname from the URL (ignoring the scheme and port)
-	// parsedURL, err := url.Parse(host)
-	// if err != nil {
-	// 	return "", fmt.Errorf("invalid host URL: %w", err)
-	// }
-
 	var requestURL string
 	// Construct the URL for the GSQL query endpoint
 	if tgcloud {
-		// requestURL = fmt.Sprintf("https://%s:443/gsqlserver/gsql/file", parsedURL.Hostname())
 		requestURL = fmt.Sprintf("%s:443/gsqlserver/gsql/file", host)
 	} else {
-		// requestURL = fmt.Sprintf("http://%s:14240/gsqlserver/gsql/file", parsedURL.Hostname())
 		requestURL = fmt.Sprintf("%s:14240/gsqlserver/gsql/file", host)
 	}
 	// Prepare the query data
