@@ -20,7 +20,7 @@ import (
 
 const (
 	USER     = "sam_pull"
-	PASS     = "pass"
+	PASS     = "sam_pull"
 	CONVO_ID = "601529eb-4927-4e24-b285-bd6b9519a951"
 )
 
@@ -425,8 +425,7 @@ func TestExecuteGSQL(t *testing.T) {
 		t.Error("Received '500 Internal Server Error'. This indicates a server-side issue.")
 	}
 
-	// Add any additional checks on the response here
-	// For example:
+	// Add any additional checks on the response
 	if response == "" {
 		t.Error("Received empty response from GSQL query")
 	}
@@ -483,16 +482,20 @@ func TestParseUserRoles(t *testing.T) {
 
 func TestGetFeedback(t *testing.T) {
 	setupDB(t, true)
+
+	testTgDbHost := "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io"
+	testConversationAccessRoles := []string{"superuser", "globaldesigner"}
+
 	// Create a request with Basic Auth
 	req, err := http.NewRequest("GET", "/get_feedback", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.SetBasicAuth("supportai", "supportai") // Use a valid username and password for testing
+	req.SetBasicAuth("supportai", "supportai")
 
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback)
+	handler := http.HandlerFunc(GetFeedback(testTgDbHost, testConversationAccessRoles))
 
 	// Serve the request
 	handler.ServeHTTP(rr, req)

@@ -237,43 +237,66 @@ func parseUserRoles(userInfo string, userName string) []string {
 
 // GetFeedback retrieves feedback data for conversations
 // "Get /get_feedback"
-func GetFeedback(w http.ResponseWriter, r *http.Request) {
-	usr, pass, ok := r.BasicAuth()
-	if !ok {
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"reason":"missing Authorization header"}`))
-		return
-	}
-
-	// Verify if the user has the required role
-	userInfo, err := executeGSQL("https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io", usr, pass, "SHOW USER")
-	if err != nil {
-		reason := []byte(`{"reason":"failed to retrieve feedback data"}`)
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(reason)
-		return
-	}
-
-	// Parse and check roles
-	userRoles := parseUserRoles(userInfo, usr)
-	conversationAccessRoles := []string{"superuser", "globaldesigner"}
-
-	if !hasAdminAccess(userRoles, conversationAccessRoles) {
-		// Fetch chat history messages for this specific user
-		conversations := db.GetUserConversations(usr)
-
-		var allMessages []structs.Message
-
-		for _, convo := range conversations {
-			messages := db.GetUserConversationById(usr, convo.ConversationId.String())
-			allMessages = append(allMessages, messages...)
+func GetFeedback(tgDbHost string, conversationAccessRoles []string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		usr, pass, ok := r.BasicAuth()
+		if !ok {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"reason":"missing Authorization header"}`))
+			return
 		}
-		// Marshal and write the response
+
+		// Verify if the user has the required role
+		userInfo, err := executeGSQL(tgDbHost, usr, pass, "SHOW USER")
+		if err != nil {
+			reason := []byte(`{"reason":"failed to retrieve feedback data"}`)
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(reason)
+			return
+		}
+
+		// Parse and check roles
+		userRoles := parseUserRoles(userInfo, usr)
+		if !hasAdminAccess(userRoles, conversationAccessRoles) {
+			// Fetch chat history messages for this specific user
+			conversations := db.GetUserConversations(usr)
+
+			var allMessages []structs.Message
+
+			for _, convo := range conversations {
+				messages := db.GetUserConversationById(usr, convo.ConversationId.String())
+				allMessages = append(allMessages, messages...)
+			}
+			// Marshal and write the response
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			response, err := json.Marshal(allMessages)
+			if err != nil {
+				reason := []byte(`{"reason":"failed to marshal messages"}`)
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write(reason)
+				return
+			}
+			w.Write(response)
+			return
+		}
+
+		// If the user has admin access, fetch all messages
+		messages, err := db.GetAllMessages()
+		if err != nil {
+			reason := []byte(`{"reason":"failed to retrieve feedback data"}`)
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(reason)
+			return
+		}
+
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		response, err := json.Marshal(allMessages)
+		response, err := json.Marshal(messages)
 		if err != nil {
 			reason := []byte(`{"reason":"failed to marshal messages"}`)
 			w.Header().Add("Content-Type", "application/json")
@@ -282,28 +305,5 @@ func GetFeedback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(response)
-		return
 	}
-
-	// If the user has admin access, fetch all messages
-	messages, err := db.GetAllMessages()
-	if err != nil {
-		reason := []byte(`{"reason":"failed to retrieve feedback data"}`)
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(reason)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	response, err := json.Marshal(messages)
-	if err != nil {
-		reason := []byte(`{"reason":"failed to marshal messages"}`)
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(reason)
-		return
-	}
-	w.Write(response)
 }
