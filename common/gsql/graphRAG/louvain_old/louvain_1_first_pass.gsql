@@ -2,20 +2,20 @@ CREATE OR REPLACE DISTRIBUTED QUERY graphRAG_louvain_1(
   UINT max_hop = 10,
   UINT batch_num = 12,
   UINT sample_edge_num = 100
-) FOR GRAPH {graph_name} SYNTAX v1 {
+) {
 
-  TYPEDEF TUPLE <DOUBLE delta_Q_add, VERTEX<{entity_vertex_name}> community, STRING ext_vid> MyTuple; --> this should be Community, I think
+  TYPEDEF TUPLE <DOUBLE delta_Q_add, VERTEX<ResolvedEntity> community, STRING ext_vid> MyTuple; //--> this should be Community, I think
   SumAccum<DOUBLE> @@m; // the sum of the weights of all the links in the network
-  MinAccum<VERTEX<{entity_vertex_name}>> @{community_id_attribute_name}; // the community ID of the node
+  MinAccum<VERTEX<ResolvedEntity>> @{community_id_attribute_name}; // the community ID of the node
   MinAccum<STRING> @community_vid; // the community ID of the node
   SumAccum<DOUBLE> @k; // the sum of the weights of the links incident to the node
   SumAccum<DOUBLE> @k_in; // the sum of the weights of the links inside the previous community of the node
   SumAccum<DOUBLE> @k_self_loop; // the weight of the self-loop link
-  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @community_k_in_map; // the community of the neighbors of the nodes -> the sum of the weights of the links inside the community
-  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_sum_total_map; // community ID C -> the sum of the weights of the links incident to nodes in C
+  MapAccum<VERTEX<ResolvedEntity>, SumAccum<DOUBLE>> @community_k_in_map; // the community of the neighbors of the nodes -> the sum of the weights of the links inside the community
+  MapAccum<VERTEX<ResolvedEntity>, SumAccum<DOUBLE>> @@community_sum_total_map; // community ID C -> the sum of the weights of the links incident to nodes in C
   SumAccum<DOUBLE> @community_sum_total; // the sum of the weights of the links incident to nodes in the community of the node
-  MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>> @@community_sum_in_map; // community ID -> the sum of the weights of the links inside the community
-  MapAccum<VERTEX<{entity_vertex_name}>, MapAccum<VERTEX<{entity_vertex_name}>, SumAccum<DOUBLE>>> @@source_target_k_in_map; // source community ID -> (target community ID -> the sum of the weights of the links from the source community to the target community)
+  MapAccum<VERTEX<ResolvedEntity>, SumAccum<DOUBLE>> @@community_sum_in_map; // community ID -> the sum of the weights of the links inside the community
+  MapAccum<VERTEX<ResolvedEntity>, MapAccum<VERTEX<ResolvedEntity>, SumAccum<DOUBLE>>> @@source_target_k_in_map; // source community ID -> (target community ID -> the sum of the weights of the links from the source community to the target community)
   SumAccum<DOUBLE> @delta_Q_remove; // delta Q to remove the node from the previous community
   MaxAccum<MyTuple> @best_move; // best move of the node with the highest delta Q to move the isolated node into the new community
   MaxAccum<DOUBLE> @@min_double; // used to reset the @best_move
@@ -27,7 +27,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY graphRAG_louvain_1(
   DOUBLE wt = 1.0;
 
   // Initialization
-  All_Nodes = {{{entity_vertex_name}.*}};
+  All_Nodes = {{ResolvedEntity.*}};
   All_Nodes = SELECT s FROM All_Nodes:s -({relation_edge_name}:e)- :t
               ACCUM @@m += wt / 2,
                     s.@k += wt,

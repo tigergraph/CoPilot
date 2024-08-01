@@ -3,15 +3,16 @@ import traceback
 from time import sleep, time
 from typing import Iterable, List, Optional, Tuple
 
-from langchain_community.vectorstores import Milvus
-from langchain_core.documents.base import Document
-from pymilvus import MilvusException, connections, utility
-
+import Levenshtein as lev
+from asyncer import asyncify
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
+from langchain_community.vectorstores import Milvus
+from langchain_core.documents.base import Document
+from pymilvus import MilvusException, SearchResult, connections, utility
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         alias: str = "alias",
         retry_interval: int = 2,
         max_retry_attempts: int = 10,
+        drop_old=False,
     ):
         self.embedding_service = embedding_service
         self.vector_field = vector_field
@@ -42,6 +44,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.milvus_alias = alias
         self.retry_interval = retry_interval
         self.max_retry_attempts = max_retry_attempts
+        self.drop_old = drop_old
 
         if host.startswith("http"):
             if host.endswith(str(port)):
@@ -86,7 +89,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     collection_name=self.collection_name,
                     connection_args=self.milvus_connection,
                     auto_id=True,
-                    drop_old=False,
+                    drop_old=self.drop_old,
                     text_field=self.text_field,
                     vector_field=self.vector_field,
                 )
@@ -118,6 +121,9 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 return metadata
 
             LogWriter.info("Milvus add initial load documents init()")
+            import os
+
+            logger.info(f"*******{os.path.exists('tg_documents')}")
             loader = DirectoryLoader(
                 "./tg_documents/",
                 glob="*.json",
@@ -583,6 +589,63 @@ class MilvusEmbeddingStore(EmbeddingStore):
             raise exc
 
         return query_result
+
+    def edit_dist_check(self, a: str, b: str, edit_dist_threshold: float, p=False):
+        a = a.lower()
+        b = b.lower()
+        # if the words are short, they should be the same
+        if len(a) < 5 and len(b) < 5:
+            return a == b
+
+        # edit_dist_threshold (as a percent) of word must match
+        threshold = int(min(len(a), len(b)) * (1 - edit_dist_threshold))
+        if p:
+            print(a, b, threshold, lev.distance(a, b))
+        return lev.distance(a, b) < threshold
+
+    async def aget_k_closest(
+        self, v_id: str, k=15, threshold_similarity=0.90, edit_dist_threshold_pct=0.75
+    ) -> list[Document]:
+        """
+        asdf
+        """
+        threshold_dist = 1 - threshold_similarity
+
+        # asyncify necessary funcs
+        query = asyncify(self.milvus.col.query)
+        search = asyncify(self.milvus.similarity_search_with_score_by_vector)
+
+        # Get all vectors with this ID
+        verts = await query(
+            f'{self.vertex_field} == "{v_id}"',
+            output_fields=[self.vertex_field, self.vector_field],
+        )
+        result = []
+        for v in verts:
+            # get the k closest verts
+            sim = await search(
+                v["document_vector"],
+                k=k,
+            )
+            # filter verts using similiarity threshold and leven_dist
+            similar_verts = [
+                doc.metadata["vertex_id"]
+                for doc, dist in sim
+                # check semantic similarity
+                if dist < threshold_dist
+                # check name similarity (won't merge Apple and Google if they're semantically similar)
+                and self.edit_dist_check(
+                    doc.metadata["vertex_id"],
+                    v_id,
+                    edit_dist_threshold_pct,
+                    # v_id == "Dataframe",
+                )
+                # don't have to merge verts with the same id (they're the same)
+                and doc.metadata["vertex_id"] != v_id
+            ]
+            result.extend(similar_verts)
+        result.append(v_id)
+        return set(result)
 
     def __del__(self):
         metrics.milvus_active_connections.labels(self.collection_name).dec

@@ -11,8 +11,8 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
-from graphrag import util  # import upsert_edge, upsert_vertex
-from langchain_community.graphs.graph_document import GraphDocument
+from graphrag import util
+from langchain_community.graphs.graph_document import GraphDocument, Node
 from pyTigerGraph import TigerGraphConnection
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
@@ -67,7 +67,7 @@ async def chunk_doc(
     """
     chunker = ecc_util.get_chunker()
     chunks = chunker.chunk(doc["attributes"]["text"])
-    v_id = doc["v_id"]
+    v_id = util.process_id(doc["v_id"])
     logger.info(f"Chunking {v_id}")
     for i, chunk in enumerate(chunks):
         chunk_id = f"{v_id}_chunk_{i}"
@@ -145,6 +145,17 @@ async def embed(
     await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
 
 
+async def get_vert_desc(conn, v_id, node: Node):
+    desc = [node.properties.get("description", "")]
+    exists = await util.check_vertex_exists(conn, v_id)
+    # if vertex exists, get description content and append this description to it
+    if not exists["error"]:
+        # dedup descriptions
+        desc.extend(exists["results"][0]["attributes"]["description"])
+        desc = list(set(desc))
+    return desc
+
+
 async def extract(
     upsert_chan: Channel,
     embed_chan: Channel,
@@ -159,12 +170,22 @@ async def extract(
     for doc in extracted:
         for node in doc.nodes:
             logger.info(f"extract writes entity vert to upsert\nNode: {node.id}")
-            v_id = str(node.id)
-            desc = node.properties.get("description", "")
+            v_id = util.process_id(str(node.id))
+            if len(v_id) == 0:
+                continue
+            desc = await get_vert_desc(conn, v_id, node)
+
+            # embed the entity
+            # embed with the v_id if the description is blank
+            if len(desc[0]):
+                await embed_chan.put((v_id, v_id, "Entity"))
+            else:
+                # (v_id, content, index_name)
+                await embed_chan.put((v_id, desc[0], "Entity"))
+
             await upsert_chan.put(
                 (
                     util.upsert_vertex,  # func to call
-                    # conn, v_id, chunk_id, chunk
                     (
                         conn,
                         "Entity",  # v_type
@@ -188,33 +209,134 @@ async def extract(
                         chunk_id,  # src_id
                         "CONTAINS_ENTITY",  # edge_type
                         "Entity",  # tgt_type
-                        str(node.id),  # tgt_id
+                        v_id,  # tgt_id
                         None,  # attributes
                     ),
                 )
             )
 
-            # embed the entity
-            # (v_id, content, index_name)
-            await embed_chan.put((v_id, desc, "Entity"))
-
         for edge in doc.relationships:
             logger.info(
                 f"extract writes relates edge to upsert\n{edge.source.id} -({edge.type})->  {edge.target.id}"
             )
+            # upsert verts first to make sure their ID becomes an attr
+            v_id = util.process_id(edge.source.id)  # src_id
+            if len(v_id) == 0:
+                continue
+            desc = await get_vert_desc(conn, v_id, edge.source)
+            await upsert_chan.put(
+                (
+                    util.upsert_vertex,  # func to call
+                    (
+                        conn,
+                        "Entity",  # v_type
+                        v_id,
+                        {  # attrs
+                            "description": desc,
+                            "epoch_added": int(time.time()),
+                        },
+                    ),
+                )
+            )
+            v_id = util.process_id(edge.target.id)
+            if len(v_id) == 0:
+                continue
+            desc = await get_vert_desc(conn, v_id, edge.target)
+            await upsert_chan.put(
+                (
+                    util.upsert_vertex,  # func to call
+                    (
+                        conn,
+                        "Entity",  # v_type
+                        v_id,  # src_id
+                        {  # attrs
+                            "description": desc,
+                            "epoch_added": int(time.time()),
+                        },
+                    ),
+                )
+            )
+
+            # upsert the edge between the two entities
             await upsert_chan.put(
                 (
                     util.upsert_edge,
                     (
                         conn,
                         "Entity",  # src_type
-                        edge.source.id,  # src_id
+                        util.process_id(edge.source.id),  # src_id
                         "RELATIONSHIP",  # edgeType
                         "Entity",  # tgt_type
-                        edge.target.id,  # tgt_id
+                        util.process_id(edge.target.id),  # tgt_id
                         {"relation_type": edge.type},  # attributes
                     ),
                 )
             )
             # embed "Relationship",
             # (v_id, content, index_name)
+
+
+async def resolve_entity(
+    conn: TigerGraphConnection,
+    upsert_chan: Channel,
+    emb_store: MilvusEmbeddingStore,
+    entity_id: str,
+):
+    """
+    get all vectors of E (one name can have multiple discriptions)
+    get ents close to E
+    for e in ents:
+        if e is 95% similar to E and edit_dist(E,e) <=3:
+            merge
+            mark e as processed
+
+    mark as processed
+    """
+    results = await emb_store.aget_k_closest(entity_id)
+    if len(results) == 0:
+        logger.error(
+            f"aget_k_closest should, minimally, return the entity itself.\n{results}"
+        )
+        raise Exception()
+    if entity_id == "Dataframe":
+        print("result:", entity_id, results)
+
+    # merge all entities into the ResolvedEntity vertex
+    # use the longest v_id as the resolved entity's v_id
+    resolved_entity_id = ""
+    for v in results:
+        # v_id = v.metadata["vertex_id"]
+        if len(v) > len(resolved_entity_id):
+            resolved_entity_id = v
+
+    # upsert the resolved entity
+    await upsert_chan.put(
+        (
+            util.upsert_vertex,  # func to call
+            (
+                conn,
+                "ResolvedEntity",  # v_type
+                resolved_entity_id,  # v_id
+                {  # attrs
+                    "description": []
+                },
+            ),
+        )
+    )
+
+    # create RESOLVES_TO edges from each entity to the ResolvedEntity
+    for v in results:
+        await upsert_chan.put(
+            (
+                util.upsert_edge,
+                (
+                    conn,
+                    "Entity",  # src_type
+                    v,  # src_id
+                    "RESOLVES_TO",  # edge_type
+                    "ResolvedEntity",  # tgt_type
+                    resolved_entity_id,  # tgt_id
+                    None,  # attributes
+                ),
+            )
+        )

@@ -1,0 +1,26 @@
+CREATE DISTRIBUTED QUERY ResolveRelationships(BOOL printResults=FALSE) SYNTAX V2 {
+    /*
+     * RE1 <- entity -RELATES-> entity -> RE2
+     * to
+     * RE1 -resolved-> RE 
+     *
+     * Combines all of a Resolved entity's children's relationships into
+     * RESOLVED_RELATIONSHIP
+     */
+    REs = {ResolvedEntity.*};
+
+    
+    REs = SELECT re1 FROM REs:re1 -(<RESOLVES_TO)- Entity:e -(RELATIONSHIP>:rel)- Entity:e_tgt -(RESOLVES_TO>:r)- ResolvedEntity:re2
+          // Connect the The first RE to the second RE
+          ACCUM 
+            INSERT INTO RESOLVED_RELATIONSHIP(FROM,TO) VALUES(re1, re2);
+
+
+    IF printResults THEN
+        // show which entities didn't get resolved
+        Ents = {Entity.*};
+        rEnts = SELECT e FROM Ents:e -(RESOLVES_TO>)- _;
+        ents = Ents minus rEnts;
+        PRINT ents;
+    END;
+}

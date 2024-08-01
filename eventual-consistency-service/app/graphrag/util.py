@@ -3,6 +3,7 @@ import base64
 import json
 import logging
 import traceback
+from glob import glob
 
 import httpx
 from common.config import (
@@ -42,6 +43,7 @@ async def install_queries(
 
     for t in tasks:
         res = t.result()
+        print(res)
         # stop system if a required query doesn't install
         if res["error"]:
             raise Exception(res["message"])
@@ -63,9 +65,14 @@ async def init(
         # "common/gsql/supportai/Update_Vertices_Processing_Status",
         # "common/gsql/supportai/ECC_Status",
         # "common/gsql/supportai/Check_Nonexistent_Vertices",
-        "common/gsql/graphRAG/StreamDocIds",
+        "common/gsql/graphRAG/StreamIds",
         "common/gsql/graphRAG/StreamDocContent",
+        "common/gsql/graphRAG/SetEpochProcessing",
+        "common/gsql/graphRAG/ResolveRelationships",
     ]
+    # add louvain to queries
+    q = [x.split('.gsql')[0] for x in glob("common/gsql/graphRAG/louvain/*")]
+    requried_queries.extend(q)
     await install_queries(requried_queries, conn)
 
     # extractor
@@ -101,13 +108,14 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
+                drop_old=False,
             )
 
             LogWriter.info(f"Initializing {name}")
             # init collection if it doesn't exist
             if not s.check_collection_exists():
                 tg.create_task(init_embedding_index(s, vertex_field))
-            
+
             index_stores[name] = s
 
     return extractor, index_stores
@@ -123,29 +131,28 @@ def make_headers(conn: TigerGraphConnection):
     return headers
 
 
-async def stream_doc_ids(
-    conn: TigerGraphConnection, current_batch: int, ttl_batches: int
+async def stream_ids(
+    conn: TigerGraphConnection, v_type: str, current_batch: int, ttl_batches: int
 ) -> dict[str, str | list[str]]:
     headers = make_headers(conn)
 
     try:
         async with httpx.AsyncClient(timeout=http_timeout) as client:
             res = await client.post(
-                f"{conn.restppUrl}/query/{conn.graphname}/StreamDocIds",
+                f"{conn.restppUrl}/query/{conn.graphname}/StreamIds",
                 params={
                     "current_batch": current_batch,
                     "ttl_batches": ttl_batches,
+                    "v_type": v_type,
                 },
                 headers=headers,
             )
-        ids = res.json()["results"][0]["@@doc_ids"]
+        ids = res.json()["results"][0]["@@ids"]
         return {"error": False, "ids": ids}
 
     except Exception as e:
         exc = traceback.format_exc()
-        LogWriter.error(
-            f"/{conn.graphname}/query/StreamDocIds\nException Trace:\n{exc}"
-        )
+        LogWriter.error(f"/{conn.graphname}/query/StreamIds\nException Trace:\n{exc}")
 
         return {"error": True, "message": str(e)}
 
@@ -165,22 +172,42 @@ def map_attrs(attributes: dict):
     return attrs
 
 
+def process_id(v_id: str):
+    v_id = v_id.replace(" ", "_").replace("/", "")
+    if v_id == "''" or v_id == '""':
+        return ""
+
+    return v_id
+
+
 async def upsert_vertex(
     conn: TigerGraphConnection,
     vertex_type: str,
     vertex_id: str,
     attributes: dict,
 ):
+    vertex_id = vertex_id.replace(" ", "_")
     attrs = map_attrs(attributes)
     data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
     headers = make_headers(conn)
-    # print("upsert vertex>>>", vertex_id)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
 
         res.raise_for_status()
+
+
+async def check_vertex_exists(conn, v_id: str):
+    headers = make_headers(conn)
+    async with httpx.AsyncClient(timeout=http_timeout) as client:
+        res = await client.get(
+            f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
+            headers=headers,
+        )
+
+        res.raise_for_status()
+    return res.json()
 
 
 async def upsert_edge(
@@ -196,6 +223,8 @@ async def upsert_edge(
         attrs = {}
     else:
         attrs = map_attrs(attributes)
+    src_v_id = src_v_id.replace(" ", "_")
+    tgt_v_id = tgt_v_id.replace(" ", "_")
     data = json.dumps(
         {
             "edges": {
@@ -212,7 +241,6 @@ async def upsert_edge(
         }
     )
     headers = make_headers(conn)
-    # print("upsert edge >>>", src_v_id, tgt_v_id)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         res = await client.post(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers

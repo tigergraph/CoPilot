@@ -1,0 +1,17 @@
+CREATE DISTRIBUTED QUERY graphRAG_louvain_1() {
+    
+    Ents = {ResolvedEntity.*};
+
+    // Put each node into a distinct community
+    // Assume each Entity starts in its own community
+    
+    // For each node i
+        // Compute ∆Q (modularity) when putting node i into the community of some neighbor j
+        // move i to community that yields the largest gain in ∆Q
+
+    Z = SELECT v FROM Ents:v -(_:e)-> ResolvedEntity:r
+        
+
+    ;
+}
+
