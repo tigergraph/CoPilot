@@ -508,45 +508,57 @@ func TestGetFeedback(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	// Create a request with Basic Auth
-	req, err := http.NewRequest("GET", "/get_feedback", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.SetBasicAuth(cfg.TgDbConfig.Username, cfg.TgDbConfig.Password)
+	testFeedback := func(t *testing.T, username, password string, expectedStatus int, expectedMessagesCount int, expectedFirstMessageContent string) {
+		// Create a request with Basic Auth
+		req, err := http.NewRequest("GET", "/get_feedback", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.SetBasicAuth(username, password)
 
-	// Record the response
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.GsPort, cfg.ChatDbConfig.ConversationAccessRoles, cfg.TgDbConfig.TgCloud))
+		// Record the response
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(GetFeedback(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.GsPort, cfg.ChatDbConfig.ConversationAccessRoles, cfg.TgDbConfig.TgCloud))
 
-	// Serve the request
-	handler.ServeHTTP(rr, req)
+		// Serve the request
+		handler.ServeHTTP(rr, req)
 
-	// Check the response status code
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
+		// Check the response status code
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+		if expectedStatus == http.StatusOK {
+			// Check the response body for expected messages
+			var messages []structs.Message
+			if err := json.Unmarshal(rr.Body.Bytes(), &messages); err != nil {
+				t.Errorf("Failed to parse response body: %v", err)
+			}
 
-	// Check the response body for expected messages
-	var messages []structs.Message
-	if err := json.Unmarshal(rr.Body.Bytes(), &messages); err != nil {
-		t.Errorf("Failed to parse response body: %v", err)
-	}
+			// Print the messages for debugging
+			// fmt.Println("Retrieved messages:", messages)
+			// Validate that the messages are as expected
+			// expectedMessagesCount := 2 // Based on populateDB function
+			if len(messages) != expectedMessagesCount {
+				t.Errorf("Expected %d messages, got %d", expectedMessagesCount, len(messages))
+			}
 
-	// Print the messages for debugging
-	fmt.Println("Retrieved messages:", messages)
-	// Validate that the messages are as expected
-	expectedMessagesCount := 2 // Based on populateDB function
-	if len(messages) != expectedMessagesCount {
-		t.Errorf("Expected %d messages, got %d", expectedMessagesCount, len(messages))
-	}
-
-	// Additional checks to ensure the response contains the correct data
-	if len(messages) > 0 {
-		if messages[0].Content != "This is the first message, there is no parent" {
-			t.Errorf("Unexpected message content: %v", messages[0].Content)
+			// Additional checks to ensure the response contains the correct data
+			if expectedMessagesCount > 0 && len(messages) > 0 {
+				if messages[0].Content != expectedFirstMessageContent {
+					t.Errorf("Unexpected message content: %v", messages[0].Content)
+				}
+			}
 		}
 	}
+
+	// Test case for admin user
+	testFeedback(t, "supportai", "supportai", http.StatusOK, 3, "This is the first message, there is no parent")
+
+	// Test case for non-admin user
+	testFeedback(t, "sam_pull", "sam_pull", http.StatusOK, 2, "This is the first message, there is no parent")
+
+	// Test case for non-existent user
+	testFeedback(t, "nonexistentuser", "password", http.StatusUnauthorized, 0, "")
 }
 
 // helpers

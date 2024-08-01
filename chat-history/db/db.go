@@ -149,9 +149,10 @@ func populateDB() {
 
 	// init convos
 	conv1 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a951")
+	conv2 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a952")
 	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: conv1, Name: "conv1"})
-	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: uuid.New(), Name: "conv2"})
-	db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: uuid.New(), Name: "conv3"})
+	db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: conv2, Name: "conv2"})
+	// db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: uuid.New(), Name: "conv3"})
 
 	// add message to convos
 	message := structs.Message{
@@ -164,8 +165,8 @@ func populateDB() {
 		Feedback:       structs.NoFeedback,
 		Comment:        "",
 	}
-
 	db.Create(&message)
+
 	m2 := structs.Message{
 		ConversationId: conv1,
 		MessageId:      uuid.New(),
@@ -177,4 +178,16 @@ func populateDB() {
 		Comment:        "",
 	}
 	db.Create(&m2)
+
+	m3 := structs.Message{
+		ConversationId: conv2,
+		MessageId:      uuid.New(),
+		ParentId:       &message.MessageId,
+		ModelName:      "GPT-4o",
+		Content:        "How many transactions?",
+		Role:           structs.SystemRole,
+		Feedback:       structs.NoFeedback,
+		Comment:        "",
+	}
+	db.Create(&m3)
 }
