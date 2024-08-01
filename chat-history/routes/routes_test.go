@@ -405,13 +405,16 @@ func TestExecuteGSQL(t *testing.T) {
 	// Split the paths into a slice
 	configPaths := strings.Split(configPath, ",")
 
-	cfg, err := config.LoadConfig(configPaths...)
+	cfg, err := config.LoadConfig(map[string]string{
+		"chatdb": configPaths[0],
+		"tgdb":   configPaths[1],
+	})
 	if err != nil {
 		panic(err)
 	}
 	query := "SHOW USER"
 
-	response, err := executeGSQL(cfg.TgDbHost, cfg.Username, cfg.Password, query, cfg.GsPort, cfg.TgCloud)
+	response, err := executeGSQL(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.Username, cfg.TgDbConfig.Password, query, cfg.TgDbConfig.GsPort, cfg.TgDbConfig.TgCloud)
 	if err != nil {
 		t.Fatalf("Failed to execute GSQL query: %v", err)
 	}
@@ -498,7 +501,10 @@ func TestGetFeedback(t *testing.T) {
 	// Split the paths into a slice
 	configPaths := strings.Split(configPath, ",")
 
-	cfg, err := config.LoadConfig(configPaths...)
+	cfg, err := config.LoadConfig(map[string]string{
+		"chatdb": configPaths[0],
+		"tgdb":   configPaths[1],
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -507,11 +513,11 @@ func TestGetFeedback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.SetBasicAuth(cfg.Username, cfg.Password)
+	req.SetBasicAuth(cfg.TgDbConfig.Username, cfg.TgDbConfig.Password)
 
 	// Record the response
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GetFeedback(cfg.TgDbHost, cfg.GsPort, cfg.ConversationAccessRoles, cfg.TgCloud))
+	handler := http.HandlerFunc(GetFeedback(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.GsPort, cfg.ChatDbConfig.ConversationAccessRoles, cfg.TgDbConfig.TgCloud))
 
 	// Serve the request
 	handler.ServeHTTP(rr, req)
