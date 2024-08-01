@@ -54,7 +54,7 @@ h11==0.14.0
 httpcore==0.18.0
 httptools==0.6.0
 httpx==0.25.0
-huggingface-hub==0.23.0
+huggingface-hub==0.23.2
 ibm-cos-sdk==2.13.6
 ibm-cos-sdk-core==2.13.6
 ibm-cos-sdk-s3transfer==2.13.6
