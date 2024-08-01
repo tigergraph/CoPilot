@@ -36,13 +36,10 @@ func setup(t *testing.T) string {
 	"logPath": "requestLogs.jsonl",
 	"tgCloud": true,
 	"conversationAccessRoles": ["superuser", "globaldesigner"]
-	"username": "tigergraph",
-	"password": "tigergraph",
-	"gsPort": "14240"
 }`
 
 	if err := os.WriteFile(pth, []byte(dat), 0644); err != nil {
-		t.Fatal("error setting upconfig.json")
+		t.Fatal("error setting up chat_config.json")
 	}
 
 	return pth
