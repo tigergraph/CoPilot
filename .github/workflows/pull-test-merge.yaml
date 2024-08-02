@@ -66,7 +66,6 @@ jobs:
           source venv/bin/activate
           cp -r copilot/tests/*test* copilot/tests/create_wandb_report.py copilot/app/ 
           cd copilot/app
-          python -c "import pymilvus;print(pymilvus.__version__)"
           python -m pytest --disable-warnings
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
