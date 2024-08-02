@@ -36,7 +36,7 @@ func main() {
 	router.HandleFunc("GET /user/{userId}", routes.GetUserConversations)
 	router.HandleFunc("GET /conversation/{conversationId}", routes.GetConversation)
 	router.HandleFunc("POST /conversation", routes.UpdateConversation)
-	router.HandleFunc("GET /get_feedback", routes.GetFeedback(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.GsPort, cfg.ChatDbConfig.ConversationAccessRoles, cfg.TgDbConfig.TgCloud))
+	router.HandleFunc("GET /get_feedback", routes.GetFeedback(cfg.TgDbConfig.Hostname, cfg.TgDbConfig.GsPort, cfg.ChatDbConfig.ConversationAccessRoles))
 
 	// create server with middleware
 	dev := strings.ToLower(os.Getenv("DEV")) == "true"
