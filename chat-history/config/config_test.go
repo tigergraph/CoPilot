@@ -25,8 +25,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	if cfg.TgDbConfig.Hostname != "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io" ||
-		cfg.TgDbConfig.GsPort != "14240" ||
-		cfg.TgDbConfig.TgCloud != true {
+		cfg.TgDbConfig.GsPort != "14240" {
 		t.Fatalf("TigerGraph config is wrong, %v", cfg.TgDbConfig)
 	}
 }
@@ -54,8 +53,7 @@ func setup(t *testing.T) (string, string) {
     "hostname": "https://tg-0cdef603-3760-41c3-af6f-41e95afc40de.us-east-1.i.tgcloud.io",
     "gsPort": "14240",
     "username": "supportai",
-    "password": "supportai",
-	"tgCloud": true
+    "password": "supportai"
 }`
 	if err := os.WriteFile(tgConfigPath, []byte(tgConfigData), 0644); err != nil {
 		t.Fatal("error setting up tg_config.json")
