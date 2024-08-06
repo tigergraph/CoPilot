@@ -180,7 +180,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
             }
             className="min-h-[32px] pt-5 pl-5 min-w-[144px]'"
           />
-          <Popover>
+          {/* <Popover>
             <PopoverTrigger className="ml-auto"><GoGear className="text-lg mr-5 mt-4"/></PopoverTrigger>
             <PopoverContent className="flex flex-col">
 
@@ -231,20 +231,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
 
 
-                {/* <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Query Name</TableHead>
-                      <TableHead className="text-right">Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      <TableRow key='0'>
-                        <TableCell className="font-medium">find_transactions_unusual_for_merchant</TableCell>
-                        <TableCell className="text-right"><IoPencil/> This query reports transactions having...</TableCell>
-                      </TableRow>
-                  </TableBody>
-                </Table> */}
+
 
 
                 <Table>
@@ -339,7 +326,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
 
             </PopoverContent>
-          </Popover>
+          </Popover>  */}
 
         </div>
       </div>
