@@ -342,7 +342,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
       {renderConvoHistory()}
 
-      <div
+      {/* <div
         className={`hidden md:block w-[320px] md:max-w-[320px] absolute bg-white dark:bg-background dark:border-[#3D3D3D] rounded-bl-3xl border-t ${height ? "open-dialog-avatar" : "bottom-0"}`}
       >
         <div className="flex justify-center items-center text-sm h-[80px]">
@@ -356,7 +356,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
           </div>
           <IoIosArrowForward />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
