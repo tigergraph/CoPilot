@@ -76,19 +76,19 @@ export const Interactions: FC<Interactions> = ({
             )}
           </div>
 
-          <div
+          {/* <div
             className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
             onClick={() => alert("Copy!!")}
           >
             <IoMdCopy className="text-[15px]" />
-          </div>
+          </div> */}
 
-          <div
+          {/* <div
             className="w-[28px] h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 cursor-pointer"
             onClick={() => alert("Regenerate!!")}
           >
             <PiArrowsCounterClockwiseFill className="text-[15px]" />
-          </div>
+          </div> */}
 
           <div
             className="w-auto h-[28px] bg-shadeA flex items-center justify-center rounded-sm mr-1 px-2 cursor-pointer"

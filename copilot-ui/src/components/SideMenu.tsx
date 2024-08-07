@@ -180,7 +180,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
             }
             className="min-h-[32px] pt-5 pl-5 min-w-[144px]'"
           />
-          <Popover>
+          {/* <Popover>
             <PopoverTrigger className="ml-auto"><GoGear className="text-lg mr-5 mt-4"/></PopoverTrigger>
             <PopoverContent className="flex flex-col">
 
@@ -231,20 +231,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
 
 
-                {/* <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Query Name</TableHead>
-                      <TableHead className="text-right">Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      <TableRow key='0'>
-                        <TableCell className="font-medium">find_transactions_unusual_for_merchant</TableCell>
-                        <TableCell className="text-right"><IoPencil/> This query reports transactions having...</TableCell>
-                      </TableRow>
-                  </TableBody>
-                </Table> */}
+
 
 
                 <Table>
@@ -339,7 +326,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
 
             </PopoverContent>
-          </Popover>
+          </Popover>  */}
 
         </div>
       </div>
@@ -355,7 +342,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
 
       {renderConvoHistory()}
 
-      <div
+      {/* <div
         className={`hidden md:block w-[320px] md:max-w-[320px] absolute bg-white dark:bg-background dark:border-[#3D3D3D] rounded-bl-3xl border-t ${height ? "open-dialog-avatar" : "bottom-0"}`}
       >
         <div className="flex justify-center items-center text-sm h-[80px]">
@@ -369,7 +356,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
           </div>
           <IoIosArrowForward />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -162,7 +162,7 @@ const ActionProvider: React.FC<ActionProviderProps> = ({
 
   return (
     <div>
-      <span className='absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]'>The WebSocket is currently {connectionStatus}</span>
+      {/* <span className='absolute bottom-0 pl-2 z-[5000] text-[8px] text-[#666]'>The WebSocket is currently {connectionStatus}</span> */}
       {React.Children.map(children, (child) => {
         return React.cloneElement(child, {
           actions: {
