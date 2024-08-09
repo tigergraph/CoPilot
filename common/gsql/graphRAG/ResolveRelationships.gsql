@@ -13,7 +13,7 @@ CREATE DISTRIBUTED QUERY ResolveRelationships(BOOL printResults=FALSE) SYNTAX V2
     REs = SELECT re1 FROM REs:re1 -(<RESOLVES_TO)- Entity:e -(RELATIONSHIP>:rel)- Entity:e_tgt -(RESOLVES_TO>:r)- ResolvedEntity:re2
           // Connect the The first RE to the second RE
           ACCUM 
-            INSERT INTO RESOLVED_RELATIONSHIP(FROM,TO) VALUES(re1, re2);
+            INSERT INTO RESOLVED_RELATIONSHIP(FROM,TO, relation_type) VALUES(re1, re2, rel.relation_type);
 
 
     IF printResults THEN

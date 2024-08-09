@@ -20,16 +20,14 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE CONTAINS_DOCUMENT(FROM DocumentCollection, TO Document) WITH REVERSE_EDGE="reverse_CONTAINS_DOCUMENT";
 
     // GraphRAG
-    ADD VERTEX Community(PRIMARY_ID id STRING, description INT) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, k_in UINT, description STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, entity_type STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
 
-    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP"; // TODO: check where knn algo writes results
+    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP"; 
     ADD DIRECTED EDGE RESOLVES_TO(FROM Entity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVES_TO"; // Connect ResolvedEntities with their children entities
-    ADD DIRECTED EDGE RESOLVED_RELATIONSHIP(FROM ResolvedEntity, TO ResolvedEntity) WITH REVERSE_EDGE="reverse_RESOLVED_RELATIONSHIP"; // store edges between entities after they're resolved
-    ADD DIRECTED EDGE IN_COMMUNITY(FROM ResolvedEntity, TO Community) WITH REVERSE_EDGE="reverse_IN_COMMUNITY";
+    ADD DIRECTED EDGE RESOLVED_RELATIONSHIP(FROM ResolvedEntity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVED_RELATIONSHIP"; // store edges between entities after they're resolved
 
-    // TODO: louvain will be run on resolved entities, but stored in community then on communities until louvain runs out
-    // Hierarchical communities (Louvain/Leiden)
-    // ADD UNDIRECTED EDGE LINKS_TO(FROM Community, TO Community);
-    // ADD DIRECTED EDGE BELONGS_TO(FROM Community, TO Community);
+    ADD DIRECTED EDGE IN_COMMUNITY(FROM ResolvedEntity, TO Community) WITH REVERSE_EDGE="reverse_IN_COMMUNITY";
+    ADD DIRECTED EDGE LINKS_TO (from Community, to Community, weight DOUBLE) WITH REVERSE_EDGE="reverse_LINKS_TO";
+    ADD DIRECTED EDGE HAS_PARENT (from Community, to Community) WITH REVERSE_EDGE="reverse_HAS_PARENT";
 }

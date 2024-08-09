@@ -6,14 +6,15 @@ from urllib.parse import quote_plus
 import ecc_util
 import httpx
 from aiochannel import Channel
+from graphrag import community_summarizer, util
+from langchain_community.graphs.graph_document import GraphDocument, Node
+from pyTigerGraph import TigerGraphConnection
+
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
-from graphrag import util
-from langchain_community.graphs.graph_document import GraphDocument, Node
-from pyTigerGraph import TigerGraphConnection
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
@@ -298,14 +299,14 @@ async def resolve_entity(
             f"aget_k_closest should, minimally, return the entity itself.\n{results}"
         )
         raise Exception()
-    if entity_id == "Dataframe":
-        print("result:", entity_id, results)
+    # FIXME: deleteme
+    # if entity_id == "Dataframe":
+    # print("result:", entity_id, results)
 
     # merge all entities into the ResolvedEntity vertex
     # use the longest v_id as the resolved entity's v_id
-    resolved_entity_id = ""
+    resolved_entity_id = entity_id
     for v in results:
-        # v_id = v.metadata["vertex_id"]
         if len(v) > len(resolved_entity_id):
             resolved_entity_id = v
 
@@ -318,7 +319,7 @@ async def resolve_entity(
                 "ResolvedEntity",  # v_type
                 resolved_entity_id,  # v_id
                 {  # attrs
-                    "description": []
+                    # "id": resolved_entity_id,
                 },
             ),
         )
@@ -340,3 +341,49 @@ async def resolve_entity(
                 ),
             )
         )
+
+
+async def process_community(
+    conn: TigerGraphConnection,
+    upsert_chan: Channel,
+    i: int,
+    c: str,
+):
+    """
+    https://github.com/microsoft/graphrag/blob/main/graphrag/prompt_tune/template/community_report_summarization.py
+
+    Get children verts (Entity for layer-1 Communities, Community otherwise)
+    if the commuinty only has one child, use its description -- no need to summarize
+
+    embed summaries
+    """
+    print(i, c, flush=True)
+
+    # get the children of the community
+    children = await util.get_commuinty_children(conn, i, c)
+    if i == 1:
+        tmp = []
+        for c in children:
+            tmp.extend(c)
+        children = list(filter(lambda x: len(x) > 0, tmp))
+    print(">>>", children, flush=True)
+    llm = ecc_util.get_llm_service()
+    summarizer = community_summarizer.CommunitySummarizer(llm)
+    summary = await summarizer.summarize(c, children)
+    await upsert_chan.put((upsert_summary, (conn,summary)))
+
+
+async def upsert_summary(conn: TigerGraphConnection, summary: str):
+    print(f"SUMMARY:> {summary}", flush=True)
+
+    # vertex_id = vertex_id.replace(" ", "_")
+    # attrs = map_attrs(attributes)
+    # data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
+    # headers = make_headers(conn)
+    # async with httpx.AsyncClient(timeout=http_timeout) as client:
+    #     res = await client.post(
+    #         f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+    #     )
+    #
+    #     res.raise_for_status()
+    #

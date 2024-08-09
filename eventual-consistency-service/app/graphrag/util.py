@@ -6,6 +6,9 @@ import traceback
 from glob import glob
 
 import httpx
+from graphrag import workers
+from pyTigerGraph import TigerGraphConnection
+
 from common.config import (
     doc_processing_config,
     embedding_service,
@@ -17,36 +20,28 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
-from graphrag import workers
-from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
 
 
 async def install_queries(
-    requried_queries: list[str], conn: TigerGraphConnection, n_workers=8
+    requried_queries: list[str],
+    conn: TigerGraphConnection,
 ):
     # queries that are currently installed
     installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
 
-    tasks = []
-    async with asyncio.TaskGroup() as grp:
-        for q in requried_queries:
-            # only install n queries at a time (n=n_workers)
-            async with asyncio.Semaphore(n_workers):
-                q_name = q.split("/")[-1]
-                # if the query is not installed, install it
-                if q_name not in installed_queries:
-                    task = grp.create_task(workers.install_query(conn, q))
-                    tasks.append(task)
-
-    for t in tasks:
-        res = t.result()
-        print(res)
-        # stop system if a required query doesn't install
-        if res["error"]:
-            raise Exception(res["message"])
+    # doesn't need to be parallel since tg only does it one at a time
+    for q in requried_queries:
+        # only install n queries at a time (n=n_workers)
+        q_name = q.split("/")[-1]
+        # if the query is not installed, install it
+        if q_name not in installed_queries:
+            res = await workers.install_query(conn, q)
+            # stop system if a required query doesn't install
+            if res["error"]:
+                raise Exception(res["message"])
 
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
@@ -69,9 +64,14 @@ async def init(
         "common/gsql/graphRAG/StreamDocContent",
         "common/gsql/graphRAG/SetEpochProcessing",
         "common/gsql/graphRAG/ResolveRelationships",
+        "common/gsql/graphRAG/get_community_children",
+        "common/gsql/graphRAG/louvain/graphrag_louvain_init",
+        "common/gsql/graphRAG/louvain/graphrag_louvain_communities",
+        "common/gsql/graphRAG/louvain/modularity",
+        "common/gsql/graphRAG/louvain/stream_community",
     ]
     # add louvain to queries
-    q = [x.split('.gsql')[0] for x in glob("common/gsql/graphRAG/louvain/*")]
+    q = [x.split(".gsql")[0] for x in glob("common/gsql/graphRAG/louvain/*")]
     requried_queries.extend(q)
     await install_queries(requried_queries, conn)
 
@@ -246,3 +246,24 @@ async def upsert_edge(
             f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
         )
         res.raise_for_status()
+
+
+async def get_commuinty_children(conn, i: int, c: str):
+    headers = make_headers(conn)
+    async with httpx.AsyncClient(timeout=None) as client:
+        resp = await client.get(
+            f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
+            params={"comm": c, "iter": i},
+            headers=headers,
+        )
+        resp.raise_for_status()
+    descrs = []
+    for d in resp.json()["results"][0]["children"]:
+        desc = d["attributes"]["description"]
+        if len(desc) == 0:
+            desc = d["v_id"]
+
+        descrs.append(desc)
+
+    print(">>>", descrs, flush=True)
+    return descrs

@@ -1,10 +1,8 @@
+from typing import Dict, List, Optional
+
 from langchain.pydantic_v1 import BaseModel, Field
-from typing import Optional
-from langchain_community.graphs.graph_document import (
-    Node as BaseNode,
-    Relationship as BaseRelationship,
-)
-from typing import List, Dict, Type
+from langchain_community.graphs.graph_document import Node as BaseNode
+from langchain_community.graphs.graph_document import Relationship as BaseRelationship
 
 
 class MapQuestionToSchemaResponse(BaseModel):
@@ -81,14 +79,27 @@ class KnowledgeGraph(BaseModel):
         ..., description="List of relationships in the knowledge graph"
     )
 
+
 class ReportQuestion(BaseModel):
     question: str = Field("The question to be asked")
     reasoning: str = Field("The reasoning behind the question")
 
+
 class ReportSection(BaseModel):
     section: str = Field("Name of the section")
     description: str = Field("Description of the section")
-    questions: List[ReportQuestion] = Field("List of questions and reasoning for the section")
+    questions: List[ReportQuestion] = Field(
+        "List of questions and reasoning for the section"
+    )
+
 
 class ReportSections(BaseModel):
     sections: List[ReportSection] = Field("List of sections for the report")
+
+
+class CommunitySummary(BaseModel):
+    """Generate a summary of the documents that are within this community."""
+
+    summary: str = Field(
+        ..., description="The community summary derived from the input documents"
+    )
