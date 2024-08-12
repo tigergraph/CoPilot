@@ -96,7 +96,7 @@ def initialize_eventual_consistency_checker(
                     vector_field=milvus_config.get("vector_field", "document_vector"),
                     text_field=milvus_config.get("text_field", "document_content"),
                     vertex_field=vertex_field,
-                    alias=milvus_config.get("alias", "default")
+                    alias=milvus_config.get("alias", "default"),
                 )
 
         chunker = ecc_util.get_chunker()
@@ -190,7 +190,10 @@ def consistency_status(
             background.add_task(graphrag.run, graphname, conn)
             # asyncio.run(graphrag.run(graphname, conn))
             import time
-            ecc_status = f"hi from graph rag ecc: {conn.graphname} ({graphname}) {time.ctime()}"
+
+            ecc_status = (
+                f"hi from graph rag ecc: {conn.graphname} ({graphname}) {time.ctime()}"
+            )
         case _:
             response.status_code = status.HTTP_404_NOT_FOUND
             return f"Method unsupported, must be {SupportAIMethod.SUPPORTAI}, {SupportAIMethod.GRAPHRAG}"

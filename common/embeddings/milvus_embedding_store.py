@@ -5,9 +5,10 @@ from typing import Iterable, List, Optional, Tuple
 
 import Levenshtein as lev
 from asyncer import asyncify
-from langchain_milvus.vectorstores import Milvus
+from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
-from pymilvus import connections, utility
+from langchain_milvus.vectorstores import Milvus
+from pymilvus import MilvusException, connections, utility
 from pymilvus.exceptions import MilvusException
 
 from common.embeddings.base_embedding_store import EmbeddingStore
@@ -15,9 +16,6 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
-from langchain_community.vectorstores import Milvus
-from langchain_core.documents.base import Document
-from pymilvus import MilvusException, connections, utility
 
 logger = logging.getLogger(__name__)
 
