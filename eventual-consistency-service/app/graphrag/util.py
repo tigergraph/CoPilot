@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import traceback
 from glob import glob
 
@@ -65,6 +66,7 @@ async def init(
         "common/gsql/graphRAG/SetEpochProcessing",
         "common/gsql/graphRAG/ResolveRelationships",
         "common/gsql/graphRAG/get_community_children",
+        "common/gsql/graphRAG/communities_have_desc",
         "common/gsql/graphRAG/louvain/graphrag_louvain_init",
         "common/gsql/graphRAG/louvain/graphrag_louvain_communities",
         "common/gsql/graphRAG/louvain/modularity",
@@ -91,6 +93,7 @@ async def init(
             "Entity",
             "Relationship",
             # "Concept",
+            "Community",
         ],
     )
     index_stores = {}
@@ -108,7 +111,7 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
-                drop_old=False,
+                drop_old=True,
             )
 
             LogWriter.info(f"Initializing {name}")
@@ -174,6 +177,10 @@ def map_attrs(attributes: dict):
 
 def process_id(v_id: str):
     v_id = v_id.replace(" ", "_").replace("/", "")
+
+    has_func = re.compile(r"(.*)\(").findall(v_id)
+    if len(has_func) > 0:
+        v_id = has_func[0]
     if v_id == "''" or v_id == '""':
         return ""
 
@@ -186,6 +193,7 @@ async def upsert_vertex(
     vertex_id: str,
     attributes: dict,
 ):
+    logger.info(f"Upsert vertex: {vertex_type} {vertex_id}")
     vertex_id = vertex_id.replace(" ", "_")
     attrs = map_attrs(attributes)
     data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
@@ -260,10 +268,26 @@ async def get_commuinty_children(conn, i: int, c: str):
     descrs = []
     for d in resp.json()["results"][0]["children"]:
         desc = d["attributes"]["description"]
-        if len(desc) == 0:
+        if i == 1 and all(len(x) == 0 for x in desc):
+            desc = [d["v_id"]]
+        elif len(desc) == 0:
             desc = d["v_id"]
 
         descrs.append(desc)
 
-    print(">>>", descrs, flush=True)
     return descrs
+
+
+async def check_vertex_has_desc(conn, i: int):
+    headers = make_headers(conn)
+    async with httpx.AsyncClient(timeout=None) as client:
+        resp = await client.get(
+            f"{conn.restppUrl}/query/{conn.graphname}/communities_have_desc",
+            params={"iter": i},
+            headers=headers,
+        )
+        resp.raise_for_status()
+
+    res = resp.json()["results"][0]["all_have_desc"]
+
+    return res

@@ -299,9 +299,6 @@ async def resolve_entity(
             f"aget_k_closest should, minimally, return the entity itself.\n{results}"
         )
         raise Exception()
-    # FIXME: deleteme
-    # if entity_id == "Dataframe":
-    # print("result:", entity_id, results)
 
     # merge all entities into the ResolvedEntity vertex
     # use the longest v_id as the resolved entity's v_id
@@ -346,8 +343,9 @@ async def resolve_entity(
 async def process_community(
     conn: TigerGraphConnection,
     upsert_chan: Channel,
+    embed_chan: Channel,
     i: int,
-    c: str,
+    comm_id: str,
 ):
     """
     https://github.com/microsoft/graphrag/blob/main/graphrag/prompt_tune/template/community_report_summarization.py
@@ -357,33 +355,39 @@ async def process_community(
 
     embed summaries
     """
-    print(i, c, flush=True)
 
+    logger.info(f"Processing Community: {comm_id}")
     # get the children of the community
-    children = await util.get_commuinty_children(conn, i, c)
+    children = await util.get_commuinty_children(conn, i, comm_id)
     if i == 1:
         tmp = []
         for c in children:
             tmp.extend(c)
         children = list(filter(lambda x: len(x) > 0, tmp))
-    print(">>>", children, flush=True)
-    llm = ecc_util.get_llm_service()
-    summarizer = community_summarizer.CommunitySummarizer(llm)
-    summary = await summarizer.summarize(c, children)
-    await upsert_chan.put((upsert_summary, (conn,summary)))
+    comm_id = util.process_id(comm_id)
 
+    # if the community only has one child, use its description
+    if len(children) == 1:
+        summary = children[0]
+    else:
+        llm = ecc_util.get_llm_service()
+        summarizer = community_summarizer.CommunitySummarizer(llm)
+        summary = await summarizer.summarize(comm_id, children)
 
-async def upsert_summary(conn: TigerGraphConnection, summary: str):
-    print(f"SUMMARY:> {summary}", flush=True)
+    await upsert_chan.put(
+        (
+            util.upsert_vertex,  # func to call
+            (
+                conn,
+                "Community",  # v_type
+                comm_id,  # v_id
+                {  # attrs
+                    "description": summary,
+                    "iteration": i,
+                },
+            ),
+        )
+    )
 
-    # vertex_id = vertex_id.replace(" ", "_")
-    # attrs = map_attrs(attributes)
-    # data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
-    # headers = make_headers(conn)
-    # async with httpx.AsyncClient(timeout=http_timeout) as client:
-    #     res = await client.post(
-    #         f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-    #     )
-    #
-    #     res.raise_for_status()
-    #
+    # (v_id, content, index_name)
+    await embed_chan.put((comm_id, summary, "Community"))

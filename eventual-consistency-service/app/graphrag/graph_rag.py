@@ -6,7 +6,13 @@ import traceback
 import httpx
 from aiochannel import Channel
 from graphrag import workers
-from graphrag.util import http_timeout, init, make_headers, stream_ids
+from graphrag.util import (
+    check_vertex_has_desc,
+    http_timeout,
+    init,
+    make_headers,
+    stream_ids,
+)
 from pyTigerGraph import TigerGraphConnection
 
 from common.config import embedding_service
@@ -210,7 +216,6 @@ async def resolve_entities(
     async with asyncio.TaskGroup() as grp:
         # for every entity
         async for entity_id in entity_chan:
-            print(f"***Entity ID from chan {entity_id}", flush=True)
             grp.create_task(
                 workers.resolve_entity(conn, upsert_chan, emb_store, entity_id)
             )
@@ -227,7 +232,7 @@ async def resolve_entities(
         res.raise_for_status()
 
 
-async def communities(conn: TigerGraphConnection, community_chan: Channel):
+async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
     """
     Run louvain
     """
@@ -250,23 +255,21 @@ async def communities(conn: TigerGraphConnection, community_chan: Channel):
         )
         res.raise_for_status()
     mod = res.json()["results"][0]["mod"]
-    print(f"****mod 1: {mod}", flush=True)
-    await community_chan.put(1)
+    logger.info(f"****mod pass 1: {mod}")
+    await stream_communities(conn, 1, comm_process_chan)
 
     # nth pass: Iterate on Resolved Entities until modularity stops increasing
     prev_mod = -10
     i = 0
-    # for _ in range(1, 5):
-    prev_mod = 0
     while abs(prev_mod - mod) > 0.0000001 and prev_mod != 0:
         prev_mod = mod
-        logger.info(f"Running louvain on Communities (iteration: {i})")
         i += 1
+        logger.info(f"Running louvain on Communities (iteration: {i})")
         # louvain pass
         async with httpx.AsyncClient(timeout=None) as client:
             res = await client.get(
                 f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_communities",
-                params={"n_batches": 1},
+                params={"n_batches": 1, "iteration": i},
                 headers=headers,
             )
 
@@ -281,20 +284,20 @@ async def communities(conn: TigerGraphConnection, community_chan: Channel):
             )
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
-        print(f"*** mod {i+1}: {mod}", flush=True)
-        print(f"****** mod diff: {abs(prev_mod - mod)}", flush=True)
+        logger.info(f"*** mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
 
         # write iter to chan for layer to be processed
-        await community_chan.put(i + 1)
+        await stream_communities(conn, i + 1, comm_process_chan)
 
     # TODO: erase last run since it's ∆q to the run before it will be small
     logger.info("closing communities chan")
-    community_chan.close()
+    comm_process_chan.close()
 
 
 async def stream_communities(
     conn: TigerGraphConnection,
-    community_chan: Channel,
+    # community_chan: Channel,
+    i: int,
     comm_process_chan: Channel,
 ):
     """
@@ -305,37 +308,48 @@ async def stream_communities(
     headers = make_headers(conn)
     # TODO:
     # can only do one layer at a time to ensure that every child community has their descriptions
-    async for i in community_chan:
-        # get the community from that layer
-        async with httpx.AsyncClient(timeout=None) as client:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/stream_community",
-                params={"iter": i},
-                headers=headers,
-            )
-        resp.raise_for_status()
-        comms = resp.json()["results"][0]["Comms"]
 
-        for c in comms:
-            await comm_process_chan.put((i, c["v_id"]))
+    # async for i in community_chan:
+    # get the community from that layer
+    async with httpx.AsyncClient(timeout=None) as client:
+        resp = await client.get(
+            f"{conn.restppUrl}/query/{conn.graphname}/stream_community",
+            params={"iter": i},
+            headers=headers,
+        )
+    resp.raise_for_status()
+    comms = resp.json()["results"][0]["Comms"]
+
+    for c in comms:
+        await comm_process_chan.put((i, c["v_id"]))
+
+    # Wait for all communities for layer i to be processed before doing next layer
+    # all community descriptions must be populated before the next layer can be processed
+    if len(comms) > 0:
+        while not await check_vertex_has_desc(conn, i):
+            logger.info(f"Waiting for layer{i} to finish processing")
+            await asyncio.sleep(5)
+        await asyncio.sleep(3)
 
     logger.info("stream_communities done")
     logger.info("closing comm_process_chan")
-    comm_process_chan.close()
+    # comm_process_chan.close()
 
 
 async def summarize_communities(
     conn: TigerGraphConnection,
     comm_process_chan: Channel,
     upsert_chan: Channel,
+    embed_chan: Channel,
 ):
     async with asyncio.TaskGroup() as tg:
         async for c in comm_process_chan:
-            tg.create_task(workers.process_community(conn, upsert_chan, *c))
-            break
+            tg.create_task(workers.process_community(conn, upsert_chan, embed_chan, *c))
+            # break
 
     logger.info("closing upsert_chan")
     upsert_chan.close()
+    embed_chan.close()
 
 
 async def run(graphname: str, conn: TigerGraphConnection):
@@ -347,14 +361,17 @@ async def run(graphname: str, conn: TigerGraphConnection):
             - embeddings
             - entities/relationships (and their embeddings)
             - upsert everything to the graph
+        - Resolve Entities
+            Ex: "Vincent van Gogh" and "van Gogh" should be resolved to "Vincent van Gogh"
     """
 
     extractor, index_stores = await init(conn)
     init_start = time.perf_counter()
 
-    abc = True
-    abc = False
-    if abc:
+    doc_process_switch = True
+    entity_resolution_switch = True 
+    community_detection_switch = True
+    if doc_process_switch:
         logger.info("Doc Processing Start")
         docs_chan = Channel(1)
         embed_chan = Channel(100)
@@ -381,7 +398,7 @@ async def run(graphname: str, conn: TigerGraphConnection):
     # Entity Resolution
     entity_start = time.perf_counter()
 
-    if abc:
+    if entity_resolution_switch:
         logger.info("Entity Processing Start")
         entities_chan = Channel(100)
         upsert_chan = Channel(100)
@@ -401,7 +418,7 @@ async def run(graphname: str, conn: TigerGraphConnection):
 
     # Community Detection
     community_start = time.perf_counter()
-    if True:
+    if community_detection_switch:
         # FIXME: delete community delete
         for v in ["Community"]:
             try:
@@ -409,20 +426,22 @@ async def run(graphname: str, conn: TigerGraphConnection):
             except:
                 pass
         logger.info("Community Processing Start")
-        communities_chan = Channel(1)
         upsert_chan = Channel(10)
         comm_process_chan = Channel(100)
         upsert_chan = Channel(100)
+        embed_chan = Channel(100)
         async with asyncio.TaskGroup() as grp:
             # run louvain
-            grp.create_task(communities(conn, communities_chan))
+            # grp.create_task(communities(conn, communities_chan))
+            grp.create_task(communities(conn, comm_process_chan))
             # get the communities
-            grp.create_task(
-                stream_communities(conn, communities_chan, comm_process_chan)
-            )
+            # grp.create_task( stream_communities(conn, communities_chan, comm_process_chan))
             # summarize each community
-            grp.create_task(summarize_communities(conn, comm_process_chan, upsert_chan))
+            grp.create_task(
+                summarize_communities(conn, comm_process_chan, upsert_chan, embed_chan)
+            )
             grp.create_task(upsert(upsert_chan))
+            grp.create_task(embed(embed_chan, index_stores, graphname))
 
     community_end = time.perf_counter()
     logger.info("Community Processing End")

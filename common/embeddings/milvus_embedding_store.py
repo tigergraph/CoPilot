@@ -606,9 +606,6 @@ class MilvusEmbeddingStore(EmbeddingStore):
     async def aget_k_closest(
         self, v_id: str, k=15, threshold_similarity=0.90, edit_dist_threshold_pct=0.75
     ) -> list[Document]:
-        """
-        asdf
-        """
         threshold_dist = 1 - threshold_similarity
 
         # asyncify necessary funcs
