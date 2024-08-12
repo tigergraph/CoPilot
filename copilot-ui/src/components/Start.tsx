@@ -13,17 +13,19 @@ const questions =
         {title: 'Can I load data with pyTG?'},
         {title: 'Write a short python snippet to run a loading job'},
       ]
-    : [
+    : localStorage.getItem('selectedGraph') === 'Transaction_Fraud' ?
+      [
         {title: 'How many transactions are there?'},
         {title: 'Tell me about transaction fraud.'},
         {title: 'Describe flow of one transaction.'},
-        {title: 'How TigerGraph can help me?'},
+        {title: 'How TigerGraph can help me?'}
         // { title: "How to use visualization correctly?" },
         // { title: "How to detect fraud in transactions?" },
         // { title: "What is William Torres' ID?" },
         // { title: "What's his email?" },
         // {title:"How do I get a count of vertices in Python?"}
-      ];
+      ]
+    : [];
 
 interface Start {
   props: any;

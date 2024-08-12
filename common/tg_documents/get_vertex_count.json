@@ -1,0 +1,10 @@
+{
+    "function_header": "getVertexCount",
+    "description": "Get the count of a vertex type, optionally with a where filter",
+    "docstring": "`getVertexCount(vertexType: Union[str, list] = '*', where: str = '')` → Union[int, dict]\nReturns the number of vertices of the specified type.\nParameters:\nvertexType (Union[str, list], optional): The name of the vertex type. If vertexType == '*', then count the instances of all vertex types (where cannot be specified in this case). Defaults to '*'.\nwhere (str, optional): A comma separated list of conditions that are all applied on each vertex’s attributes. The conditions are in logical conjunction (i.e. they are 'AND’ed' together). Defaults to ''.\nReturns:\nA dictionary of <vertex_type>: <vertex_count> pairs if vertexType is a list or '*'.\nAn integer of vertex count if vertexType is a single vertex type.\nUses:\nIf vertexType is specified only: count of the instances of the given vertex type(s).\nIf vertexType and where are specified: count of the instances of the given vertex type after being filtered by where condition(s).",
+    "param_types": {
+        "vertexType": "Union[str, List[str]]",
+        "where": "str"
+    },
+    "custom_query": false
+}

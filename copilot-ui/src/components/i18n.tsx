@@ -14,7 +14,7 @@ i18n
       en: {
         translation: {
           welcome: "Welcome to",
-          login: "Please log in to your TigerGraph account to continue.",
+          login: "Please log in with your TigerGraph database account",
           username: "Username",
           password: "Password",
           forgotPassword: "Forgot Password",

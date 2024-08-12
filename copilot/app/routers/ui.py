@@ -25,7 +25,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pyTigerGraph import TigerGraphConnection
 from tools.validation_utils import MapQuestionToSchemaException
 
-from common.config import db_config, embedding_service, llm_config
+from common.config import db_config, embedding_service, llm_config, service_status
 from common.db.connections import get_db_connection_pwd_manual
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
@@ -168,6 +168,31 @@ async def get_conversation_contents(
 
     return res.json()
 
+@router.get(route_prefix + "/get_feedback")
+async def get_conversation_feedback(
+    creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+):
+    creds = creds[1]
+    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{db_config['chat_history_api']}/get_feedback",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            res.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error occurred: {e}")
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to fetch feedback")
+    except Exception as e:
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/get_feedback request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+    return res.json()
+
 
 async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
     # loop on q until done token emit events through ws
@@ -271,6 +296,12 @@ async def chat(
             initially retrieve the convo
             update the convo
     """
+    if service_status["embedding_store"]["error"]:
+        return HTTPException(
+            status_code=503,
+            detail=service_status["embedding_store"]["error"]
+        )
+    
     await websocket.accept()
 
     # AUTH

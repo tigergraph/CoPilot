@@ -1,4 +1,5 @@
 import logging
+import json
 import time
 from typing import Dict, List
 
@@ -19,6 +20,7 @@ from common.llm_services import (
     HuggingFaceEndpoint,
     Ollama,
     OpenAI,
+    IBMWatsonX
 )
 from common.llm_services.base_llm import LLM_Model
 from common.logs.log import req_id_cv
@@ -119,20 +121,28 @@ class TigerGraphAgent:
 
             input_data = {}
             input_data["input"] = question
-            logger.info(f"conversation: {conversation}")
 
             if conversation is not None:
                 input_data["conversation"] = [
                     {"query": chat["query"], "response": chat["response"]}
                     for chat in conversation
                 ]
+
             else:
                 # Handle the case where conversation is None or empty
                 input_data["conversation"] = []
-            logger.info(f"input_data: {input_data}")
 
-            for output in self.agent.stream({"question": str(input_data)}):
+            # Validate and convert input_data to JSON string
+            try:
+                input_data_str = json.dumps(input_data)
+            except (TypeError, ValueError) as e:
+                logger.error(f"Failed to serialize input_data to JSON: {e}")
+                raise ValueError("Invalid input data format. Unable to convert to JSON.")
+
+            for output in self.agent.stream({"question": input_data["input"], "conversation": input_data["conversation"]}):
+
                 for key, value in output.items():
+                    # logger.info(f"testing steps {key}: {value}")
                     LogWriter.info(f"request_id={req_id_cv.get()} executed node {key}")
 
             LogWriter.info(f"request_id={req_id_cv.get()} EXIT question_for_agent")
@@ -178,6 +188,9 @@ def make_agent(graphname, conn, use_cypher, ws: WebSocket = None, supportai_retr
     elif llm_config["completion_service"]["llm_service"].lower() == "huggingface":
         llm_service_name = "huggingface"
         llm_provider = HuggingFaceEndpoint(llm_config["completion_service"])
+    elif llm_config["completion_service"]["llm_service"].lower() == "watsonx":
+        llm_service_name = "watsonx"
+        llm_provider = IBMWatsonX(llm_config["completion_service"])
     else:
         LogWriter.error(
             f"/{graphname}/query_with_history request_id={req_id_cv.get()} agent creation failed due to invalid llm_service"

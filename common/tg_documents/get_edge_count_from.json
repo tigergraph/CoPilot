@@ -1,0 +1,13 @@
+{
+    "function_header": "getEdgeCountFrom",
+    "description": "Get the number of edges from a source vertex, and optionally to a target vertex.",
+    "docstring": "`getEdgeCountFrom(sourceVertexType: str = '', sourceVertexId: Union[str, int] = None, edgeType: str = '', targetVertexType: str = '', targetVertexId: Union[str, int] = None, where: str = '')` → dict\nReturns the number of edges from a specific vertex.\nParameters:\nsourceVertexType: The name of the source vertex type.\nsourceVertexId: The primary ID value of the source vertex instance.\nedgeType: The name of the edge type.\ntargetVertexType: The name of the target vertex type.\ntargetVertexId: The primary ID value of the target vertex instance.\nwhere: A comma separated list of conditions that are all applied on each edge’s attributes. The conditions are in logical conjunction (i.e. they are 'AND’ed' together).\nReturns:\nA dictionary of edge_type: edge_count pairs.\nUses:\nIf edgeType = '*': edge count of all edge types (no other arguments can be specified in this case).\nIf edgeType is specified only: edge count of the given edge type.\nIf sourceVertexType, edgeType, targetVertexType are specified: edge count of the given edge type between source and target vertex types.\nIf sourceVertexType, sourceVertexId are specified: edge count of all edge types from the given vertex instance.\nIf sourceVertexType, sourceVertexId, edgeType are specified: edge count of all edge types from the given vertex instance.\nIf sourceVertexType, sourceVertexId, edgeType, where are specified: the edge count of the given edge type after filtered by where condition.\nIf targetVertexId is specified, then targetVertexType must also be specified.\nIf targetVertexType is specified, then edgeType must also be specified.",
+    "param_types": {
+        "sourceVertexType": "str",
+        "sourceVertexId": "Union[str, int]",
+        "edgeType": "str",
+        "targetVertexType": "str",
+        "targetVertexId": "Union[str, int]"
+    },
+    "custom_query": false
+}

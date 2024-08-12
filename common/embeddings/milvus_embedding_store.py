@@ -5,6 +5,11 @@ from typing import Iterable, List, Optional, Tuple
 
 import Levenshtein as lev
 from asyncer import asyncify
+from langchain_milvus.vectorstores import Milvus
+from langchain_core.documents.base import Document
+from pymilvus import connections, utility
+from pymilvus.exceptions import MilvusException
+
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.embedding_services import EmbeddingModel
 from common.logs.log import req_id_cv
@@ -12,7 +17,7 @@ from common.logs.logwriter import LogWriter
 from common.metrics.prometheus_metrics import metrics
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
-from pymilvus import MilvusException, SearchResult, connections, utility
+from pymilvus import MilvusException, connections, utility
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +89,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
                     port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, collection={self.collection_name}"""
                 )
+                LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 self.milvus = Milvus(
                     embedding_function=self.embedding_service,
                     collection_name=self.collection_name,
@@ -110,7 +116,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
     def load_documents(self):
         if not self.check_collection_exists():
-            from langchain.document_loaders import DirectoryLoader, JSONLoader
+            from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 
             def metadata_func(record: dict, metadata: dict) -> dict:
                 metadata["function_header"] = record.get("function_header")
@@ -125,7 +131,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
             logger.info(f"*******{os.path.exists('tg_documents')}")
             loader = DirectoryLoader(
-                "./tg_documents/",
+                "./common/tg_documents/",
                 glob="*.json",
                 loader_cls=JSONLoader,
                 loader_kwargs={
@@ -135,6 +141,8 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 },
             )
             docs = loader.load()
+
+            # logger.info(f"docs: {docs}")
 
             operation_type = "load_upsert"
             metrics.milvus_query_total.labels(

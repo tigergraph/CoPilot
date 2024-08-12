@@ -25,6 +25,14 @@ from common.config import (
     get_llm_service,
     llm_config,
 )
+from common.config import (
+    db_config,
+    embedding_service,
+    embedding_store,
+    get_llm_service,
+    llm_config,
+    service_status,
+)
 from common.logs.logwriter import LogWriter
 from common.py_schemas.schemas import (  # SupportAIInitConfig,; SupportAIMethod,
     CoPilotResponse,
@@ -38,6 +46,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
 
 security = HTTPBase(scheme="basic", auto_error=False)
+
+
+def check_embedding_store_status():
+    if service_status["embedding_store"]["error"]:
+        return HTTPException(
+            status_code=503, detail=service_status["embedding_store"]["error"]
+        )
 
 
 @router.post("/{graphname}/supportai/initialize")
@@ -123,6 +138,7 @@ def search(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
@@ -177,6 +193,7 @@ def answer_question(
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
+    check_embedding_store_status()
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"

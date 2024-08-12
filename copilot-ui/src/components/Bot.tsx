@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const Bot = ({ layout }: { layout?: string | undefined }) => {
+const Bot = ({ layout, getConversationId }: { layout?: string | undefined, getConversationId?:any }) => {
   const [store, setStore] = useState<any>();
   const [currentDate, setCurrentDate] = useState('');
   const [selectedGraph, setSelectedGraph] = useState(localStorage.getItem("selectedGraph") || 'pyTigerGraphRAG');
@@ -51,6 +51,7 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
       {/* {layout === "fp" && ( */}
         <div className="border-b border-gray-300 dark:border-[#3D3D3D] h-[70px] flex justify-end items-center bg-white dark:bg-background z-50 rounded-tr-lg">
           <div className="text-sm pl-5 mr-auto">{currentDate}</div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild className="mr-20">
               <Button
@@ -87,22 +88,19 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuLabel>Select a Graph</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {store?.graphs.map((f, i) => (
-                  <DropdownMenuItem key={i} onSelect={() => handleSelect(f)}>
-                    {/* <User className="mr-2 h-4 w-4" /> */}
-                    <span>{f}</span>
-                    {/* <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut> */}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      {/*   )} */}
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Select a Graph</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              {store?.graphs.map((f, i) => (
+                <DropdownMenuItem key={i} onSelect={() => handleSelect(f)}>
+                  <span>{f}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       
       <SelectedGraphContext.Provider value={selectedGraph}>
         <Chatbot
@@ -110,6 +108,7 @@ const Bot = ({ layout }: { layout?: string | undefined }) => {
           // @ts-ignore
           config={config}
           fullPage={layout}
+          getConversationId={getConversationId}
           messageParser={MessageParser}
           actionProvider={ActionProvider}
         />

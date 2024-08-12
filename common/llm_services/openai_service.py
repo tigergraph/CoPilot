@@ -17,7 +17,6 @@ class OpenAI(LLM_Model):
                 auth_detail
             ]
 
-
         model_name = config["llm_model"]
         self.llm = ChatOpenAI(
             temperature=config["model_kwargs"]["temperature"], model_name=model_name

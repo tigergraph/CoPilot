@@ -213,6 +213,29 @@ func TestParallelWrites(t *testing.T) {
 	}
 }
 
+func TestGetAllMessages(t *testing.T) {
+	setupTest(t, true)
+
+	messages, err := GetAllMessages()
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Ensure that messages are returned
+	if len(messages) == 0 {
+		t.Fatalf("Expected some messages, got none")
+	}
+
+	// Validate the structure of the messages
+	for _, m := range messages {
+		if uuid.Validate(m.ConversationId.String()) != nil ||
+			uuid.Validate(m.MessageId.String()) != nil ||
+			(m.Role != "system" && m.Role != "user") {
+			t.Fatalf("Invaid message structure: %v", m)
+		}
+	}
+}
+
 /*
 helper functions
 */

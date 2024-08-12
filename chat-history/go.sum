@@ -1,3 +1,5 @@
+github.com/GenericP3rson/TigerGo v0.0.4 h1:xI7d/cLJ6sRP4fzanInakARE0XGk1YAmvn5KrH1fwFU=
+github.com/GenericP3rson/TigerGo v0.0.4/go.mod h1:PGpAFO9vNA7l34WSGYCtWb/eqVKHuIq1xqvizBlNhRM=
 github.com/go-chi/chi/v5 v5.0.12 h1:9euLV5sTrTNTRUU9POmDUvfxyj6LAABLUcEWO+JJb4s=
 github.com/go-chi/chi/v5 v5.0.12/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-chi/httplog/v2 v2.0.11 h1:eu6kYksMEJzBcOP+ba/iYudc0m5rv4VvBAzroJMkaY4=

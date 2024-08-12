@@ -1,0 +1,12 @@
+{
+    "function_header": "getVertices",
+    "description": "Get a sample of vertices",
+    "docstring": "`getVertices(vertexType: str, where: str = '', limit: Union[int, str] = None, sort: str = '')` → dict\nRetrieves vertices of the given vertex type.\nNote: The primary ID of a vertex instance is NOT an attribute, thus cannot be used in select, where or sort parameters (unless the WITH primary_id_as_attribute clause was used when the vertex type was created).\nUse getVerticesById() if you need to retrieve vertices by their primary ID.\nParameters:\nvertexType: The name of the vertex type.\nwhere: Comma separated list of conditions that are all applied on each vertex' attributes. The conditions are in logical conjunction (i.e. they are 'AND’ed' together).\nsort: Comma separated list of attributes the results should be sorted by. Add '-' in front of the attribute to sort in descending order. Must be used with limit.\nlimit: Maximum number of vertex instances to be returned (after sorting). Must be used with sort.\nReturns:\nThe (selected) details of the (matching) vertex instances (sorted, limited) as dictionary, JSON or pandas DataFrame.",
+    "param_types": {
+        "vertexType": "str",
+        "where": "str",
+        "limit": "Union[int, str]",
+        "sort": "str"
+    },
+    "custom_query": false
+}

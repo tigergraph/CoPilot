@@ -23,47 +23,21 @@ import { LANGUAGES } from "../constants";
 
 const formSchema = z.object({
   email: z.string().min(2, {
-    message: "Email must be at least 2 characters.",
+    message: "Username must be at least 2 characters.",
   }),
   password: z.string().min(2, {
     message: "Password must be at least 2 characters.",
   }),
 });
 
-// TODO
-// const AuthContext = createContext();
+
 const WS_URL = "/ui/ui-login";
-// const WS_URL = "http://localhost:8000/ui/ui-login";
 
 export function Login() {
   const { i18n, t } = useTranslation();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("site") || "");
   const navigate = useNavigate();
-
-  // useEffect(() => {
-  //   const fetchMe = async () => {
-  //     try {
-  //       const response = await fetch(WS_URL, {
-  //         method: 'POST',
-  //         headers: {
-  //           // Authorization: token,
-  //           Authorization: "Basic " + btoa('user_2' + ":" + '')
-  //         },
-  //       });
-  //       const res = await response.json();
-  //       console.log(res);
-  //       if (res) {
-  //         setUser(res);
-  //         return;
-  //       }
-  //       throw new Error(res.message);
-  //     } catch (err) {
-  //       console.error(err);
-  //     }
-  //   }
-  //   fetchMe();
-  // }, []);
 
   useEffect(() => console.log(localStorage), []);
 
@@ -121,7 +95,7 @@ export function Login() {
       <h1 className="text-center text-2xl font-bold mb-5">
         {t("welcome")}
         <br />
-        TigerGraph Bot
+        TigerGraph CoPilot
       </h1>
       <h4 className="text-center mb-10 text-black dark:text-[#D9D9D9]">
         {t("login")}
@@ -168,23 +142,23 @@ export function Login() {
               </>
             )}
           />
-          <a href="#" className="text-xs text-right block">
+          {/* <a href="#" className="text-xs text-right block">
             {t("forgotPassword")}
-          </a>
+          </a> */}
           <Button type="submit" className="gradient w-full text-white mt-10">
             {t("submit")}
           </Button>
 
-          <div className="inline-flex items-center justify-center w-full">
+          {/* <div className="inline-flex items-center justify-center w-full">
             <hr className="w-full h-px my-8 border-0 bg-gray-200 dark:bg-gray-700" />
             <span className="absolute px-3 text-xs bg-background dark:border-[#3D3D3D] text-gray-900 -translate-x-1/2 left-1/2 dark:text-white">
               {t("noAccount")}
             </span>
-          </div>
+          </div> */}
 
-          <a href="#" className="text-xs text-center block !text-tigerOrange">
+          {/* <a href="#" className="text-xs text-center block !text-tigerOrange">
             {t("signUp")}
-          </a>
+          </a> */}
         </form>
       </Form>
 
