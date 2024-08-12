@@ -212,14 +212,17 @@ You can also disable the consistency_checker, which reconciles Milvus and TigerG
 ```
 
 ##### Milvus configuration
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. `process_interval_seconds` is the number of seconds which the eventual-consistency-checker (ECC) service will be scheduled to check for new vertices in TigerGraph in order to create embeddings in Milvus. In the same way `cleanup_interval_seconds` is the number of seconds the ECC service will be scheduled to check for stale Milvus embeddings (e.g. if TigerGraph is restored from backup, or a vertex is deleted).  Batch size is the number of vertices that ECC will process in one workload; this is optional and defaults to 10.
 ```json
 {
     "host": "milvus-standalone",
     "port": 19530,
     "username": "",
     "password": "",
-    "enabled": "true"
+    "enabled": "true",
+    "process_interval_seconds": 1800,
+    "cleanup_interval_seconds": 2592000,
+    "batch_size": 10
 }
 ```
 
@@ -350,11 +353,21 @@ TigerGraph CoPilot is designed to be easily extensible. The service can be confi
 ## Testing
 A family of tests are included under the `tests` directory. If you would like to add more tests please refer to the [guide here](./docs/DeveloperGuide.md#adding-a-new-test-suite). A shell script `run_tests.sh` is also included in the folder which is the driver for running the tests. The easiest way to use this script is to execute it in the Docker Container for testing.
 
+### Testing with Pytest
+You can run testing for each service by going to the top level of the service's directory and running `python -m pytest`
+
+e.g. (from the top level)
+```sh
+cd copilot
+python -m pytest
+cd ..
+```
+
 ### Test in Docker Container
 
 First, make sure that all your LLM service provider configuration files are working properly. The configs will be mounted for the container to access. Also make sure that all the dependencies such as database and Milvus are ready. If not, you can run the included docker compose file to create those services.
 ```sh
-docker compose docker-compose.yml up -d --build
+docker compose up -d --build
 ```
 
 If you want to use Weights And Biases for logging the test results, your WandB API key needs to be set in an environment variable on the host machine.

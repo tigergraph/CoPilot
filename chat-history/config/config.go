@@ -9,14 +9,19 @@ type LLMConfig struct {
 	ModelName string `json:"model_name"`
 }
 
-type DbConfig struct {
-	Port string `json:"apiPort"`
-	DbPath string `json:"dbPath"`
-	DbLogPath string `json:"dbLogPath"`
-	LogPath string `json:"logPath"`
-	// DbHostname string `json:"hostname"`
-	// Username string `json:"username"`
-	// Password string `json:"password"`
+type ChatDbConfig struct {
+	Port                    string   `json:"apiPort"`
+	DbPath                  string   `json:"dbPath"`
+	DbLogPath               string   `json:"dbLogPath"`
+	LogPath                 string   `json:"logPath"`
+	ConversationAccessRoles []string `json:"conversationAccessRoles"`
+}
+
+type TgDbConfig struct {
+	Hostname string `json:"hostname"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	GsPort   string `json:"gsPort"`
 	// GetToken string `json:"getToken"`
 	// DefaultTimeout       string `json:"default_timeout"`
 	// DefaultMemThreshold string `json:"default_mem_threshold"`
@@ -24,18 +29,55 @@ type DbConfig struct {
 }
 
 type Config struct {
-	DbConfig
+	ChatDbConfig
+	TgDbConfig
 	// LLMConfig
 }
 
-func LoadConfig(path string) (Config, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return Config{}, err
+func LoadConfig(paths map[string]string) (Config, error) {
+	var config Config
+
+	// Load database config
+	if dbConfigPath, ok := paths["chatdb"]; ok {
+		dbConfig, err := loadChatDbConfig(dbConfigPath)
+		if err != nil {
+			return Config{}, err
+		}
+		config.ChatDbConfig = dbConfig
 	}
 
-	var cfg Config
-	json.Unmarshal(b, &cfg)
+	// Load TigerGraph config
+	if tgConfigPath, ok := paths["tgdb"]; ok {
+		tgConfig, err := loadTgDbConfig(tgConfigPath)
+		if err != nil {
+			return Config{}, err
+		}
+		config.TgDbConfig = tgConfig
+	}
 
-	return cfg, nil
+	return config, nil
+}
+
+func loadChatDbConfig(path string) (ChatDbConfig, error) {
+	var dbConfig ChatDbConfig
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ChatDbConfig{}, err
+	}
+	if err := json.Unmarshal(b, &dbConfig); err != nil {
+		return ChatDbConfig{}, err
+	}
+	return dbConfig, nil
+}
+
+func loadTgDbConfig(path string) (TgDbConfig, error) {
+	var tgConfig TgDbConfig
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return TgDbConfig{}, err
+	}
+	if err := json.Unmarshal(b, &tgConfig); err != nil {
+		return TgDbConfig{}, err
+	}
+	return tgConfig, nil
 }

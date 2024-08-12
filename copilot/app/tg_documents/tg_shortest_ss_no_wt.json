@@ -1,0 +1,11 @@
+{
+    "function_header": "tg_shortest_ss_no_wt",
+    "description": "The single-source shortest paths algorithm with no weights algorithm calculates the shortest path distances from a source node to all other nodes in a graph with unweighted edges.",
+    "docstring": "This query finds the shortest path distances from a source vertex to all other vertices with types v_type_set in the graph using unweighted edges that have edge type e_type_set. Run the query with `gds.featurizer().runAlgorithm('tg_shortest_ss_no_wt', params={'source': { 'id': 'INSERT_ID_HERE', 'type':'INSERT_v_type_here' }, 'v_type_set': 'INSERT_v_type_set_HERE', 'e_type_set': 'INSERT_e_type_set_HERE' })` , where the parameters are: \n 'source': The source node to run the algorithm from. \n 'v_type_set': The set of vertex types to run the algorithm on. \n 'e_type_set': The edge types to run the algorithm on.",
+    "param_types": {
+        "source" : "VERTEX",
+        "v_type_set" : "LIST<STRING>",
+        "e_type_set" : "LIST<STRING>"
+    },
+    "custom_query": false
+}

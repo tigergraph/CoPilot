@@ -1,0 +1,11 @@
+{
+    "function_header": "getEdgeCount",
+    "description": "Get the number of edges at a graph level, optionally filtered by type.",
+    "docstring": "`getEdgeCount(edgeType: str = '*', sourceVertexType: str = '', targetVertexType: str = '')` → dict\nReturns the number of edges of an edge type.\nThis is a simplified version of getEdgeCountFrom(), to be used when the total number of edges of a given type is needed, regardless which vertex instance they are originated from. See documentation of getEdgeCountFrom above for more details.\nParameters:\nedgeType: The name of the edge type.\nsourceVertexType: The name of the source vertex type.\ntargetVertexType: The name of the target vertex type.\nReturns:\nA dictionary of edge_type: edge_count pairs.",
+    "param_types": {
+        "edgeType": "str",
+        "sourceVertexType": "str",
+        "targetVertexType": "str"
+    },
+    "custom_query": false
+}

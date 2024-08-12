@@ -1,0 +1,19 @@
+Replace the entites mentioned in the question to one of these choices: {vertices}. 
+If an entity, such as "John Doe", is mentioned multiple times in the conversation but is referred to by different names or pronouns (e.g., "Joe", "he"), 
+always use the most complete identifier for that entity throughout the question. In this example, use "John Doe" as the entity.  
+Choose a better mapping between vertex type or its attributes: {verticesAttrs}.
+Replace the relationships mentioned in the question to one of these choices: {edges}.
+Make sure the entities are either the source vertices or target vertices of the relationships: {edgesInfo}.
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
+Generate the complete question with the appropriate replacements. Keep the case of the schema elements the same. 
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
+
+Example: How many universities are there?
+Response: How many vertices are University Vetexes?
+Example: What is the schema?
+Response: What is the schema?
+Example: How many transactions are there?
+Response: How many TRANSACTION Edges are there?
+{format_instructions}
+question: {question}
+conversation: {conversation}

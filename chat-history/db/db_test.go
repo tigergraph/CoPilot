@@ -63,6 +63,73 @@ func TestGetUserConversationById(t *testing.T) {
 	}
 }
 
+func TestUpdateUserConversationById(t *testing.T) {
+	setupTest(t, true)
+	convoId := "601529eb-4927-4e24-b285-bd6b9519a951"
+	messages := GetUserConversationById(USER, convoId)
+
+	if len(messages) == 0 {
+		t.Fatalf("Messages should not be empty for conversation ID: %s", convoId)
+	}
+
+	originalMessage := messages[0]
+	updatedComment := "Updated comment"
+
+	// Prepare the updated message
+	updatedMessage := structs.Message{
+		ConversationId: originalMessage.ConversationId,
+		MessageId:      originalMessage.MessageId,
+		Feedback:       structs.ThumbsUp,
+		Comment:        updatedComment,
+	}
+
+	// Call the UpdateConversationById function
+	_, err := UpdateConversationById(updatedMessage)
+	if err != nil {
+		t.Fatalf("Failed to update conversation: %v", err)
+	}
+
+	// Retrieve the updated messages
+	updatedMessages := GetUserConversationById(USER, convoId)
+	if len(updatedMessages) == 0 {
+		t.Fatalf("Updated messages should not be empty for conversation ID: %s", convoId)
+	}
+
+	// Validate the updated message fields
+	for _, m := range updatedMessages {
+		if m.MessageId == originalMessage.MessageId {
+			if m.Feedback != structs.ThumbsUp {
+				t.Fatalf("Expected feedback to be %d, got %d", structs.ThumbsUp, m.Feedback)
+			}
+			if m.Comment != updatedComment {
+				t.Fatalf("Expected comment to be '%s', got '%s'", updatedComment, m.Comment)
+			}
+			// Ensure other fields are not affected
+			if m.ConversationId != originalMessage.ConversationId {
+				t.Fatalf("Expected conversation ID to be '%s', got '%s'", originalMessage.ConversationId, m.ConversationId)
+			}
+			if m.MessageId != originalMessage.MessageId {
+				t.Fatalf("Expected message ID to be '%s', got '%s'", originalMessage.MessageId, m.MessageId)
+			}
+			if m.ParentId != originalMessage.ParentId {
+				t.Fatalf("Expected parent ID to be '%v', got '%v'", originalMessage.ParentId, m.ParentId)
+			}
+			if m.ModelName != originalMessage.ModelName {
+				t.Fatalf("Expected model name to be '%s', got '%s'", originalMessage.ModelName, m.ModelName)
+			}
+			if m.Content != originalMessage.Content {
+				t.Fatalf("Expected content to be '%s', got '%s'", originalMessage.Content, m.Content)
+			}
+			if m.Role != originalMessage.Role {
+				t.Fatalf("Expected role to be '%s', got '%s'", originalMessage.Role, m.Role)
+			}
+			if m.ResponseTime != originalMessage.ResponseTime {
+				t.Fatalf("Expected response time to be '%f', got '%f'", originalMessage.ResponseTime, m.ResponseTime)
+			}
+		}
+	}
+}
+
 // parallel tests
 func TestParallelWrites(t *testing.T) {
 	/*
@@ -142,6 +209,29 @@ func TestParallelWrites(t *testing.T) {
 				t.Fatal("conversation history is incorrect ")
 			}
 			prev = m.MessageId
+		}
+	}
+}
+
+func TestGetAllMessages(t *testing.T) {
+	setupTest(t, true)
+
+	messages, err := GetAllMessages()
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Ensure that messages are returned
+	if len(messages) == 0 {
+		t.Fatalf("Expected some messages, got none")
+	}
+
+	// Validate the structure of the messages
+	for _, m := range messages {
+		if uuid.Validate(m.ConversationId.String()) != nil ||
+			uuid.Validate(m.MessageId.String()) != nil ||
+			(m.Role != "system" && m.Role != "user") {
+			t.Fatalf("Invaid message structure: %v", m)
 		}
 	}
 }

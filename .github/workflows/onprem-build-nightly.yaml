@@ -33,12 +33,56 @@ jobs:
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
         echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT${{ needs.setup.outputs.image }} 
  
-    - name: Build and push Docker image
+    - name: Build and push Docker image CoPilot
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./Dockerfile
+        file: ./copilot/Dockerfile
         push: true
         tags: |
            ${{ env.IMAGE }}
            tigergraphml/copilot:dev
+ 
+    - name: Build and push Docker image ECC
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./eventual-consistency-service/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/ecc:dev
+
+    - name: Build and push Docker image chat-history
+      uses: docker/build-push-action@v5
+      with:
+        context: chat-history/
+        file: ./chat-history/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/chat-history:dev
+
+    - name: Build and push Docker image copilot-ui
+      uses: docker/build-push-action@v5
+      with:
+        context: copilot-ui/
+        file: ./copilot-ui/Dockerfile
+        push: true
+        tags: |
+           ${{ env.IMAGE }}
+           tigergraphml/copilot-ui:dev
+
+    - name: Set SSH key
+      run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRIVATE_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+    - name: Update on-prem dev environment
+      run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_ADDRESS }} << 'ENDSSH'
+          cd CoPilot
+          docker compose pull
+          docker compose up -d
+          ENDSSH

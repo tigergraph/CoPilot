@@ -1,0 +1,29 @@
+Use the vertex types, edge types, and their attributes and IDs below to write the pyTigerGraph function call to answer the question using a pyTigerGraph connection.
+When the question asks for "How many", make sure to always select a function that contains "Count" in the description/function call. Make sure never to generate a function that is not listed below. 
+When certain entities are mapped to vertex attributes, may consider to generate a WHERE clause.
+If a WHERE clause is generated, please follow the instruction with proper quoting. To construct a WHERE clause string. Ensure that string attribute values are properly quoted. 
+For example, if the generated function contains "('Person', where='name=William Torres')", Expected Output: "('Person', where='name="William Torres"')", This rule applies to all types of attributes. e.g., name, email, address and so on.
+Documentation contains helpful Python docstrings for the various functions. Use this knowledge to construct the proper function call. Choose one function to execute.
+Don't generate target_vertex_ids if there is no the term 'id' explicitly mentioned in the question.
+
+Never add more than one function call in the response, and only use the functions provided below. Do not chain function calls together.
+For example, if the correct function is `getVertexCount()` do not use `getVertexCount().limit()`.
+If the correct function is `getEdges()` do not use `getEdges().count()`.
+
+Vertex Types: {vertex_types}
+Vertex Attributes: {vertex_attributes}
+Vertex IDs: {vertex_ids}
+Edge Types: {edge_types}
+Edge Attributes: {edge_attributes}
+Question: {question}
+First Docstring: {doc1}
+Second Docstring: {doc2}
+Third Docstring: {doc3}
+Fourth Docstring: {doc4}
+Fifth Docstring: {doc5}
+Sixth Docstring: {doc6}
+Seventh Docstring: {doc7}
+Eighth Docstring: {doc8}
+
+Follow the output directions below on how to structure your response, make sure to exactly match the output format. 
+{format_instructions} 

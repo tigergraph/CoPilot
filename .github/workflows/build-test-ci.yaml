@@ -21,11 +21,11 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and push Docker image
+    - name: Build Docker.tests image
       uses: docker/build-push-action@v5
       with:
-        context: .
-        file: ./Dockerfile.tests
+        context: . 
+        file: copilot/Dockerfile.tests
         push: false
         load: true
         tags: nlqs/tests:0.1
@@ -45,6 +45,7 @@ jobs:
         echo "$LLM_CONFIG_GROQ_MIXTRAL" > configs/groq_mixtral_config.json
         echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
         echo "$LLM_CONFIG_HUGGINGFACE_LLAMA70B" > configs/huggingface_llama70b_config.json
+        echo "$LLM_CONFIG_WATSONX_MISTRAL_LARGE" > configs/ibm_watsonx_config.json
         echo "$MILVUS_CONFIG" > configs/milvus_config.json
       env:
         DB_CONFIG: ${{ secrets.DB_CONFIG }}
@@ -57,6 +58,7 @@ jobs:
         LLM_CONFIG_HUGGINGFACE_PHI3: ${{ secrets.LLM_CONFIG_HUGGINGFACE_PHI3 }}
         LLM_CONFIG_OPENAI_GPT4O: ${{ secrets.LLM_CONFIG_OPENAI_GPT4O }}
         LLM_CONFIG_HUGGINGFACE_LLAMA70B: ${{ secrets.LLM_CONFIG_HUGGINGFACE_LLAMA70B }}
+        LLM_CONFIG_WATSONX_MISTRAL_LARGE: ${{ secrets.LLM_CONFIG_WATSONX_MISTRAL_LARGE }}
         GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
         LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
         MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
@@ -66,13 +68,13 @@ jobs:
       if: ${{ github.event_name }} == 'pull_request'
       run: |
         docker rm -f nlqs-tests || true
-        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }} --name nlqs-tests -d nlqs/tests:0.1
+        docker run -it -v $(pwd)/configs/:/code/app/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/app/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER=${{ github.event.number }} --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Run Docker Container for Regress
       if: ${{ github.event_name == 'schedule' }}
       run: |
         docker rm -f nlqs-tests || true
-        docker run -it -v $(pwd)/configs/:/code/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER="DailyRegression" --name nlqs-tests -d nlqs/tests:0.1
+        docker run -it -v $(pwd)/configs/:/code/app/configs -e GOOGLE_APPLICATION_CREDENTIALS=/code/app/configs/GCP_CREDS.json -e WANDB_API_KEY=${{ secrets.WANDB_API_KEY }} -e PR_NUMBER="DailyRegression" --name nlqs-tests -d nlqs/tests:0.1
 
     - name: Execute PR Tests
       if: github.event_name == 'pull_request'

@@ -1,0 +1,54 @@
+CREATE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_host, 
+  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT lookback=3, INT lookahead=3) { 
+  MapAccum<VERTEX, INT> @distances;
+  SumAccum<STRING> @content;
+  MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@final_retrieval;
+  OrAccum @touched;
+  SetAccum<VERTEX> @@start_set;
+  INT inc_top_k = top_k * 2;
+  
+  all_chunks = {v_type};
+  @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+
+  WHILE @@start_set.size() < top_k LIMIT 5 DO
+    @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
+    inc_top_k = inc_top_k * 2;
+  END;
+
+
+  seeds = {@@start_set};
+  start = SELECT s FROM seeds:s LIMIT top_k;
+  start = SELECT s FROM start:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  FOREACH i IN RANGE[1, lookback] DO
+    start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
+          ACCUM 
+            tgt.@touched += TRUE,
+            FOREACH (key, val) IN s.@distances DO
+              tgt.@distances += (key -> -1*i)
+            END;
+  END;
+  
+  start = seeds;
+  FOREACH i IN RANGE[1, lookahead] DO
+    start = SELECT tgt FROM start:s -(reverse_IS_AFTER)-> :tgt
+            ACCUM
+              tgt.@touched += TRUE,
+              FOREACH (key, val) IN s.@distances DO
+                tgt.@distances += (key -> i)
+              END;
+  END;
+  
+  res = SELECT s FROM all_chunks:s -(HAS_CONTENT)- Content:t WHERE s.@touched == TRUE
+        ACCUM s.@content += t.text;
+  
+  res = SELECT s FROM all_chunks:s WHERE s.@touched == TRUE
+        POST-ACCUM
+          FOREACH (key, val) IN s.@distances DO
+            @@final_retrieval += (key -> (s -> ("distance" -> to_string(val)))),
+            @@final_retrieval += (key -> (s -> ("content" -> s.@content)))
+          END;
+  
+  PRINT @@final_retrieval;
+  
+}

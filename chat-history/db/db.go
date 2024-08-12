@@ -3,6 +3,7 @@ package db
 import (
 	"chat-history/middleware"
 	"chat-history/structs"
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -98,16 +99,48 @@ func UpdateConversationById(message structs.Message) (*structs.Conversation, err
 	mu.Lock()
 	defer mu.Unlock()
 
-	if result := db.Create(&message); result.Error != nil {
-		return nil, result.Error
+	// Find the existing message by conversation ID and message ID
+	var existingMessage structs.Message
+	tx := db.Where("conversation_id = ? AND message_id = ? ", message.ConversationId, message.MessageId).First(&existingMessage)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			if result := db.Create(&message); result.Error != nil {
+				return nil, result.Error
+			}
+		} else {
+			return nil, tx.Error
+		}
+	} else {
+		// Update only the feedback and comments fields if the message exists
+		if result := db.Model(&existingMessage).Select("Feedback", "Comment").Updates(
+			structs.Message{
+				Feedback: message.Feedback,
+				Comment:  message.Comment,
+			}); result.Error != nil {
+			return nil, result.Error
+		}
 	}
+
+	// Retrieve the updated conversation
 	convo := structs.Conversation{}
-	tx := db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
+	tx = db.Where("conversation_id = ?", message.ConversationId).Find(&convo)
 
 	if err := tx.Error; err != nil {
 		return nil, err
 	}
 	return &convo, nil
+}
+
+// GetAllMessages retrieves all messages from the database
+func GetAllMessages() ([]structs.Message, error) {
+	var messages []structs.Message
+
+	// Use GORM to query all messages
+	if err := db.Find(&messages).Error; err != nil {
+		return nil, err
+	}
+
+	return messages, nil
 }
 
 func populateDB() {
@@ -116,9 +149,10 @@ func populateDB() {
 
 	// init convos
 	conv1 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a951")
+	conv2 := uuid.MustParse("601529eb-4927-4e24-b285-bd6b9519a952")
 	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: conv1, Name: "conv1"})
-	db.Create(&structs.Conversation{UserId: "sam_pull", ConversationId: uuid.New(), Name: "conv2"})
-	db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: uuid.New(), Name: "conv3"})
+	db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: conv2, Name: "conv2"})
+	// db.Create(&structs.Conversation{UserId: "Miss_Take", ConversationId: uuid.New(), Name: "conv3"})
 
 	// add message to convos
 	message := structs.Message{
@@ -131,8 +165,8 @@ func populateDB() {
 		Feedback:       structs.NoFeedback,
 		Comment:        "",
 	}
-
 	db.Create(&message)
+
 	m2 := structs.Message{
 		ConversationId: conv1,
 		MessageId:      uuid.New(),
@@ -144,4 +178,16 @@ func populateDB() {
 		Comment:        "",
 	}
 	db.Create(&m2)
+
+	m3 := structs.Message{
+		ConversationId: conv2,
+		MessageId:      uuid.New(),
+		ParentId:       &message.MessageId,
+		ModelName:      "GPT-4o",
+		Content:        "How many transactions?",
+		Role:           structs.SystemRole,
+		Feedback:       structs.NoFeedback,
+		Comment:        "",
+	}
+	db.Create(&m3)
 }

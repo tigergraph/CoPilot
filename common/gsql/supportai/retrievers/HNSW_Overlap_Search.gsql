@@ -1,0 +1,59 @@
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host, 
+  UINT milvus_port, STRING collection_prefix, STRING vector_field_name, 
+  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
+  SetAccum<VERTEX> @@start_set;
+  SetAccum<VERTEX> @@tmp_start_set;
+  SetAccum<EDGE> @@edges;
+  SumAccum<INT> @num_times_seen;
+  MapAccum<STRING, STRING> @@relationship_info;
+  MapAccum<STRING, STRING> @@entity_info;
+  MapAccum<STRING, STRING> @@doc_chunk_info;
+  SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
+  MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
+  INT inc_top_k = top_k * 2;
+  
+  FOREACH v_type IN v_types DO
+    @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+  
+    WHILE @@tmp_start_set.size() < top_k LIMIT 5 DO
+      @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
+      inc_top_k = inc_top_k * 2;
+    END;
+    
+    tmp = {@@tmp_start_set};
+    tmp2 = SELECT s FROM tmp:s LIMIT top_k;
+    tmp3 = SELECT s FROM tmp2:s POST-ACCUM @@start_set += s;
+  END;
+  
+  start = {@@start_set};
+  
+  start = SELECT s FROM start:s POST-ACCUM s.@num_times_seen += 1;
+  
+  FOREACH i IN RANGE[0, num_hops-1] DO
+    start = SELECT t FROM start:s -(:e)- :t
+            ACCUM @@edges += e
+            POST-ACCUM t.@num_times_seen += 1;
+  END;
+  
+  res = SELECT s FROM start:s WHERE s.@num_times_seen >= num_seen_min AND s.type != "Document"
+        POST-ACCUM
+          IF s.type == "Relationship" THEN
+            @@relationship_info += (s.id -> s.definition)
+          ELSE IF s.type == "Entity" THEN
+            @@entity_info += (s.id -> s.definition)
+          ELSE IF s.type == "DocumentChunk" THEN
+            @@to_retrieve_content += s 
+          END;
+  
+  doc_chunks = {@@to_retrieve_content};
+  
+  res = SELECT t FROM doc_chunks:s -(HAS_CONTENT)- Content:t 
+        ACCUM
+          @@doc_chunk_info += (s.id -> t.text);
+  
+  @@final_retrieval += ("DocumentChunkInfo" -> @@doc_chunk_info);
+  @@final_retrieval += ("RelationshipInfo" -> @@relationship_info);
+  @@final_retrieval += ("EntityInfo" -> @@entity_info);
+  
+  PRINT @@final_retrieval, @@edges;
+}

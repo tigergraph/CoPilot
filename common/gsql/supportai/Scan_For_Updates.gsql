@@ -1,0 +1,45 @@
+CREATE DISTRIBUTED QUERY Scan_For_Updates(STRING v_type = "Document",
+                                          UINT expire_window=3600,
+                                          UINT num_samples = 10) { 
+  TYPEDEF TUPLE <VERTEX to_process, UINT priority> ProcessInfo;
+  MapAccum<STRING, STRING> @@v_and_text;
+                                      
+  HeapAccum<ProcessInfo>(0, priority ASC) @@ToProcess;
+  SetAccum<VERTEX> @@vset;                                          
+  @@ToProcess.resize(num_samples);
+  
+  seeds = {v_type};
+  
+  to_process = SELECT s FROM seeds:s
+               WHERE s.epoch_processed == 0 AND ((s.epoch_processing == 0 AND s.epoch_added > 0)
+                     OR datetime_to_epoch(now()) > s.epoch_processing + expire_window)
+               POST-ACCUM @@ToProcess += ProcessInfo(s, s.epoch_added);
+  
+  FOREACH tup IN @@ToProcess DO
+    @@vset += tup.to_process;
+  END;
+                                            
+  start = {@@vset};
+  IF v_type == "Document" THEN
+      res = SELECT s FROM start:s -(HAS_CONTENT)-> Content:c
+            ACCUM @@v_and_text += (s.id -> c.text)
+            POST-ACCUM s.epoch_processing = datetime_to_epoch(now());
+  ELSE IF v_type == "Concept" THEN
+      res = SELECT s FROM start:s
+            POST-ACCUM @@v_and_text += (s.id -> s.description),
+            s.epoch_processing = datetime_to_epoch(now());
+  ELSE IF v_type == "Entity" THEN
+      res = SELECT s FROM start:s
+            POST-ACCUM @@v_and_text += (s.id -> s.definition),
+            s.epoch_processing = datetime_to_epoch(now());
+  ELSE IF v_type == "Relationship" THEN
+      res = SELECT s FROM start:s
+            POST-ACCUM @@v_and_text += (s.id -> s.definition),
+            s.epoch_processing = datetime_to_epoch(now());
+  ELSE IF v_type == "DocumentChunk" THEN
+      res = SELECT s FROM start:s -(HAS_CONTENT)-> Content:c
+            ACCUM @@v_and_text += (s.id -> c.text)
+            POST-ACCUM s.epoch_processing = datetime_to_epoch(now());                         
+  END;
+  PRINT @@v_and_text;
+}
