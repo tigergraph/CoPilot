@@ -151,7 +151,7 @@ async def get_vert_desc(conn, v_id, node: Node):
     exists = await util.check_vertex_exists(conn, v_id)
     # if vertex exists, get description content and append this description to it
     if not exists["error"]:
-        # dedup descriptions
+        # deduplicate descriptions
         desc.extend(exists["results"][0]["attributes"]["description"])
         desc = list(set(desc))
     return desc
@@ -316,7 +316,6 @@ async def resolve_entity(
                 "ResolvedEntity",  # v_type
                 resolved_entity_id,  # v_id
                 {  # attrs
-                    # "id": resolved_entity_id,
                 },
             ),
         )

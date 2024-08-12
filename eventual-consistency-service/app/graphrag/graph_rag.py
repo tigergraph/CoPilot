@@ -19,8 +19,6 @@ from common.config import embedding_service
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 
-# http_logs = logging.getLogger("httpx")
-# http_logs.setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 consistency_checkers = {}
@@ -192,8 +190,6 @@ async def stream_entities(
         for i in ids["ids"]:
             if len(i) > 0:
                 await entity_chan.put(i)
-                # break
-        # break  # one batch
 
     logger.info("stream_enities done")
     # close the docs chan -- this function is the only sender
@@ -296,7 +292,6 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
 
 async def stream_communities(
     conn: TigerGraphConnection,
-    # community_chan: Channel,
     i: int,
     comm_process_chan: Channel,
 ):
@@ -333,7 +328,6 @@ async def stream_communities(
 
     logger.info("stream_communities done")
     logger.info("closing comm_process_chan")
-    # comm_process_chan.close()
 
 
 async def summarize_communities(
@@ -345,7 +339,6 @@ async def summarize_communities(
     async with asyncio.TaskGroup() as tg:
         async for c in comm_process_chan:
             tg.create_task(workers.process_community(conn, upsert_chan, embed_chan, *c))
-            # break
 
     logger.info("closing upsert_chan")
     upsert_chan.close()
@@ -369,7 +362,7 @@ async def run(graphname: str, conn: TigerGraphConnection):
     init_start = time.perf_counter()
 
     doc_process_switch = True
-    entity_resolution_switch = True 
+    entity_resolution_switch = True
     community_detection_switch = True
     if doc_process_switch:
         logger.info("Doc Processing Start")
@@ -419,12 +412,6 @@ async def run(graphname: str, conn: TigerGraphConnection):
     # Community Detection
     community_start = time.perf_counter()
     if community_detection_switch:
-        # FIXME: delete community delete
-        for v in ["Community"]:
-            try:
-                conn.delVertices(v)
-            except:
-                pass
         logger.info("Community Processing Start")
         upsert_chan = Channel(10)
         comm_process_chan = Channel(100)
