@@ -119,7 +119,7 @@ pyTigerDriver==1.0.15
 pyTigerGraph==1.6.2
 pytz==2023.3.post1
 PyYAML==6.0.1
-rapidfuzz==3.4.0
+rapidfuzz==3.9.6
 regex==2023.10.3
 requests==2.32.2
 rsa==4.9
