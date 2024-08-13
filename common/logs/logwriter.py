@@ -142,7 +142,7 @@ class LogWriter:
             LogWriter.general_logger.info(message)
 
     @staticmethod
-    def info(message, mask_pii=False, **kwargs):
+    def info(message, mask_pii=True, **kwargs):
         LogWriter.log("info", message, mask_pii, **kwargs)
 
     @staticmethod

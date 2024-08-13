@@ -26,11 +26,11 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
     DOUBLE wt = 1.0;
 
     // prevent multiple init runs
-    // z = SELECT s FROM AllNodes:s -(_)-> Community:t;
-    // IF z.size() > 0 THEN
-    //     EXCEPTION reinit(400001);
-    //     RAISE reinit("ERROR: the hierarchical communities have already been initialized");
-    // END;
+    z = SELECT s FROM AllNodes:s -(_)-> Community:t;
+    IF z.size() > 0 THEN
+        EXCEPTION reinit(400001);
+        RAISE reinit("ERROR: the hierarchical communities have already been initialized");
+    END;
 
     // init
     z = SELECT s FROM AllNodes:s 
@@ -42,11 +42,6 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
     z = SELECT s FROM AllNodes:s -(_)-> ResolvedEntity:t
         ACCUM s.@k += wt,
               @@m += 1;
-        // POST-ACCUM 
-        //     s.@community_id = s, // assign node to its own community
-        //     s.@community_vid = s.id, // external id
-        //     s.@vid = getvid(s), // internal id (used in batching)
-            // s.@batch_id = s.@vid % n_batches; // get batch number
 
     PRINT z.size();
     PRINT z;
@@ -166,7 +161,7 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
               END
           POST-ACCUM
               //                              ID                      , iter, edges within the community
-              INSERT INTO Community VALUES (s.@community_vid+"_1", 1, @@community_sum_in_map.get(s.@community_id), ""),
+              INSERT INTO Community VALUES (s.@community_vid+"_1", 1, ""),
               INSERT INTO IN_COMMUNITY VALUES (s, s.@community_vid+"_1") // link entity to it's first community
           ;  
 

@@ -20,7 +20,7 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE CONTAINS_DOCUMENT(FROM DocumentCollection, TO Document) WITH REVERSE_EDGE="reverse_CONTAINS_DOCUMENT";
 
     // GraphRAG
-    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, k_in UINT, description STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, description STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, entity_type STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
 
     ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP"; 

@@ -40,8 +40,7 @@ class GraphExtractor(BaseExtractor):
         """
         doc = Document(page_content=text)
         graph_docs = self.transformer.convert_to_graph_documents([doc])
-        translated_docs = self.translate(graph_docs)
-        return translated_docs
+        return graph_docs
 
     async def aextract(self, text:str) -> list[GraphDocument]:
         """

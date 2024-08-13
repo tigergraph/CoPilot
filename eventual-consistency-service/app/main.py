@@ -188,11 +188,10 @@ def consistency_status(
             LogWriter.info(f"Returning consistency status for {graphname}: {status}")
         case SupportAIMethod.GRAPHRAG:
             background.add_task(graphrag.run, graphname, conn)
-            # asyncio.run(graphrag.run(graphname, conn))
             import time
 
             ecc_status = (
-                f"hi from graph rag ecc: {conn.graphname} ({graphname}) {time.ctime()}"
+                f"GraphRAG initialization: {conn.graphname} ({graphname}) {time.ctime()}"
             )
         case _:
             response.status_code = status.HTTP_404_NOT_FOUND

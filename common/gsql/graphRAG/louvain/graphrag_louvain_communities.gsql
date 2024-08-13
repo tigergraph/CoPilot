@@ -166,14 +166,13 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_communities(UINT iteration=1, UINT max
                   @@community_sum_in_map += (s.@community_id -> e.weight) 
               ELSE
                   // get LINKS_TO edge weights (how many edges are between communities)
-                  // s.@community_k_in_map += (t.@community_id -> 1)
                   @@source_target_k_in_map += (s.@community_vid -> (t.@community_vid -> e.weight))
               END,
               t.@has_parent += TRUE // Used to help find unattached partitions
           POST-ACCUM
               // Write the results to a new community vertex (iteration + 1)
               //                              ID                      , iter, edges within the community
-              INSERT INTO Community VALUES (s.id+"_"+to_string(iteration+1), iteration+1, s.k_in + @@community_sum_in_map.get(s.@community_id), ""),
+              INSERT INTO Community VALUES (s.id+"_"+to_string(iteration+1), iteration+1), ""),
               INSERT INTO HAS_PARENT VALUES (s, s.@community_vid+"_"+to_string(iteration+1)) // link Community's child/parent community
           ;  
 
@@ -183,7 +182,7 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_communities(UINT iteration=1, UINT max
             AND NOT s.@has_parent
           POST-ACCUM
               // if s is a part of an unattached partition, add to its community hierarchy to maintain parity with rest of graph
-              INSERT INTO Community VALUES (s.id+"_"+to_string(iteration+1), iteration+1, s.k_in + @@community_sum_in_map.get(s.@community_id), ""),
+              INSERT INTO Community VALUES (s.id+"_"+to_string(iteration+1), iteration+1, ""),
               INSERT INTO HAS_PARENT VALUES (s, s.id+"_"+to_string(iteration+1)) // link Community's child/parent community
           ; 
 

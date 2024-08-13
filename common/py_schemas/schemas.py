@@ -20,10 +20,6 @@ class SupportAIMethod(enum.StrEnum):
     GRAPHRAG = enum.auto()
 
 
-class EccConfig(BaseModel):
-    method: SupportAIMethod = SupportAIMethod.SUPPORTAI
-
-
 class GSQLQueryInfo(BaseModel):
     function_header: str
     description: str

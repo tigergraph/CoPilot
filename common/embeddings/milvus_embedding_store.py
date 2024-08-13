@@ -596,7 +596,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         return query_result
 
-    def edit_dist_check(self, a: str, b: str, edit_dist_threshold: float, p=False):
+    def edit_dist_check(self, a: str, b: str, edit_dist_threshold: float):
         a = a.lower()
         b = b.lower()
         # if the words are short, they should be the same
@@ -605,8 +605,6 @@ class MilvusEmbeddingStore(EmbeddingStore):
 
         # edit_dist_threshold (as a percent) of word must match
         threshold = int(min(len(a), len(b)) * (1 - edit_dist_threshold))
-        if p:
-            print(a, b, threshold, lev.distance(a, b))
         return lev.distance(a, b) < threshold
 
     async def aget_k_closest(
@@ -641,7 +639,6 @@ class MilvusEmbeddingStore(EmbeddingStore):
                     doc.metadata["vertex_id"],
                     v_id,
                     edit_dist_threshold_pct,
-                    # v_id == "Dataframe",
                 )
                 # don't have to merge verts with the same id (they're the same)
                 and doc.metadata["vertex_id"] != v_id
