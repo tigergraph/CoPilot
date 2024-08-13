@@ -7,7 +7,8 @@ import Levenshtein as lev
 from asyncer import asyncify
 from langchain_community.vectorstores import Milvus
 from langchain_core.documents.base import Document
-from langchain_milvus.vectorstores import Milvus
+# from langchain_milvus.vectorstores import Milvus
+from langchain_community.vectorstores.milvus import Milvus
 from pymilvus import MilvusException, connections, utility
 from pymilvus.exceptions import MilvusException
 
