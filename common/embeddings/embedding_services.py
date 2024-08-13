@@ -134,7 +134,8 @@ class OpenAI_Embedding(EmbeddingModel):
         super().__init__(
             config, model_name=config.get("model_name", "OpenAI gpt-4-0613")
         )
-        from langchain_openai import OpenAIEmbeddings
+        # from langchain_openai import OpenAIEmbeddings
+        from langchain_community.embeddings.openai import OpenAIEmbeddings
 
         self.embeddings = OpenAIEmbeddings()
 
