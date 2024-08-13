@@ -70,7 +70,7 @@ jsonpatch==1.33
 jsonpointer==2.4
 langchain==0.2.11
 langchain-community==0.2.10
-langchain-core==0.2.25
+langchain-core==0.2.29
 langchain-experimental==0.0.64
 langchain-groq==0.1.8
 langchain-ibm==0.1.11
