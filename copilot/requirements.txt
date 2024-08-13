@@ -81,6 +81,7 @@ langchainhub==0.1.20
 langdetect==1.0.9
 langgraph==0.1.16
 langsmith==0.1.94
+Levenshtein==0.25.1
 lomond==0.3.3
 lxml==4.9.3
 marshmallow==3.20.1
@@ -118,7 +119,7 @@ pyTigerDriver==1.0.15
 pyTigerGraph==1.6.2
 pytz==2023.3.post1
 PyYAML==6.0.1
-rapidfuzz==3.4.0
+rapidfuzz==3.8.0
 regex==2023.10.3
 requests==2.32.2
 rsa==4.9
