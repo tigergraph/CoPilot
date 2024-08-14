@@ -87,6 +87,7 @@ langchain-openai==0.1.20
 langchain-text-splitters==0.2.2
 langchainhub==0.1.21
 langdetect==1.0.9
+langchain-core==0.2.29
 langgraph==0.2.3
 langgraph-checkpoint==1.0.2
 langsmith==0.1.99
