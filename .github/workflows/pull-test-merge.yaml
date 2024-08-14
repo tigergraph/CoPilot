@@ -30,8 +30,6 @@ jobs:
 
       - name: Install and Check Python Setup
         run: |
-          pip install uv
-          alias pip='uv pip'
           python -m venv venv
           source venv/bin/activate
           python -m pip install --upgrade pip
