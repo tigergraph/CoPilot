@@ -77,7 +77,7 @@ jsonpatch==1.33
 jsonpath-python==1.0.6
 jsonpointer==3.0.0
 kiwisolver==1.4.5
-langchain==0.2.13
+langchain==0.2.12
 langchain-community==0.2.12
 langchain-experimental==0.0.64
 langchain-groq==0.1.9
