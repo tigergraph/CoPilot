@@ -1,3 +1,6 @@
+import os
+
+os.environ["ECC"] = True
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -190,9 +193,7 @@ def consistency_status(
             background.add_task(graphrag.run, graphname, conn)
             import time
 
-            ecc_status = (
-                f"GraphRAG initialization: {conn.graphname} ({graphname}) {time.ctime()}"
-            )
+            ecc_status = f"GraphRAG initialization: {conn.graphname} ({graphname}) {time.ctime()}"
         case _:
             response.status_code = status.HTTP_404_NOT_FOUND
             return f"Method unsupported, must be {SupportAIMethod.SUPPORTAI}, {SupportAIMethod.GRAPHRAG}"

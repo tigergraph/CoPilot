@@ -1,7 +1,10 @@
 import logging
 import os
 
-from langchain_openai.chat_models import ChatOpenAI
+if os.getenv("ECC"):
+    from langchain_openai.chat_models import ChatOpenAI
+else:
+    from langchain_community.chat_models import ChatOpenAI
 
 from common.llm_services import LLM_Model
 from common.logs.log import req_id_cv
