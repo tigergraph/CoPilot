@@ -437,5 +437,5 @@ async def run(graphname: str, conn: TigerGraphConnection):
     end = time.perf_counter()
     logger.info(f"DONE. graphrag system initializer dT: {init_end-init_start}")
     logger.info(f"DONE. graphrag entity resolution dT: {entity_end-entity_start}")
-    logger.info(f"DONE. graphrag initializer dT: {community_end-community_start}")
+    logger.info(f"DONE. graphrag community initializer dT: {community_end-community_start}")
     logger.info(f"DONE. graphrag.run() total time elaplsed: {end-init_start}")

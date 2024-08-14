@@ -24,13 +24,6 @@ from common.config import (
     embedding_store,
     get_llm_service,
     llm_config,
-)
-from common.config import (
-    db_config,
-    embedding_service,
-    embedding_store,
-    get_llm_service,
-    llm_config,
     service_status,
 )
 from common.logs.logwriter import LogWriter
