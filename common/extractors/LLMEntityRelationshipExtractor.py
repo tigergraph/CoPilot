@@ -1,8 +1,9 @@
-from common.llm_services import LLM_Model
-from common.extractors.BaseExtractor import BaseExtractor
-from common.py_schemas import KnowledgeGraph
-from typing import List
 import json
+from typing import List
+
+from common.extractors.BaseExtractor import BaseExtractor
+from common.llm_services import LLM_Model
+from common.py_schemas import KnowledgeGraph
 
 
 class LLMEntityRelationshipExtractor(BaseExtractor):
@@ -19,6 +20,34 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
         self.strict_mode = strict_mode
 
     def _extract_kg_from_doc(self, doc, chain, parser):
+        """
+        returns:
+        {
+            "nodes": [
+                {
+                    "id": "str",
+                    "type": "string",
+                    "definition": "string"
+                }
+            ],
+            "rels": [
+                {
+                    "source":{
+                        "id": "str",
+                        "type": "string",
+                        "definition": "string"
+                    }
+                    "target":{
+                        "id": "str",
+                        "type": "string",
+                        "definition": "string"
+                    }
+                    "definition"
+                }
+            ]
+        }
+        """
+
         try:
             out = chain.invoke(
                 {"input": doc, "format_instructions": parser.get_format_instructions()}

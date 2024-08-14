@@ -1,54 +1,82 @@
-import logging
-from typing import Annotated
+import os
 
-from fastapi import Depends, FastAPI, BackgroundTasks
+os.environ["ECC"] = "true"
+import json
+import logging
+from contextlib import asynccontextmanager
+from threading import Thread
+from typing import Annotated, Callable
+
+import ecc_util
+import graphrag
+from eventual_consistency_checker import EventualConsistencyChecker
+from fastapi import BackgroundTasks, Depends, FastAPI, Response, status
 from fastapi.security.http import HTTPBase
 
 from common.config import (
     db_config,
+    doc_processing_config,
     embedding_service,
     get_llm_service,
     llm_config,
     milvus_config,
     security,
-    doc_processing_config,
 )
+from common.db.connections import elevate_db_connection_to_token
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.logs.logwriter import LogWriter
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from common.db.connections import elevate_db_connection_to_token
-from eventual_consistency_checker import EventualConsistencyChecker
-import json
-from threading import Thread
+from common.py_schemas.schemas import SupportAIMethod
 
 logger = logging.getLogger(__name__)
 consistency_checkers = {}
 
-app = FastAPI()
 
-@app.on_event("startup")
-def startup_event():
-    if not db_config.get("enable_consistency_checker", True):
-        LogWriter.info("Eventual consistency checker disabled")
-        return
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if not db_config.get("enable_consistency_checker", False):
+        LogWriter.info("Eventual Consistency Checker not run on startup")
 
-    startup_checkers = db_config.get("graph_names", [])
-    for graphname in startup_checkers:
-        conn = elevate_db_connection_to_token(db_config["hostname"], db_config["username"], db_config["password"], graphname)
-        start_ecc_in_thread(graphname, conn)
+    else:
+        startup_checkers = db_config.get("graph_names", [])
+        for graphname in startup_checkers:
+            conn = elevate_db_connection_to_token(
+                db_config["hostname"],
+                db_config["username"],
+                db_config["password"],
+                graphname,
+            )
+            start_ecc_in_thread(graphname, conn)
+    yield
+    LogWriter.info("ECC Shutdown")
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 def start_ecc_in_thread(graphname: str, conn: TigerGraphConnectionProxy):
-    thread = Thread(target=initialize_eventual_consistency_checker, args=(graphname, conn), daemon=True)
+    thread = Thread(
+        target=initialize_eventual_consistency_checker,
+        args=(graphname, conn),
+        daemon=True,
+    )
     thread.start()
     LogWriter.info(f"Eventual consistency checker started for graph {graphname}")
 
-def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConnectionProxy):
+
+def initialize_eventual_consistency_checker(
+    graphname: str, conn: TigerGraphConnectionProxy
+):
     if graphname in consistency_checkers:
         return consistency_checkers[graphname]
 
     try:
-        process_interval_seconds = milvus_config.get("process_interval_seconds", 1800) # default 30 minutes
-        cleanup_interval_seconds = milvus_config.get("cleanup_interval_seconds", 86400) # default 30 days,
+        process_interval_seconds = milvus_config.get(
+            "process_interval_seconds", 1800
+        )  # default 30 minutes
+        cleanup_interval_seconds = milvus_config.get(
+            "cleanup_interval_seconds", 86400
+        )  # default 30 days,
         batch_size = milvus_config.get("batch_size", 10)
         vector_indices = {}
         vertex_field = None
@@ -71,38 +99,10 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
                     vector_field=milvus_config.get("vector_field", "document_vector"),
                     text_field=milvus_config.get("text_field", "document_content"),
                     vertex_field=vertex_field,
-                    alias=milvus_config.get("alias", "default")
+                    alias=milvus_config.get("alias", "default"),
                 )
 
-        if doc_processing_config.get("chunker") == "semantic":
-            from common.chunkers.semantic_chunker import SemanticChunker
-
-            chunker = SemanticChunker(
-                embedding_service,
-                doc_processing_config["chunker_config"].get("method", "percentile"),
-                doc_processing_config["chunker_config"].get("threshold", 0.95),
-            )
-        elif doc_processing_config.get("chunker") == "regex":
-            from common.chunkers.regex_chunker import RegexChunker
-
-            chunker = RegexChunker(
-                pattern=doc_processing_config["chunker_config"].get(
-                    "pattern", "\\r?\\n"
-                )
-            )
-        elif doc_processing_config.get("chunker") == "character":
-            from common.chunkers.character_chunker import CharacterChunker
-
-            chunker = CharacterChunker(
-                chunk_size=doc_processing_config["chunker_config"].get(
-                    "chunk_size", 1024
-                ),
-                overlap_size=doc_processing_config["chunker_config"].get(
-                    "overlap_size", 0
-                ),
-            )
-        else:
-            raise ValueError("Invalid chunker type")
+        chunker = ecc_util.get_chunker()
 
         if doc_processing_config.get("extractor") == "llm":
             from common.extractors import LLMEntityRelationshipExtractor
@@ -112,7 +112,9 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
             raise ValueError("Invalid extractor type")
 
         if vertex_field is None:
-            raise ValueError("vertex_field is not defined. Ensure Milvus is enabled in the configuration.")
+            raise ValueError(
+                "vertex_field is not defined. Ensure Milvus is enabled in the configuration."
+            )
 
         checker = EventualConsistencyChecker(
             process_interval_seconds,
@@ -125,7 +127,7 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
             conn,
             chunker,
             extractor,
-            batch_size
+            batch_size,
         )
         consistency_checkers[graphname] = checker
 
@@ -139,22 +141,61 @@ def initialize_eventual_consistency_checker(graphname: str, conn: TigerGraphConn
 
         return checker
     except Exception as e:
-        LogWriter.error(f"Failed to start eventual consistency checker for graph {graphname}: {e}")
+        LogWriter.error(
+            f"Failed to start eventual consistency checker for graph {graphname}: {e}"
+        )
+
+
+def start_func_in_thread(f: Callable, *args, **kwargs):
+    thread = Thread(
+        target=f,
+        args=args,
+        kwargs=kwargs,
+        daemon=True,
+    )
+    thread.start()
+    LogWriter.info(f'Thread started for function: "{f.__name__}"')
+
 
 @app.get("/")
 def root():
     LogWriter.info(f"Healthcheck")
     return {"status": "ok"}
 
-@app.get("/{graphname}/consistency_status")
-def consistency_status(graphname: str, credentials: Annotated[HTTPBase, Depends(security)]):
-    if graphname in consistency_checkers:
-        ecc = consistency_checkers[graphname]
-        status = json.dumps(ecc.get_status())
-    else:
-        conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname)
-        start_ecc_in_thread(graphname, conn)
-        status = f"Eventual consistency checker started for graph {graphname}"
 
-    LogWriter.info(f"Returning consistency status for {graphname}: {status}")
-    return status
+@app.get("/{graphname}/consistency_status/{ecc_method}")
+def consistency_status(
+    graphname: str,
+    ecc_method: str,
+    background: BackgroundTasks,
+    credentials: Annotated[HTTPBase, Depends(security)],
+    response: Response,
+):
+    conn = elevate_db_connection_to_token(
+        db_config["hostname"],
+        credentials.username,
+        credentials.password,
+        graphname,
+    )
+    match ecc_method:
+        case SupportAIMethod.SUPPORTAI:
+            if graphname in consistency_checkers:
+                ecc = consistency_checkers[graphname]
+                ecc_status = json.dumps(ecc.get_status())
+            else:
+                start_ecc_in_thread(graphname, conn)
+                ecc_status = (
+                    f"Eventual consistency checker started for graph {graphname}"
+                )
+
+            LogWriter.info(f"Returning consistency status for {graphname}: {status}")
+        case SupportAIMethod.GRAPHRAG:
+            background.add_task(graphrag.run, graphname, conn)
+            import time
+
+            ecc_status = f"GraphRAG initialization on {conn.graphname} {time.ctime()}"
+        case _:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return f"Method unsupported, must be {SupportAIMethod.SUPPORTAI}, {SupportAIMethod.GRAPHRAG}"
+
+    return ecc_status

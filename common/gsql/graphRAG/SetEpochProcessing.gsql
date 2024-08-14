@@ -1,0 +1,7 @@
+CREATE DISTRIBUTED QUERY SetEpochProcessing(Vertex<Entity> v_id) {
+    Verts = {v_id};
+
+    // mark the vertex as processed
+    Verts = SELECT v FROM Verts:v
+           POST-ACCUM v.epoch_processed = datetime_to_epoch(now());
+}

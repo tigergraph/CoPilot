@@ -1,0 +1,12 @@
+CREATE DISTRIBUTED QUERY get_community_children(Vertex<Community> comm, UINT iter) SYNTAX V2{
+    Comms = {comm};
+
+    IF iter > 1 THEN
+        Comms = SELECT t FROM Comms:c -(<HAS_PARENT)- Community:t;
+        PRINT Comms[Comms.description as description] as children;
+    ELSE
+        Ents = SELECT t FROM Comms:c -(_>)- ResolvedEntity -(_>)- Entity:t;
+
+        PRINT Ents[Ents.description as description] as children;
+    END;
+}

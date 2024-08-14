@@ -1,0 +1,9 @@
+CREATE DISTRIBUTED QUERY stream_community(UINT iter) {
+    Comms = {Community.*};
+
+    // Get communities of the current iteration
+    Comms = SELECT s FROM Comms:s
+               WHERE s.iteration == iter;
+
+    PRINT Comms;
+}

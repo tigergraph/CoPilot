@@ -1,0 +1,8 @@
+CREATE DISTRIBUTED QUERY StreamDocContent(Vertex<Document> doc) {
+    Doc = {doc};
+
+    // Get the document's content and mark it as processed
+    DocContent = SELECT c FROM Doc:d -(HAS_CONTENT)-> Content:c
+                 POST-ACCUM d.epoch_processed = datetime_to_epoch(now());
+    PRINT DocContent;
+}

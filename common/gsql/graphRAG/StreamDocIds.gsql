@@ -1,0 +1,16 @@
+CREATE DISTRIBUTED QUERY StreamDocIds(INT current_batch, INT ttl_batches) {
+    /* 
+     * Get the IDs of documents that have not already been processed (one
+     * batch at a time)
+     */
+    ListAccum<STRING> @@doc_ids;
+    Docs = {Document.*};
+
+    Docs = SELECT d FROM Docs:d
+           WHERE vertex_to_int(d) % ttl_batches == current_batch
+             AND d.epoch_processed == 0
+           ACCUM @@doc_ids += d.id
+           POST-ACCUM d.epoch_processing = datetime_to_epoch(now()); // set the processing time
+    
+    PRINT @@doc_ids;
+}

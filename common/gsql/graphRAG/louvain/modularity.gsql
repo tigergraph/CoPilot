@@ -1,0 +1,49 @@
+CREATE DISTRIBUTED QUERY modularity(UINT iteration=1) SYNTAX V2 {
+    SumAccum<DOUBLE> @@sum_weight; // the sum of the weights of all the links in the network
+    MinAccum<STRING> @community_id; // the community ID of the node
+    MapAccum<STRING, SumAccum<DOUBLE>> @@community_total_weight_map; // community ID C -> the sum of the weights of the links incident to nodes in C
+    MapAccum<STRING, SumAccum<DOUBLE>> @@community_in_weight_map; // community ID -> the sum of the weights of the links inside the community
+    SumAccum<DOUBLE> @@modularity;
+    MinAccum<STRING> @parent;
+    DOUBLE wt = 1.0;
+    Comms = {Community.*};
+
+    // Assign Entities to their correct community (given the specified iteration level)
+    IF iteration > 1 THEN
+        Comms = SELECT t FROM Comms:c -(<HAS_PARENT)- Community:t
+                WHERE c.iteration == iteration
+                ACCUM t.@parent = c.id;
+        
+        FOREACH i IN RANGE[iteration-1, 2].step(-1) DO
+             Comms = SELECT t FROM Comms:c -(<HAS_PARENT)- Community:t
+                     WHERE c.iteration == i
+                     ACCUM t.@parent = c.@parent;
+        END;
+        Entities = SELECT t FROM Comms:c -(_>)- ResolvedEntity:t
+                   ACCUM t.@community_id = c.@parent;
+
+    ELSE
+        Entities = SELECT t FROM Comms:c -(_>)- ResolvedEntity:t
+                   WHERE c.iteration == iteration
+                   ACCUM t.@community_id = c.id;
+    END;
+  
+    Nodes = SELECT s FROM Entities:s -(_>:e)- ResolvedEntity:t
+            ACCUM  
+                IF s.@community_id == t.@community_id THEN
+                    @@community_in_weight_map += (s.@community_id -> wt)
+                END,
+                @@community_total_weight_map += (s.@community_id -> wt),
+                @@sum_weight += wt;
+
+    @@modularity = 0;
+    FOREACH (community, total_weight) IN @@community_total_weight_map DO
+        DOUBLE in_weight = 0;
+        IF @@community_in_weight_map.containsKey(community) THEN
+            in_weight = @@community_in_weight_map.get(community);
+        END;
+        @@modularity += in_weight / @@sum_weight - pow(total_weight / @@sum_weight, 2);
+    END;
+    
+    PRINT @@modularity as mod;
+}

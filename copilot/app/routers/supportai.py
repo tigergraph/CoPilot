@@ -1,22 +1,39 @@
 import json
 import logging
-import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
 from fastapi.security.http import HTTPBase
+from supportai import supportai
 from supportai.concept_management.create_concepts import (
-    CommunityConceptCreator, EntityConceptCreator, HigherLevelConceptCreator,
-    RelationshipConceptCreator)
-from supportai.retrievers import (EntityRelationshipRetriever,
-                                  HNSWOverlapRetriever, HNSWRetriever,
-                                  HNSWSiblingRetriever)
+    CommunityConceptCreator,
+    EntityConceptCreator,
+    HigherLevelConceptCreator,
+    RelationshipConceptCreator,
+)
+from supportai.retrievers import (
+    EntityRelationshipRetriever,
+    HNSWOverlapRetriever,
+    HNSWRetriever,
+    HNSWSiblingRetriever,
+)
 
-from common.config import (db_config, embedding_service, embedding_store,
-                           get_llm_service, llm_config, service_status)
+from common.config import (
+    db_config,
+    embedding_service,
+    embedding_store,
+    get_llm_service,
+    llm_config,
+    service_status,
+)
 from common.logs.logwriter import LogWriter
-from common.py_schemas.schemas import (CoPilotResponse, CreateIngestConfig,
-                                       LoadingInfo, SupportAIQuestion)
+from common.py_schemas.schemas import (  # SupportAIInitConfig,; SupportAIMethod,
+    CoPilotResponse,
+    CreateIngestConfig,
+    LoadingInfo,
+    SupportAIMethod,
+    SupportAIQuestion,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SupportAI"])
@@ -27,57 +44,20 @@ security = HTTPBase(scheme="basic", auto_error=False)
 def check_embedding_store_status():
     if service_status["embedding_store"]["error"]:
         return HTTPException(
-            status_code=503,
-            detail=service_status["embedding_store"]["error"]
+            status_code=503, detail=service_status["embedding_store"]["error"]
         )
-    
+
 
 @router.post("/{graphname}/supportai/initialize")
 def initialize(
-    graphname, conn: Request, credentials: Annotated[HTTPBase, Depends(security)]
+    graphname,
+    conn: Request,
+    credentials: Annotated[HTTPBase, Depends(security)],
 ):
     conn = conn.state.conn
-    # need to open the file using the absolute path
-    file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
-    with open(file_path, "r") as f:
-        schema = f.read()
-    schema_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
-            graphname, schema
-        )
-    )
 
-    file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
-    with open(file_path) as f:
-        index = f.read()
-    index_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(
-            graphname, index
-        )
-    )
-
-    file_path = "common/gsql/supportai/Scan_For_Updates.gsql"
-    with open(file_path) as f:
-        scan_for_updates = f.read()
-    res = conn.gsql(
-        "USE GRAPH "
-        + conn.graphname
-        + "\n"
-        + scan_for_updates
-        + "\n INSTALL QUERY Scan_For_Updates"
-    )
-
-    file_path = "common/gsql/supportai/Update_Vertices_Processing_Status.gsql"
-    with open(file_path) as f:
-        update_vertices = f.read()
-    res = conn.gsql(
-        "USE GRAPH "
-        + conn.graphname
-        + "\n"
-        + update_vertices
-        + "\n INSTALL QUERY Update_Vertices_Processing_Status"
-    )
-
+    resp = supportai.init_supportai(conn, graphname)
+    schema_res, index_res = resp[0], resp[1]
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
@@ -88,132 +68,13 @@ def initialize(
 @router.post("/{graphname}/supportai/create_ingest")
 def create_ingest(
     graphname,
-    ingest_config: CreateIngestConfig,
+    cfg: CreateIngestConfig,
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
 ):
     conn = conn.state.conn
 
-    if ingest_config.file_format.lower() == "json":
-        file_path = "common/gsql/supportai/SupportAI_InitialLoadJSON.gsql"
-
-        with open(file_path) as f:
-            ingest_template = f.read()
-        ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
-        doc_id = ingest_config.loader_config.get("doc_id_field", "doc_id")
-        doc_text = ingest_config.loader_config.get("content_field", "content")
-        ingest_template = ingest_template.replace('"doc_id"', '"{}"'.format(doc_id))
-        ingest_template = ingest_template.replace('"content"', '"{}"'.format(doc_text))
-
-    if ingest_config.file_format.lower() == "csv":
-        file_path = "common/gsql/supportai/SupportAI_InitialLoadCSV.gsql"
-
-        with open(file_path) as f:
-            ingest_template = f.read()
-        ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
-        separator = ingest_config.get("separator", "|")
-        header = ingest_config.get("header", "true")
-        eol = ingest_config.get("eol", "\n")
-        quote = ingest_config.get("quote", "double")
-        ingest_template = ingest_template.replace('"|"', '"{}"'.format(separator))
-        ingest_template = ingest_template.replace('"true"', '"{}"'.format(header))
-        ingest_template = ingest_template.replace('"\\n"', '"{}"'.format(eol))
-        ingest_template = ingest_template.replace('"double"', '"{}"'.format(quote))
-
-    file_path = "common/gsql/supportai/SupportAI_DataSourceCreation.gsql"
-
-    with open(file_path) as f:
-        data_stream_conn = f.read()
-
-    # assign unique identifier to the data stream connection
-
-    data_stream_conn = data_stream_conn.replace(
-        "@source_name@", "SupportAI_" + graphname + "_" + str(uuid.uuid4().hex)
-    )
-
-    # check the data source and create the appropriate connection
-    if ingest_config.data_source.lower() == "s3":
-        data_conn = ingest_config.data_source_config
-        if (
-            data_conn.get("aws_access_key") is None
-            or data_conn.get("aws_secret_key") is None
-        ):
-            raise Exception("AWS credentials not provided")
-        connector = {
-            "type": "s3",
-            "access.key": data_conn["aws_access_key"],
-            "secret.key": data_conn["aws_secret_key"],
-        }
-
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
-
-    elif ingest_config.data_source.lower() == "azure":
-        if ingest_config.data_source_config.get("account_key") is not None:
-            connector = {
-                "type": "abs",
-                "account.key": ingest_config.data_source_config["account_key"],
-            }
-        elif ingest_config.data_source_config.get("client_id") is not None:
-            # verify that the client secret is also provided
-            if ingest_config.data_source_config.get("client_secret") is None:
-                raise Exception("Client secret not provided")
-            # verify that the tenant id is also provided
-            if ingest_config.data_source_config.get("tenant_id") is None:
-                raise Exception("Tenant id not provided")
-            connector = {
-                "type": "abs",
-                "client.id": ingest_config.data_source_config["client_id"],
-                "client.secret": ingest_config.data_source_config["client_secret"],
-                "tenant.id": ingest_config.data_source_config["tenant_id"],
-            }
-        else:
-            raise Exception("Azure credentials not provided")
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
-    elif ingest_config.data_source.lower() == "gcs":
-        # verify that the correct fields are provided
-        if ingest_config.data_source_config.get("project_id") is None:
-            raise Exception("Project id not provided")
-        if ingest_config.data_source_config.get("private_key_id") is None:
-            raise Exception("Private key id not provided")
-        if ingest_config.data_source_config.get("private_key") is None:
-            raise Exception("Private key not provided")
-        if ingest_config.data_source_config.get("client_email") is None:
-            raise Exception("Client email not provided")
-        connector = {
-            "type": "gcs",
-            "project_id": ingest_config.data_source_config["project_id"],
-            "private_key_id": ingest_config.data_source_config["private_key_id"],
-            "private_key": ingest_config.data_source_config["private_key"],
-            "client_email": ingest_config.data_source_config["client_email"],
-        }
-        data_stream_conn = data_stream_conn.replace(
-            "@source_config@", json.dumps(connector)
-        )
-    else:
-        raise Exception("Data source not implemented")
-
-    load_job_created = conn.gsql("USE GRAPH {}\n".format(graphname) + ingest_template)
-
-    data_source_created = conn.gsql(
-        "USE GRAPH {}\n".format(graphname) + data_stream_conn
-    )
-
-    return {
-        "load_job_id": load_job_created.split(":")[1]
-        .strip(" [")
-        .strip(" ")
-        .strip(".")
-        .strip("]"),
-        "data_source_id": data_source_created.split(":")[1]
-        .strip(" [")
-        .strip(" ")
-        .strip(".")
-        .strip("]"),
-    }
+    return supportai.create_ingest(graphname, cfg, conn)
 
 
 @router.post("/{graphname}/supportai/ingest")
@@ -397,18 +258,24 @@ def build_concepts(
     return {"status": "success"}
 
 
-@router.get("/{graphname}/supportai/forceupdate")
-def ecc(
-    graphname,
+@router.get("/{graphname}/{method}/forceupdate")
+def supportai_update(
+    graphname: str,
+    method: str,
     conn: Request,
     credentials: Annotated[HTTPBase, Depends(security)],
     bg_tasks: BackgroundTasks,
+    response: Response,
 ):
+    if method != SupportAIMethod.SUPPORTAI and method != SupportAIMethod.GRAPHRAG:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return f"{method} is not a valid method. {SupportAIMethod.SUPPORTAI} or {SupportAIMethod.GRAPHRAG}"
+
     from httpx import get as http_get
 
     ecc = (
-        db_config.get("ecc", "http://eventual-consistency-service:8001")
-        + f"/{graphname}/consistency_status"
+        db_config.get("ecc", "http://localhost:8001")
+        + f"/{graphname}/consistency_status/{method}"
     )
     LogWriter.info(f"Sending ECC request to: {ecc}")
     bg_tasks.add_task(

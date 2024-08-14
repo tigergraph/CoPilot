@@ -1,0 +1,14 @@
+CREATE DISTRIBUTED QUERY communities_have_desc(UINT iter) SYNTAX V2{
+    SumAccum<INT> @@descrs;
+    Comms = {Community.*};
+    Comms = SELECT c FROM Comms:c
+            WHERE c.iteration == iter
+            ACCUM
+                IF length(c.description) > 0 THEN
+                    @@descrs += 1
+                END;
+
+    
+    PRINT (@@descrs == Comms.size()) as all_have_desc;
+    PRINT @@descrs, Comms.size();
+}

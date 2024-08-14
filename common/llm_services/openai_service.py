@@ -1,6 +1,11 @@
 import logging
 import os
 
+if os.getenv("ECC"):
+    from langchain_openai.chat_models import ChatOpenAI
+else:
+    from langchain_community.chat_models import ChatOpenAI
+
 from common.llm_services import LLM_Model
 from common.logs.log import req_id_cv
 from common.logs.logwriter import LogWriter
@@ -16,8 +21,6 @@ class OpenAI(LLM_Model):
                 auth_detail
             ]
 
-        from langchain_community.chat_models import ChatOpenAI
-        
         model_name = config["llm_model"]
         self.llm = ChatOpenAI(
             temperature=config["model_kwargs"]["temperature"], model_name=model_name
