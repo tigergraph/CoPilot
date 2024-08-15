@@ -64,7 +64,7 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
 
 addLoggingLevel("DEBUG_PII", logging.DEBUG - 5)
 log_config = get_log_config()
-LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
+LOGLEVEL = os.environ.get("LOGLEVEL", logging.INFO).upper()
 
 log_directory = log_config.get("log_file_path", "/tmp/logs")
 os.makedirs(log_directory, exist_ok=True)

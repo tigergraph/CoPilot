@@ -5,6 +5,7 @@ import logging
 import re
 import traceback
 from glob import glob
+from typing import Callable
 
 import httpx
 from graphrag import workers
@@ -23,7 +24,9 @@ from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
-http_timeout = httpx.Timeout(15.0)
+http_timeout =  httpx.Timeout(15.0)
+
+tg_sem = asyncio.Semaphore(100)
 
 
 async def install_queries(
@@ -111,7 +114,7 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
-                drop_old=False,
+                drop_old=True,
             )
 
             LogWriter.info(f"Initializing {name}")
@@ -141,15 +144,16 @@ async def stream_ids(
 
     try:
         async with httpx.AsyncClient(timeout=http_timeout) as client:
-            res = await client.post(
-                f"{conn.restppUrl}/query/{conn.graphname}/StreamIds",
-                params={
-                    "current_batch": current_batch,
-                    "ttl_batches": ttl_batches,
-                    "v_type": v_type,
-                },
-                headers=headers,
-            )
+            async with tg_sem:
+                res = await client.post(
+                    f"{conn.restppUrl}/query/{conn.graphname}/StreamIds",
+                    params={
+                        "current_batch": current_batch,
+                        "ttl_batches": ttl_batches,
+                        "v_type": v_type,
+                    },
+                    headers=headers,
+                )
         ids = res.json()["results"][0]["@@ids"]
         return {"error": False, "ids": ids}
 
@@ -199,9 +203,10 @@ async def upsert_vertex(
     data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
-        res = await client.post(
-            f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-        )
+        async with tg_sem:
+            res = await client.post(
+                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+            )
 
         res.raise_for_status()
 
@@ -209,10 +214,11 @@ async def upsert_vertex(
 async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
-        res = await client.get(
-            f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
-            headers=headers,
-        )
+        async with tg_sem:
+            res = await client.get(
+                f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
+                headers=headers,
+            )
 
         res.raise_for_status()
     return res.json()
@@ -250,20 +256,22 @@ async def upsert_edge(
     )
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
-        res = await client.post(
-            f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-        )
+        async with tg_sem:
+            res = await client.post(
+                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+            )
         res.raise_for_status()
 
 
 async def get_commuinty_children(conn, i: int, c: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
-        resp = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
-            params={"comm": c, "iter": i},
-            headers=headers,
-        )
+        async with tg_sem:
+            resp = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
+                params={"comm": c, "iter": i},
+                headers=headers,
+            )
         resp.raise_for_status()
     descrs = []
     for d in resp.json()["results"][0]["children"]:
@@ -281,11 +289,12 @@ async def get_commuinty_children(conn, i: int, c: str):
 async def check_vertex_has_desc(conn, i: int):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
-        resp = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/communities_have_desc",
-            params={"iter": i},
-            headers=headers,
-        )
+        async with tg_sem:
+            resp = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/communities_have_desc",
+                params={"iter": i},
+                headers=headers,
+            )
         resp.raise_for_status()
 
     res = resp.json()["results"][0]["all_have_desc"]

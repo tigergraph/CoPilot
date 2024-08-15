@@ -37,11 +37,12 @@ INSTALL QUERY {query_name}"""
     headers = {"Authorization": f"Basic {tkn}"}
 
     async with httpx.AsyncClient(timeout=None) as client:
-        res = await client.post(
-            conn.gsUrl + "/gsqlserver/gsql/file",
-            data=quote_plus(query.encode("utf-8")),
-            headers=headers,
-        )
+        async with util.tg_sem:
+            res = await client.post(
+                conn.gsUrl + "/gsqlserver/gsql/file",
+                data=quote_plus(query.encode("utf-8")),
+                headers=headers,
+            )
 
     if "error" in res.text.lower():
         LogWriter.error(res.text)
