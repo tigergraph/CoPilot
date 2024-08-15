@@ -21,7 +21,7 @@ services:
 
   eventual-consistency-service:
     image: tigergraphml/ecc:latest
-    # container_name: eventual-consistency-service
+    container_name: eventual-consistency-service
     build:
       context: .
       dockerfile: eventual-consistency-service/Dockerfile

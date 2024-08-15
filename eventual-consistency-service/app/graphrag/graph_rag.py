@@ -53,7 +53,7 @@ async def stream_docs(
                         # continue to the next doc.
                         # This doc will not be marked as processed, so the ecc will process it eventually.
                         continue
-                    logger.info("steam_docs writes to docs")
+                    logger.info("stream_docs writes to docs")
                     await docs_chan.put(res.json()["results"][0]["DocContent"][0])
                 except Exception as e:
                     exc = traceback.format_exc()
