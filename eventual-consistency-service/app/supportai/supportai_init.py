@@ -15,7 +15,8 @@ from supportai.util import (
     init,
     make_headers,
     http_timeout,
-    stream_ids
+    stream_ids,
+    tg_sem
 )
 
 logger = logging.getLogger(__name__)
@@ -41,11 +42,12 @@ async def stream_docs(
 
             for d in doc_ids["ids"]:
                 try:
-                    res = await client.get(
-                        f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
-                        params={"doc": d},
-                        headers=headers,
-                    )
+                    async with tg_sem:
+                        res = await client.get(
+                            f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
+                            params={"doc": d},
+                            headers=headers,
+                        )
                     if res.status_code != 200:
                         continue
                     logger.info("stream_docs writes to docs")    
@@ -167,7 +169,8 @@ async def extract(
 
 async def run(
     graphname: str, 
-    conn: TigerGraphConnection
+    conn: TigerGraphConnection,
+    upsert_limit=10
 ):
     """
     Set up SupportAI:
