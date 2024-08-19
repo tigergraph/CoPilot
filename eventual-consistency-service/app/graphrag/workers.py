@@ -79,7 +79,7 @@ async def chunk_doc(
 
         # send chunks to be embedded
         logger.info("chunk writes to embed_chan")
-        await embed_chan.put((v_id, chunk, "DocumentChunk"))
+        await embed_chan.put((chunk_id, chunk, "DocumentChunk"))
 
         # send chunks to have entities extracted
         logger.info("chunk writes to extract_chan")
@@ -179,7 +179,7 @@ async def extract(
 
             # embed the entity
             # embed with the v_id if the description is blank
-            if len(desc[0]):
+            if len(desc[0]) == 0:
                 await embed_chan.put((v_id, v_id, "Entity"))
             else:
                 # (v_id, content, index_name)
@@ -219,7 +219,7 @@ async def extract(
 
         for edge in doc.relationships:
             logger.info(
-                f"extract writes relates edge to upsert\n{edge.source.id} -({edge.type})->  {edge.target.id}"
+                f"extract writes relates edge to upsert:{edge.source.id} -({edge.type})->  {edge.target.id}"
             )
             # upsert verts first to make sure their ID becomes an attr
             v_id = util.process_id(edge.source.id)  # src_id
@@ -359,11 +359,6 @@ async def process_community(
     logger.info(f"Processing Community: {comm_id}")
     # get the children of the community
     children = await util.get_commuinty_children(conn, i, comm_id)
-    if i == 1:
-        tmp = []
-        for c in children:
-            tmp.extend(c)
-        children = list(filter(lambda x: len(x) > 0, tmp))
     comm_id = util.process_id(comm_id)
 
     # if the community only has one child, use its description
@@ -374,6 +369,7 @@ async def process_community(
         summarizer = community_summarizer.CommunitySummarizer(llm)
         summary = await summarizer.summarize(comm_id, children)
 
+    print(f"*******>{comm_id}: {children}, {summary}", flush=True)
     await upsert_chan.put(
         (
             util.upsert_vertex,  # func to call

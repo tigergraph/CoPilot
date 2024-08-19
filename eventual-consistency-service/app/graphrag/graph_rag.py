@@ -2,17 +2,21 @@ import asyncio
 import logging
 import time
 import traceback
+from collections import defaultdict
 
 import httpx
 from aiochannel import Channel
 from graphrag import workers
 from graphrag.util import (
+    check_all_ents_resolved,
     check_vertex_has_desc,
     http_timeout,
     init,
+    load_q,
     make_headers,
     stream_ids,
     tg_sem,
+    upsert_batch,
 )
 from pyTigerGraph import TigerGraphConnection
 
@@ -83,8 +87,8 @@ async def chunk_docs(
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for content in docs_chan:
-            v_id = content["v_id"]
-            txt = content["attributes"]["text"]
+            # v_id = content["v_id"]
+            # txt = content["attributes"]["text"]
             # send the document to be embedded
             logger.info("chunk writes to extract")
             # await embed_chan.put((v_id, txt, "Document"))
@@ -117,7 +121,65 @@ async def upsert(upsert_chan: Channel):
             # execute the task
             grp.create_task(func(*args))
 
-    logger.info(f"upsert done")
+    logger.info("upsert done")
+    logger.info("closing load_q chan")
+    load_q.close()
+
+
+async def load(conn: TigerGraphConnection):
+    logger.info("Reading from load_q")
+    dd = lambda: defaultdict(dd)  # infinite default dict
+    batch_size = 250
+    # while the load q is still open or has contents
+    while not load_q.closed() or not load_q.empty():
+        if load_q.closed():
+            logger.info(
+                f"load queue closed. Flushing load queue (final load for this stage)"
+            )
+        # if there's `batch_size` entities in the channel, load it
+        # or if the channel is closed, flush it
+        if load_q.qsize() >= batch_size or load_q.closed() or load_q.should_flush():
+            batch = {
+                "vertices": defaultdict(dict[str, any]),
+                "edges": dd(),
+            }
+            n_verts = 0
+            n_edges = 0
+            size = (
+                load_q.qsize()
+                if load_q.closed() or load_q.should_flush()
+                else batch_size
+            )
+            for _ in range(size):
+                t, elem = await load_q.get()
+                if t == "FLUSH":
+                    logger.debug(f"flush recieved: {t}")
+                    load_q._should_flush = False
+                    break
+                match t:
+                    case "vertices":
+                        vt, v_id, attr = elem
+                        batch[t][vt][v_id] = attr
+                        n_verts += 1
+                    case "edges":
+                        src_v_type, src_v_id, edge_type, tgt_v_type, tgt_v_id, attrs = (
+                            elem
+                        )
+                        batch[t][src_v_type][src_v_id][edge_type][tgt_v_type][
+                            tgt_v_id
+                        ] = attrs
+                        n_edges += 1
+
+            logger.info(
+                f"Upserting batch size of {size}. ({n_verts} verts | {n_edges} edges)"
+            )
+            await upsert_batch(conn, batch)
+        else:
+            await asyncio.sleep(1)
+
+    # TODO: flush q if it's not empty
+    if not load_q.empty():
+        raise Exception(f"load_q not empty: {load_q.qsize()}", flush=True)
 
 
 async def embed(
@@ -132,6 +194,7 @@ async def embed(
     async with asyncio.TaskGroup() as grp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
+            continue
             embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
             grp.create_task(
@@ -288,6 +351,8 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
         logger.info(f"*** mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
+        if mod == 0:
+            break
 
         # write iter to chan for layer to be processed
         await stream_communities(conn, i + 1, comm_process_chan)
@@ -329,13 +394,18 @@ async def stream_communities(
     # Wait for all communities for layer i to be processed before doing next layer
     # all community descriptions must be populated before the next layer can be processed
     if len(comms) > 0:
+        n_waits = 0
         while not await check_vertex_has_desc(conn, i):
             logger.info(f"Waiting for layer{i} to finish processing")
             await asyncio.sleep(5)
+            n_waits += 1
+            if n_waits > 3:
+                logger.info("Flushing load_q")
+                await load_q.flush(("FLUSH", None))
         await asyncio.sleep(3)
 
-    logger.info("stream_communities done")
-    logger.info("closing comm_process_chan")
+    # logger.info("stream_communities done")
+    # logger.info("closing comm_process_chan")
 
 
 async def summarize_communities(
@@ -353,7 +423,7 @@ async def summarize_communities(
     embed_chan.close()
 
 
-async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
+async def run(graphname: str, conn: TigerGraphConnection):
     """
     Set up GraphRAG:
         - Install necessary queries.
@@ -369,9 +439,9 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
     extractor, index_stores = await init(conn)
     init_start = time.perf_counter()
 
-    doc_process_switch = True
-    entity_resolution_switch =True 
-    community_detection_switch =True 
+    doc_process_switch = False
+    entity_resolution_switch = False
+    community_detection_switch = True
     if doc_process_switch:
         logger.info("Doc Processing Start")
         docs_chan = Channel(1)
@@ -386,7 +456,8 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
                 chunk_docs(conn, docs_chan, embed_chan, upsert_chan, extract_chan)
             )
             # upsert chunks
-            grp.create_task(upsert( upsert_chan))
+            grp.create_task(upsert(upsert_chan))
+            grp.create_task(load(conn))
             # embed
             grp.create_task(embed(embed_chan, index_stores, graphname))
             # extract entities
@@ -403,6 +474,7 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
         logger.info("Entity Processing Start")
         entities_chan = Channel(100)
         upsert_chan = Channel(100)
+        load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             grp.create_task(stream_entities(conn, entities_chan, 50))
             grp.create_task(
@@ -414,8 +486,12 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
                 )
             )
             grp.create_task(upsert(upsert_chan))
+            grp.create_task(load(conn))
     entity_end = time.perf_counter()
     logger.info("Entity Processing End")
+    while not await check_all_ents_resolved(conn):
+        logger.info(f"Waiting for resolved entites to finish loading")
+        await asyncio.sleep(1)
 
     # Community Detection
     community_start = time.perf_counter()
@@ -425,9 +501,9 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
         comm_process_chan = Channel(100)
         upsert_chan = Channel(100)
         embed_chan = Channel(100)
+        load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             # run louvain
-            # grp.create_task(communities(conn, communities_chan))
             grp.create_task(communities(conn, comm_process_chan))
             # get the communities
             # grp.create_task( stream_communities(conn, communities_chan, comm_process_chan))
@@ -436,6 +512,7 @@ async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
                 summarize_communities(conn, comm_process_chan, upsert_chan, embed_chan)
             )
             grp.create_task(upsert(upsert_chan))
+            grp.create_task(load(conn))
             grp.create_task(embed(embed_chan, index_stores, graphname))
 
     community_end = time.perf_counter()
