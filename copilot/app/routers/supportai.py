@@ -245,7 +245,7 @@ def answer_question(
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["community_level"],
-            query.method_params["top_k_summaries"]
+            query.method_params["top_k_answer_candidates"]
         )
     else:
         raise Exception("Method not implemented")

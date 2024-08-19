@@ -72,7 +72,7 @@ class GraphRAG(BaseRetriever):
     def retrieve_answer(self,
                         question: str,
                         community_level: int,
-                        top_k_summaries: int = 1):
+                        top_k_answer_candidates: int = 1):
         retrieved = self.search(question, community_level)
         context = [x["attributes"] for x in retrieved[0]["selected_comms"]]
         
@@ -83,6 +83,6 @@ class GraphRAG(BaseRetriever):
         res.sort(key=lambda x: x.quality_score, reverse=True)
 
         new_context = [{"candidate_answer": x.answer,
-                        "score": x.quality_score} for x in res[:top_k_summaries]]
+                        "score": x.quality_score} for x in res[:top_k_answer_candidates]]
         
         return self._generate_response(question, new_context)
