@@ -76,8 +76,8 @@ async def chunk_docs(
     doc_task = []
     async with asyncio.TaskGroup() as sp:
         async for content in docs_chan:
-            v_id = content["v_id"]
-            txt = content["attributes"]["text"]
+            # v_id = content["v_id"]
+            # txt = content["attributes"]["text"]
 
             logger.info("chunk writes to extract")
             # await embed_chan.put((v_id, txt, "Document"))
@@ -170,7 +170,7 @@ async def extract(
 async def run(
     graphname: str, 
     conn: TigerGraphConnection,
-    upsert_limit=10
+    upsert_limit=100
 ):
     """
     Set up SupportAI:

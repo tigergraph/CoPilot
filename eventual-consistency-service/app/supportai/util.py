@@ -26,22 +26,19 @@ from common.logs.logwriter import LogWriter
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
 
-tg_sem = asyncio.Semaphore(10)
+tg_sem = asyncio.Semaphore(100)
 
 async def install_queries(
     requried_queries: list[str],
     conn: TigerGraphConnection,
 ):
     # queries that are currently installed
-    logger.info("Fetching currently installed queries...")
     installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
-    logger.info(f"Installed queries: {installed_queries}")
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
         # only install n queries at a time (n=n_workers)
         q_name = q.split("/")[-1]
-        logger.info(f"Processing query: {q_name}")
         # if the query is not installed, install it
         if q_name not in installed_queries:
             logger.info(f"Query '{q_name}' not found in installed queries. Attempting to install...")
