@@ -1,0 +1,7 @@
+CREATE DISTRIBUTED QUERY GraphRAG_CommunityRetriever(INT community_level=2) FOR GRAPH pyTigerGraphRAG { 
+  comms = {Community.*};
+  
+  selected_comms = SELECT c FROM comms:c WHERE c.iteration == community_level;
+  
+  PRINT selected_comms;
+}

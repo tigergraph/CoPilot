@@ -79,7 +79,7 @@ async def chunk_doc(
 
         # send chunks to be embedded
         logger.info("chunk writes to embed_chan")
-        await embed_chan.put((v_id, chunk, "DocumentChunk"))
+        await embed_chan.put((chunk_id, chunk, "DocumentChunk"))
 
         # send chunks to have entities extracted
         logger.info("chunk writes to extract_chan")
