@@ -101,7 +101,7 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
-                drop_old=False,
+                drop_old=True,
             )
 
             LogWriter.info(f"Initializing {name}")
@@ -191,24 +191,49 @@ async def upsert_vertex(
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.post(
-                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-            )
+            try:
+                res = await client.post(
+                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+                )
 
-        res.raise_for_status()
+                res.raise_for_status()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Request body: {data}")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                logger.error(f"Request body: {data}")
 
 
 async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.get(
-                f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
-                headers=headers,
-            )
+            try:
+                res = await client.get(
+                    f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
+                    headers=headers,
+                )
 
-        res.raise_for_status()
-    return res.json()
+                res.raise_for_status()
+                return res.json()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+                return {"error": "Request failed"}
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                return {"error": f"HTTP status error {exc.response.status_code}"}
+
 
 
 async def upsert_edge(
@@ -244,7 +269,19 @@ async def upsert_edge(
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.post(
-                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-            )
-        res.raise_for_status()
+            try:
+                res = await client.post(
+                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+                )
+                res.raise_for_status()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Request body: {data}")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                logger.error(f"Request body: {data}")

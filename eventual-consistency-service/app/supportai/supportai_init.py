@@ -80,7 +80,7 @@ async def chunk_docs(
             txt = content["attributes"]["text"]
 
             logger.info("chunk writes to extract")
-            await embed_chan.put((v_id, txt, "Document"))
+            # await embed_chan.put((v_id, txt, "Document"))
 
             task = sp.create_task(
                 workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
@@ -123,12 +123,12 @@ async def embed(
     (v_id, content, index_name) <- q.get()
     """
     logger.info("Reading from embed channel")
-    async with asyncio.TaskGroup() as grp:
+    async with asyncio.TaskGroup() as sp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
             embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
-            grp.create_task(
+            sp.create_task(
                 workers.embed(
                     embedding_service,
                     embedding_store,
@@ -154,9 +154,9 @@ async def extract(
     """
     logger.info("Reading from extract channel")
     # consume task queue
-    async with asyncio.TaskGroup() as grp:
+    async with asyncio.TaskGroup() as sp:
         async for item in extract_chan:
-            grp.create_task(
+            sp.create_task(
                 workers.extract(upsert_chan, embed_chan, extractor, conn, *item)
             )
 

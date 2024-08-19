@@ -147,13 +147,14 @@ async def embed(
     vec = await embed_svc.aembed_query(content)
     await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
 
+
 async def get_vert_desc(conn, v_id, node: Node):
-    desc = [node.properties.get("definition", "")]
+    desc = [node.properties.get("description", "")]
     exists = await util.check_vertex_exists(conn, v_id)
     # if vertex exists, get description content and append this description to it
     if not exists["error"]:
         # deduplicate descriptions
-        desc.extend(exists["results"][0]["attributes"]["definition"])
+        desc.extend(exists["results"][0]["attributes"]["description"])
         desc = list(set(desc))
     return desc
 
