@@ -33,18 +33,34 @@ async def install_queries(
     conn: TigerGraphConnection,
 ):
     # queries that are currently installed
+    logger.info("Fetching currently installed queries...")
     installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    logger.info(f"Installed queries: {installed_queries}")
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
         # only install n queries at a time (n=n_workers)
         q_name = q.split("/")[-1]
+        logger.info(f"Processing query: {q_name}")
         # if the query is not installed, install it
         if q_name not in installed_queries:
-            res = await workers.install_query(conn, q)
-            # stop system if a required query doesn't install
-            if res["error"]:
-                raise Exception(res["message"])
+            logger.info(f"Query '{q_name}' not found in installed queries. Attempting to install...")
+            try:
+                res = await workers.install_query(conn, q)
+                # stop system if a required query doesn't install
+                if res["error"]:
+                    logger.error(f"Failed to install query '{q_name}'. Error: {res['message']}")
+                    raise Exception(f"Installation of query '{q_name}' failed with message: {res['message']}")
+                else:
+                    logger.info(f"Successfully installed query '{q_name}'.")
+                    
+            except Exception as e:
+                logger.critical(f"Critical error during installation of query '{q_name}': {e}")
+                raise e
+        else:
+            logger.info(f"Query '{q_name}' is already installed.")
+    
+    logger.info("Finished processing all required queries.")
 
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
@@ -64,8 +80,7 @@ async def init(
         "common/gsql/supportai/ECC_Status",
         "common/gsql/supportai/Check_Nonexistent_Vertices",
         "common/gsql/graphRAG/StreamIds",
-        "common/gsql/graphRAG/StreamDocContent",
-        # "common/gsql/graphRAG/SetEpochProcessing",
+        "common/gsql/graphRAG/StreamDocContent"
     ]
     await install_queries(requried_queries, conn)
 
