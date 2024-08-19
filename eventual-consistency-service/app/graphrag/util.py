@@ -206,7 +206,8 @@ async def upsert_vertex(
                 f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
             )
 
-            res.raise_for_status()
+        res.raise_for_status()
+
 
 
 async def check_vertex_exists(conn, v_id: str):
