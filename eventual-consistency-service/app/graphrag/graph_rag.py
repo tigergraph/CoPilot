@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import time
 import traceback
@@ -129,7 +130,7 @@ async def upsert(upsert_chan: Channel):
 async def load(conn: TigerGraphConnection):
     logger.info("Reading from load_q")
     dd = lambda: defaultdict(dd)  # infinite default dict
-    batch_size = 250
+    batch_size = 1000
     # while the load q is still open or has contents
     while not load_q.closed() or not load_q.empty():
         if load_q.closed():
@@ -170,10 +171,11 @@ async def load(conn: TigerGraphConnection):
                         ] = attrs
                         n_edges += 1
 
+            data = json.dumps(batch)
             logger.info(
-                f"Upserting batch size of {size}. ({n_verts} verts | {n_edges} edges)"
+                f"Upserting batch size of {size}. ({n_verts} verts | {n_edges} edges. {len(data.encode())/1000:,} kb)"
             )
-            await upsert_batch(conn, batch)
+            await upsert_batch(conn, data)
         else:
             await asyncio.sleep(1)
 
@@ -194,7 +196,6 @@ async def embed(
     async with asyncio.TaskGroup() as grp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
-            continue
             embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
             grp.create_task(
@@ -350,7 +351,7 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
                 )
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
-        logger.info(f"*** mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
+        logger.info(f"mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
         if mod == 0:
             break
 
@@ -373,8 +374,6 @@ async def stream_communities(
     logger.info("streaming communities")
 
     headers = make_headers(conn)
-    # TODO:
-    # can only do one layer at a time to ensure that every child community has their descriptions
 
     # async for i in community_chan:
     # get the community from that layer
@@ -403,9 +402,6 @@ async def stream_communities(
                 logger.info("Flushing load_q")
                 await load_q.flush(("FLUSH", None))
         await asyncio.sleep(3)
-
-    # logger.info("stream_communities done")
-    # logger.info("closing comm_process_chan")
 
 
 async def summarize_communities(
@@ -439,8 +435,8 @@ async def run(graphname: str, conn: TigerGraphConnection):
     extractor, index_stores = await init(conn)
     init_start = time.perf_counter()
 
-    doc_process_switch = False
-    entity_resolution_switch = False
+    doc_process_switch = True
+    entity_resolution_switch = True
     community_detection_switch = True
     if doc_process_switch:
         logger.info("Doc Processing Start")

@@ -10,13 +10,8 @@ import httpx
 from graphrag import reusable_channel, workers
 from pyTigerGraph import TigerGraphConnection
 
-from common.config import (
-    doc_processing_config,
-    embedding_service,
-    get_llm_service,
-    llm_config,
-    milvus_config,
-)
+from common.config import (doc_processing_config, embedding_service,
+                           get_llm_service, llm_config, milvus_config)
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
@@ -25,7 +20,7 @@ from common.logs.logwriter import LogWriter
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
 
-tg_sem = asyncio.Semaphore(100)
+tg_sem = asyncio.Semaphore(20)
 load_q = reusable_channel.ReuseableChannel()
 
 
@@ -215,12 +210,11 @@ async def upsert_vertex(
     #         logger.error(f"Upsert err: {vertex_type} {vertex_id}\n{e}")
 
 
-async def upsert_batch(conn: TigerGraphConnection, batch):
+async def upsert_batch(conn: TigerGraphConnection, data: str):
     # logger.info(f"Upsert vertex: {vertex_type} {vertex_id}")
     # vertex_id = vertex_id.replace(" ", "_")
     # attrs = map_attrs(attributes)
     # await load_q.put(('vertices'))
-    data = json.dumps(batch)
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
@@ -237,10 +231,15 @@ async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.get(
+            try:
+                res = await client.get(
                 f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
                 headers=headers,
             )
+
+            except Exception as e:
+                logger.error(f"Check err:\n{e}")
+                return {"error": True}
 
         try:
             res.raise_for_status()

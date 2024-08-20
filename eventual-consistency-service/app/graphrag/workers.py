@@ -1,6 +1,7 @@
 import base64
 import logging
 import time
+import traceback
 from urllib.parse import quote_plus
 
 import ecc_util
@@ -294,7 +295,14 @@ async def resolve_entity(
 
     mark as processed
     """
-    results = await emb_store.aget_k_closest(entity_id)
+    try:
+        results = await emb_store.aget_k_closest(entity_id)
+
+    except Exception:
+        err = traceback.format_exc()
+        logger.error(err)
+        return
+
     if len(results) == 0:
         logger.error(
             f"aget_k_closest should, minimally, return the entity itself.\n{results}"
