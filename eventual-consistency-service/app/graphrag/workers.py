@@ -1,20 +1,20 @@
 import base64
 import logging
 import time
+import traceback
 from urllib.parse import quote_plus
 
 import ecc_util
 import httpx
 from aiochannel import Channel
-from graphrag import community_summarizer, util
-from langchain_community.graphs.graph_document import GraphDocument, Node
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
+from graphrag import community_summarizer, util
+from langchain_community.graphs.graph_document import GraphDocument, Node
+from pyTigerGraph import TigerGraphConnection
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
@@ -179,7 +179,7 @@ async def extract(
 
             # embed the entity
             # embed with the v_id if the description is blank
-            if len(desc[0]):
+            if len(desc[0]) == 0:
                 await embed_chan.put((v_id, v_id, "Entity"))
             else:
                 # (v_id, content, index_name)
@@ -219,7 +219,7 @@ async def extract(
 
         for edge in doc.relationships:
             logger.info(
-                f"extract writes relates edge to upsert\n{edge.source.id} -({edge.type})->  {edge.target.id}"
+                f"extract writes relates edge to upsert:{edge.source.id} -({edge.type})->  {edge.target.id}"
             )
             # upsert verts first to make sure their ID becomes an attr
             v_id = util.process_id(edge.source.id)  # src_id
@@ -276,6 +276,7 @@ async def extract(
             )
             # embed "Relationship",
             # (v_id, content, index_name)
+            # right now, we're not embedding relationships in graphrag
 
 
 async def resolve_entity(
@@ -294,7 +295,14 @@ async def resolve_entity(
 
     mark as processed
     """
-    results = await emb_store.aget_k_closest(entity_id)
+    try:
+        results = await emb_store.aget_k_closest(entity_id)
+
+    except Exception:
+        err = traceback.format_exc()
+        logger.error(err)
+        return
+
     if len(results) == 0:
         logger.error(
             f"aget_k_closest should, minimally, return the entity itself.\n{results}"
@@ -359,11 +367,6 @@ async def process_community(
     logger.info(f"Processing Community: {comm_id}")
     # get the children of the community
     children = await util.get_commuinty_children(conn, i, comm_id)
-    if i == 1:
-        tmp = []
-        for c in children:
-            tmp.extend(c)
-        children = list(filter(lambda x: len(x) > 0, tmp))
     comm_id = util.process_id(comm_id)
 
     # if the community only has one child, use its description
@@ -374,6 +377,7 @@ async def process_community(
         summarizer = community_summarizer.CommunitySummarizer(llm)
         summary = await summarizer.summarize(comm_id, children)
 
+    logger.debug(f"Community {comm_id}: {children}, {summary}")
     await upsert_chan.put(
         (
             util.upsert_vertex,  # func to call

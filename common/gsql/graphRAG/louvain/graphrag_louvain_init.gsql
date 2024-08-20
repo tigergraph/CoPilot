@@ -18,7 +18,7 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
     MaxAccum<Move> @best_move; // best move of the node with the highest delta Q to move the isolated node into the new community
     MaxAccum<DOUBLE> @@min_double; // used to reset the @best_move
     SumAccum<INT> @@move_cnt;
-    OrAccum @to_change_community;
+    OrAccum @to_change_community, @has_relations;
     SumAccum<INT> @batch_id;
     MinAccum<INT> @vid;
 
@@ -152,6 +152,8 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
     @@community_sum_total_map.clear();
     Tmp = SELECT s FROM AllNodes:s -(_:e)-> ResolvedEntity:t
           ACCUM
+              s.@has_relations += TRUE,
+              t.@has_relations += TRUE,
               IF s.@community_id == t.@community_id THEN
                   // keep track of how many edges are within the community
                   @@community_sum_in_map += (s.@community_id -> wt) 
@@ -165,7 +167,14 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches
               INSERT INTO IN_COMMUNITY VALUES (s, s.@community_vid+"_1") // link entity to it's first community
           ;  
 
-    PRINT @@source_target_k_in_map;
+    // Continue community hierarchy for unattached partitions
+    Tmp = SELECT s FROM AllNodes:s
+          WHERE NOT s.@has_relations
+          POST-ACCUM
+              // if s is a part of an unattached partition, add to its community hierarchy to maintain parity with rest of graph
+              INSERT INTO Community VALUES (s.id+"_1", 1, ""),
+              INSERT INTO IN_COMMUNITY VALUES (s, s.id+"_1"); // link entity to it's first community
+        
 
     @@community_sum_total_map.clear();
     // link communities

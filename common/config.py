@@ -92,8 +92,6 @@ else:
             "MILVUS_CONFIG must be a .json file or a JSON string, failed with error: "
             + str(e)
         )
-
-
 if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai":
     embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":
@@ -128,11 +126,9 @@ def get_llm_service(llm_config) -> LLM_Model:
     else:
         raise Exception("LLM Completion Service Not Supported")
 
-
 LogWriter.info(
     f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
 )
-
 if os.getenv("INIT_EMBED_STORE", "true")=="true":
     LogWriter.info("Setting up Milvus embedding store for InquiryAI")
     try:
