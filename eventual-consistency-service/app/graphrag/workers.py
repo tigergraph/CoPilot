@@ -377,7 +377,7 @@ async def process_community(
         summarizer = community_summarizer.CommunitySummarizer(llm)
         summary = await summarizer.summarize(comm_id, children)
 
-    logger.debug(f"*******>{comm_id}: {children}, {summary}")
+    logger.debug(f"Community {comm_id}: {children}, {summary}")
     await upsert_chan.put(
         (
             util.upsert_vertex,  # func to call

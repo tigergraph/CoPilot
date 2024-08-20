@@ -88,12 +88,6 @@ async def chunk_docs(
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
         async for content in docs_chan:
-            # v_id = content["v_id"]
-            # txt = content["attributes"]["text"]
-            # send the document to be embedded
-            logger.info("chunk writes to extract")
-            # await embed_chan.put((v_id, txt, "Document"))
-
             task = grp.create_task(
                 workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
             )
