@@ -84,7 +84,7 @@ langchain-experimental==0.0.64
 langchain-groq==0.1.9
 langchain-ibm==0.1.12
 langchain-milvus==0.1.4
-langchain-openai==0.1.22
+langchain-openai==0.1.21
 langchain-text-splitters==0.2.2
 langchainhub==0.1.21
 langdetect==1.0.9
