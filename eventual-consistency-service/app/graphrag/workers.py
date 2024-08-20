@@ -7,15 +7,14 @@ from urllib.parse import quote_plus
 import ecc_util
 import httpx
 from aiochannel import Channel
-from graphrag import community_summarizer, util
-from langchain_community.graphs.graph_document import GraphDocument, Node
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
+from graphrag import community_summarizer, util
+from langchain_community.graphs.graph_document import GraphDocument, Node
+from pyTigerGraph import TigerGraphConnection
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
@@ -378,7 +377,7 @@ async def process_community(
         summarizer = community_summarizer.CommunitySummarizer(llm)
         summary = await summarizer.summarize(comm_id, children)
 
-    print(f"*******>{comm_id}: {children}, {summary}", flush=True)
+    logger.debug(f"*******>{comm_id}: {children}, {summary}")
     await upsert_chan.put(
         (
             util.upsert_vertex,  # func to call

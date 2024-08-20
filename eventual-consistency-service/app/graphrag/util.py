@@ -6,9 +6,6 @@ import traceback
 from glob import glob
 
 import httpx
-from graphrag import reusable_channel, workers
-from pyTigerGraph import TigerGraphConnection
-
 from common.config import (
     doc_processing_config,
     embedding_service,
@@ -20,6 +17,8 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
+from graphrag import reusable_channel, workers
+from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
@@ -182,6 +181,7 @@ def process_id(v_id: str):
         v_id = has_func[0]
     if v_id == "''" or v_id == '""':
         return ""
+    v_id = v_id.replace("(", "").replace(")", "")
 
     return v_id
 
@@ -287,7 +287,6 @@ async def get_commuinty_children(conn, i: int, c: str):
         else:
             descrs.append(desc)
 
-    print(f"Comm: {c} --> {descrs}", flush=True)
     return descrs
 
 

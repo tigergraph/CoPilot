@@ -352,7 +352,7 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
         logger.info(f"mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
-        if mod == 0 or mod - prev_mod < -0.05:
+        if mod == 0 or mod - prev_mod <= -0.05:
             break
 
         # write iter to chan for layer to be processed
@@ -500,9 +500,8 @@ async def run(graphname: str, conn: TigerGraphConnection):
         load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             # run louvain
-            grp.create_task(communities(conn, comm_process_chan))
             # get the communities
-            # grp.create_task( stream_communities(conn, communities_chan, comm_process_chan))
+            grp.create_task(communities(conn, comm_process_chan))
             # summarize each community
             grp.create_task(
                 summarize_communities(conn, comm_process_chan, upsert_chan, embed_chan)
