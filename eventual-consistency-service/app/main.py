@@ -181,18 +181,9 @@ def consistency_status(
     )
     match ecc_method:
         case SupportAIMethod.SUPPORTAI:
-            # if graphname in consistency_checkers:
-            #     ecc = consistency_checkers[graphname]
-            #     ecc_status = json.dumps(ecc.get_status())
-            # else:
-            #     start_ecc_in_thread(graphname, conn)
             background.add_task(supportai.run, graphname, conn)
-            # ecc_status = (
-            #         f"Eventual consistency checker started for graph {graphname} {time.ctime()}"
-            #     )
-            ecc_status = f"SupportAI initialization on {graphname} {time.ctime()}"
-            
-            # LogWriter.info(f"Returning consistency status for {graphname}: {status}")
+
+            ecc_status = f"SupportAI initialization on {graphname} {time.ctime()}"       
         case SupportAIMethod.GRAPHRAG:
             background.add_task(graphrag.run, graphname, conn)
 

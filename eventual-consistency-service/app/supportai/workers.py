@@ -183,7 +183,6 @@ async def extract(
             if len(desc[0]):
                 await embed_chan.put((v_id, v_id, "Entity"))
             else:
-                # (v_id, content, index_name)
                 await embed_chan.put((v_id, desc[0], "Entity"))
 
             await upsert_chan.put(
@@ -219,21 +218,13 @@ async def extract(
             )
 
         for edge in doc.relationships:
-            # logger.info(
-            #     f"extract writes relates edge to upsert\n{edge.source.id} -({edge.type})->  {edge.target.id}"
-            # )
             # upsert verts first to make sure their ID becomes an attr
-            # v_id = util.process_id(edge.type) # edge type
             v_id = edge.type
-            # if len(v_id) == 0:
-                # continue
-            # desc = await get_vert_desc(conn, v_id, node)
+            if len(v_id) == 0:
+                continue
             # embed "Relationship"
-            # if len(desc[0]):
             await embed_chan.put((v_id, v_id, "Relationship"))
-            # else:
-            #     # (v_id, content, index_name)
-            #     await embed_chan.put((v_id, desc[0], "Relationship"))
+
             await upsert_chan.put(
                 (
                     util.upsert_vertex,  # func to call
@@ -242,7 +233,6 @@ async def extract(
                         "Relationship",  # v_type
                         v_id,
                         {  # attrs
-                            # "description": desc,
                             "epoch_added": int(time.time()),
                         },
                     ),
@@ -251,7 +241,7 @@ async def extract(
             v_id = util.process_id(edge.source.id) # source id
             if len(v_id) == 0:
                 continue
-            # desc = await get_vert_desc(conn, v_id, edge.source)
+            desc = await get_vert_desc(conn, v_id, edge.source)
             await upsert_chan.put(
                 (
                     util.upsert_vertex,  # func to call
@@ -260,7 +250,7 @@ async def extract(
                         "Entity",  # v_type
                         v_id,
                         {  # attrs
-                            # "description": desc,
+                            "description": desc,
                             "epoch_added": int(time.time()),
                         },
                     ),
@@ -269,7 +259,7 @@ async def extract(
             v_id = util.process_id(edge.target.id) # target id
             if len(v_id) == 0:
                 continue
-            # desc = await get_vert_desc(conn, v_id, edge.target) 
+            desc = await get_vert_desc(conn, v_id, edge.target) 
             await upsert_chan.put(
                 (
                     util.upsert_vertex,  # func to call
@@ -278,7 +268,7 @@ async def extract(
                         "Entity",  # v_type
                         v_id,  # src_id
                         {  # attrs
-                            # "description": desc,
+                            "description": desc,
                             "epoch_added": int(time.time()),
                         },
                     ),
@@ -295,9 +285,7 @@ async def extract(
                         util.process_id(edge.source.id),  # src_id
                         "IS_HEAD_OF",  # edgeType
                         "Relationship",  # tgt_type
-                        # util.process_id(edge.type),  # tgt_id
                         edge.type,  # tgt_id
-                        # {"relation_type": edge.type},  # attributes
                     ),
                 )
             )
@@ -307,12 +295,10 @@ async def extract(
                     (
                         conn,
                         "Relationship",  # src_type
-                        # util.process_id(edge.type),  # src_id
                         edge.type, # src_id
                         "HAS_TAIL",  # edgeType
                         "Entity",  # tgt_type
                         util.process_id(edge.target.id),  # tgt_id
-                        # {"relation_type": edge.type},  # attributes
                     ),
                 )
             )
@@ -329,7 +315,6 @@ async def extract(
                         "MENTIONS_RELATIONSHIP",  # edge_type
                         "Relationship",  # tgt_type
                         edge.type,  # tgt_id
-                        # None,  # attributes
                     ),
                 )
             )
