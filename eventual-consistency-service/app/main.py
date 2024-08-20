@@ -2,6 +2,7 @@ import os
 
 os.environ["ECC"] = "true"
 import json
+import time
 import logging
 from contextlib import asynccontextmanager
 from threading import Thread
@@ -9,6 +10,7 @@ from typing import Annotated, Callable
 
 import ecc_util
 import graphrag
+import supportai
 from eventual_consistency_checker import EventualConsistencyChecker
 from fastapi import BackgroundTasks, Depends, FastAPI, Response, status
 from fastapi.security.http import HTTPBase
@@ -179,19 +181,11 @@ def consistency_status(
     )
     match ecc_method:
         case SupportAIMethod.SUPPORTAI:
-            if graphname in consistency_checkers:
-                ecc = consistency_checkers[graphname]
-                ecc_status = json.dumps(ecc.get_status())
-            else:
-                start_ecc_in_thread(graphname, conn)
-                ecc_status = (
-                    f"Eventual consistency checker started for graph {graphname}"
-                )
+            background.add_task(supportai.run, graphname, conn)
 
-            LogWriter.info(f"Returning consistency status for {graphname}: {status}")
+            ecc_status = f"SupportAI initialization on {graphname} {time.ctime()}"       
         case SupportAIMethod.GRAPHRAG:
             background.add_task(graphrag.run, graphname, conn)
-            import time
 
             ecc_status = f"GraphRAG initialization on {conn.graphname} {time.ctime()}"
         case _:

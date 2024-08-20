@@ -8,7 +8,7 @@ from glob import glob
 from typing import Callable
 
 import httpx
-from graphrag import workers
+from supportai import workers
 from pyTigerGraph import TigerGraphConnection
 
 from common.config import (
@@ -24,9 +24,7 @@ from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
-http_timeout =  httpx.Timeout(15.0)
-
-tg_sem = asyncio.Semaphore(100)
+http_timeout = httpx.Timeout(15.0)
 
 tg_sem = asyncio.Semaphore(100)
 
@@ -43,10 +41,23 @@ async def install_queries(
         q_name = q.split("/")[-1]
         # if the query is not installed, install it
         if q_name not in installed_queries:
-            res = await workers.install_query(conn, q)
-            # stop system if a required query doesn't install
-            if res["error"]:
-                raise Exception(res["message"])
+            logger.info(f"Query '{q_name}' not found in installed queries. Attempting to install...")
+            try:
+                res = await workers.install_query(conn, q)
+                # stop system if a required query doesn't install
+                if res["error"]:
+                    logger.error(f"Failed to install query '{q_name}'. Error: {res['message']}")
+                    raise Exception(f"Installation of query '{q_name}' failed with message: {res['message']}")
+                else:
+                    logger.info(f"Successfully installed query '{q_name}'.")
+                    
+            except Exception as e:
+                logger.critical(f"Critical error during installation of query '{q_name}': {e}")
+                raise e
+        else:
+            logger.info(f"Query '{q_name}' is already installed.")
+    
+    logger.info("Finished processing all required queries.")
 
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
@@ -61,24 +72,13 @@ async def init(
 ) -> tuple[BaseExtractor, dict[str, MilvusEmbeddingStore]]:
     # install requried queries
     requried_queries = [
-        # "common/gsql/supportai/Scan_For_Updates",
-        # "common/gsql/supportai/Update_Vertices_Processing_Status",
-        # "common/gsql/supportai/ECC_Status",
-        # "common/gsql/supportai/Check_Nonexistent_Vertices",
+        "common/gsql/supportai/Scan_For_Updates",
+        "common/gsql/supportai/Update_Vertices_Processing_Status",
+        "common/gsql/supportai/ECC_Status",
+        "common/gsql/supportai/Check_Nonexistent_Vertices",
         "common/gsql/graphRAG/StreamIds",
-        "common/gsql/graphRAG/StreamDocContent",
-        "common/gsql/graphRAG/SetEpochProcessing",
-        "common/gsql/graphRAG/ResolveRelationships",
-        "common/gsql/graphRAG/get_community_children",
-        "common/gsql/graphRAG/communities_have_desc",
-        "common/gsql/graphRAG/louvain/graphrag_louvain_init",
-        "common/gsql/graphRAG/louvain/graphrag_louvain_communities",
-        "common/gsql/graphRAG/louvain/modularity",
-        "common/gsql/graphRAG/louvain/stream_community",
+        "common/gsql/graphRAG/StreamDocContent"
     ]
-    # add louvain to queries
-    q = [x.split(".gsql")[0] for x in glob("common/gsql/graphRAG/louvain/*")]
-    requried_queries.extend(q)
     await install_queries(requried_queries, conn)
 
     # extractor
@@ -95,9 +95,7 @@ async def init(
             "Document",
             "DocumentChunk",
             "Entity",
-            "Relationship",
-            # "Concept",
-            "Community",
+            "Relationship"
         ],
     )
     index_stores = {}
@@ -205,25 +203,49 @@ async def upsert_vertex(
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.post(
-                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-            )
+            try:
+                res = await client.post(
+                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+                )
 
-        res.raise_for_status()
-
+                res.raise_for_status()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Request body: {data}")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                logger.error(f"Request body: {data}")
 
 
 async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.get(
-                f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
-                headers=headers,
-            )
+            try:
+                res = await client.get(
+                    f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
+                    headers=headers,
+                )
 
-        res.raise_for_status()
-    return res.json()
+                res.raise_for_status()
+                return res.json()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+                return {"error": "Request failed"}
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                return {"error": f"HTTP status error {exc.response.status_code}"}
+
 
 
 async def upsert_edge(
@@ -259,46 +281,19 @@ async def upsert_edge(
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.post(
-                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-            )
-        res.raise_for_status()
-
-
-async def get_commuinty_children(conn, i: int, c: str):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
-                params={"comm": c, "iter": i},
-                headers=headers,
-            )
-        resp.raise_for_status()
-    descrs = []
-    for d in resp.json()["results"][0]["children"]:
-        desc = d["attributes"]["description"]
-        if i == 1 and all(len(x) == 0 for x in desc):
-            desc = [d["v_id"]]
-        elif len(desc) == 0:
-            desc = d["v_id"]
-
-        descrs.append(desc)
-
-    return descrs
-
-
-async def check_vertex_has_desc(conn, i: int):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/communities_have_desc",
-                params={"iter": i},
-                headers=headers,
-            )
-        resp.raise_for_status()
-
-    res = resp.json()["results"][0]["all_have_desc"]
-
-    return res
+            try:
+                res = await client.post(
+                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+                )
+                res.raise_for_status()
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
+                logger.error(f"Request body: {data}")
+                logger.error(f"Details: {exc}")
+                # Check if the exception has a response attribute
+                if hasattr(exc, 'response') and exc.response is not None:
+                    logger.error(f"Response content: {exc.response.content}")
+            except httpx.HTTPStatusError as exc:
+                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
+                logger.error(f"Response content: {exc.response.content}")
+                logger.error(f"Request body: {data}")
