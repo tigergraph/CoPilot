@@ -277,6 +277,7 @@ async def extract(
             )
             # embed "Relationship",
             # (v_id, content, index_name)
+            # right now, we're not embedding relationships in graphrag
 
 
 async def resolve_entity(

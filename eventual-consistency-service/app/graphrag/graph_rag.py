@@ -352,7 +352,7 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
         logger.info(f"mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
-        if mod == 0:
+        if mod == 0 or mod - prev_mod < -0.05:
             break
 
         # write iter to chan for layer to be processed
