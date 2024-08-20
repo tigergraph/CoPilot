@@ -37,11 +37,12 @@ INSTALL QUERY {query_name}"""
     headers = {"Authorization": f"Basic {tkn}"}
 
     async with httpx.AsyncClient(timeout=None) as client:
-        res = await client.post(
-            conn.gsUrl + "/gsqlserver/gsql/file",
-            data=quote_plus(query.encode("utf-8")),
-            headers=headers,
-        )
+        async with util.tg_sem:
+            res = await client.post(
+                conn.gsUrl + "/gsqlserver/gsql/file",
+                data=quote_plus(query.encode("utf-8")),
+                headers=headers,
+            )
 
     if "error" in res.text.lower():
         LogWriter.error(res.text)
@@ -78,7 +79,7 @@ async def chunk_doc(
 
         # send chunks to be embedded
         logger.info("chunk writes to embed_chan")
-        await embed_chan.put((v_id, chunk, "DocumentChunk"))
+        await embed_chan.put((chunk_id, chunk, "DocumentChunk"))
 
         # send chunks to have entities extracted
         logger.info("chunk writes to extract_chan")

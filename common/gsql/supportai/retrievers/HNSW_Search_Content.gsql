@@ -24,6 +24,8 @@ CREATE DISTRIBUTED QUERY HNSW_Search_Content(STRING v_type, STRING milvus_host,
         POST-ACCUM
           IF s.type == "Relationship" OR s.type == "Entity" OR s.type == "Concept" THEN
             @@final_retrieval += (s.id -> s.definition)
+          ELSE IF s.type == "Community" THEN
+            @@final_retrieval += (s.id -> s.description)
           END;
     
   PRINT @@final_retrieval;     

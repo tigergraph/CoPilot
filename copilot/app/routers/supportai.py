@@ -16,6 +16,7 @@ from supportai.retrievers import (
     HNSWOverlapRetriever,
     HNSWRetriever,
     HNSWSiblingRetriever,
+    GraphRAG
 )
 
 from common.config import (
@@ -175,7 +176,11 @@ def search(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.search(query.question, query.method_params["top_k"])
-
+    elif query.method.lower() == "graphrag":
+        retriever = GraphRAG(
+            embedding_service, embedding_store, get_llm_service(llm_config), conn
+        )
+        res = retriever.search(query.question, query.method_params["community_level"])
     return res
 
 
@@ -232,6 +237,16 @@ def answer_question(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
+
+    elif query.method.lower() == "graphrag":
+        retriever = GraphRAG(
+            embedding_service, embedding_store, get_llm_service(llm_config), conn
+        )
+        res = retriever.retrieve_answer(
+            query.question,
+            query.method_params["community_level"],
+            query.method_params["top_k_answer_candidates"]
+        )
     else:
         raise Exception("Method not implemented")
 

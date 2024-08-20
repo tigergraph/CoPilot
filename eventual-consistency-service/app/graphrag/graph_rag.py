@@ -12,6 +12,7 @@ from graphrag.util import (
     init,
     make_headers,
     stream_ids,
+    tg_sem,
 )
 from pyTigerGraph import TigerGraphConnection
 
@@ -44,11 +45,12 @@ async def stream_docs(
 
             for d in doc_ids["ids"]:
                 try:
-                    res = await client.get(
-                        f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
-                        params={"doc": d},
-                        headers=headers,
-                    )
+                    async with tg_sem:
+                        res = await client.get(
+                            f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
+                            params={"doc": d},
+                            headers=headers,
+                        )
                     if res.status_code != 200:
                         # continue to the next doc.
                         # This doc will not be marked as processed, so the ecc will process it eventually.
@@ -85,7 +87,7 @@ async def chunk_docs(
             txt = content["attributes"]["text"]
             # send the document to be embedded
             logger.info("chunk writes to extract")
-            await embed_chan.put((v_id, txt, "Document"))
+            # await embed_chan.put((v_id, txt, "Document"))
 
             task = grp.create_task(
                 workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
@@ -221,10 +223,11 @@ async def resolve_entities(
     # Copy RELATIONSHIP edges to RESOLVED_RELATIONSHIP
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
-        res = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/ResolveRelationships/",
-            headers=headers,
-        )
+        async with tg_sem:
+            res = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/ResolveRelationships/",
+                headers=headers,
+            )
         res.raise_for_status()
 
 
@@ -236,19 +239,21 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
     logger.info("Initializing Communities (first louvain pass)")
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
-        res = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_init",
-            params={"n_batches": 1},
-            headers=headers,
-        )
+        async with tg_sem:
+            res = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_init",
+                params={"n_batches": 1},
+                headers=headers,
+            )
         res.raise_for_status()
     # get the modularity
     async with httpx.AsyncClient(timeout=None) as client:
-        res = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/modularity",
-            params={"iteration": 1, "batch_num": 1},
-            headers=headers,
-        )
+        async with tg_sem:
+            res = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/modularity",
+                params={"iteration": 1, "batch_num": 1},
+                headers=headers,
+            )
         res.raise_for_status()
     mod = res.json()["results"][0]["mod"]
     logger.info(f"****mod pass 1: {mod}")
@@ -263,21 +268,23 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
         logger.info(f"Running louvain on Communities (iteration: {i})")
         # louvain pass
         async with httpx.AsyncClient(timeout=None) as client:
-            res = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_communities",
-                params={"n_batches": 1, "iteration": i},
-                headers=headers,
-            )
+            async with tg_sem:
+                res = await client.get(
+                    f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_communities",
+                    params={"n_batches": 1, "iteration": i},
+                    headers=headers,
+                )
 
         res.raise_for_status()
 
         # get the modularity
         async with httpx.AsyncClient(timeout=None) as client:
-            res = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/modularity",
-                params={"iteration": i + 1, "batch_num": 1},
-                headers=headers,
-            )
+            async with tg_sem:
+                res = await client.get(
+                    f"{conn.restppUrl}/query/{conn.graphname}/modularity",
+                    params={"iteration": i + 1, "batch_num": 1},
+                    headers=headers,
+                )
         res.raise_for_status()
         mod = res.json()["results"][0]["mod"]
         logger.info(f"*** mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
@@ -307,11 +314,12 @@ async def stream_communities(
     # async for i in community_chan:
     # get the community from that layer
     async with httpx.AsyncClient(timeout=None) as client:
-        resp = await client.get(
-            f"{conn.restppUrl}/query/{conn.graphname}/stream_community",
-            params={"iter": i},
-            headers=headers,
-        )
+        async with tg_sem:
+            resp = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/stream_community",
+                params={"iter": i},
+                headers=headers,
+            )
     resp.raise_for_status()
     comms = resp.json()["results"][0]["Comms"]
 
@@ -345,7 +353,7 @@ async def summarize_communities(
     embed_chan.close()
 
 
-async def run(graphname: str, conn: TigerGraphConnection):
+async def run(graphname: str, conn: TigerGraphConnection, upsert_limit=100):
     """
     Set up GraphRAG:
         - Install necessary queries.
@@ -362,8 +370,8 @@ async def run(graphname: str, conn: TigerGraphConnection):
     init_start = time.perf_counter()
 
     doc_process_switch = True
-    entity_resolution_switch = True
-    community_detection_switch = True
+    entity_resolution_switch =True 
+    community_detection_switch =True 
     if doc_process_switch:
         logger.info("Doc Processing Start")
         docs_chan = Channel(1)
@@ -378,7 +386,7 @@ async def run(graphname: str, conn: TigerGraphConnection):
                 chunk_docs(conn, docs_chan, embed_chan, upsert_chan, extract_chan)
             )
             # upsert chunks
-            grp.create_task(upsert(upsert_chan))
+            grp.create_task(upsert( upsert_chan))
             # embed
             grp.create_task(embed(embed_chan, index_stores, graphname))
             # extract entities
@@ -437,5 +445,7 @@ async def run(graphname: str, conn: TigerGraphConnection):
     end = time.perf_counter()
     logger.info(f"DONE. graphrag system initializer dT: {init_end-init_start}")
     logger.info(f"DONE. graphrag entity resolution dT: {entity_end-entity_start}")
-    logger.info(f"DONE. graphrag community initializer dT: {community_end-community_start}")
+    logger.info(
+        f"DONE. graphrag community initializer dT: {community_end-community_start}"
+    )
     logger.info(f"DONE. graphrag.run() total time elaplsed: {end-init_start}")
