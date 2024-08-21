@@ -1,7 +1,9 @@
 # TigerGraph CoPilot
 
 ## Releases
-* **4/30/2024: CoPilot is available now in Beta** (v0.5). A whole new function is added to CoPilot: Now you can create chatbots with graph-augmented AI on a your own documents. CoPilot builds a knowledge graph from source material and applies knowledge graph RAG (Retrieval Augmented Generation) to improve the contextual relevance and accuracy of answers to their natural-language questions. We would love to hear your feedback to keep improving it so that it could bring more value to you. It would be helpful if you could fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7) after you have played with CoPilot. Thank you for your interest and support!
+* **8/21/2024: CoPilot is available now in v0.9** (v0.9.0). Please see [Release Notes](https://docs.tigergraph.com/tg-copilot/current/release-notes/#_new_in_copilot_0_9) for details. Note: On [TigerGraph Cloud](https://beta.tgcloud.io/) only CoPilot v0.5 is available. 
+
+* **4/30/2024: CoPilot is available now in Beta** (v0.5.0). A whole new function is added to CoPilot: Now you can create chatbots with graph-augmented AI on a your own documents. CoPilot builds a knowledge graph from source material and applies knowledge graph RAG (Retrieval Augmented Generation) to improve the contextual relevance and accuracy of answers to their natural-language questions. We would love to hear your feedback to keep improving it so that it could bring more value to you. It would be helpful if you could fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7) after you have played with CoPilot. Thank you for your interest and support!
 
 * **3/18/2024: CoPilot is available now in Alpha** (v0.0.1). It uses a Large Language Model (LLM) to convert your question into a function call, which is then executed on the graph in TigerGraph. We would love to hear your feedback to keep improving it so that it could bring more value to you. If you are trying it out, it would be helpful if you could fill out this [sign up form](https://info.tigergraph.com/copilotalpha) so we can keep track of it (no spam, promised). And if you would just like to provide the feedback, please feel free to fill out this [short survey](https://forms.gle/c9jd4evjEPsVtR5p7). Thank you for your interest and support!
 
@@ -14,7 +16,7 @@ TigerGraph CoPilot is an AI assistant that is meticulously designed to combine t
 * SupportAI as a knowledge Q&A assistant for documents and graphs
 * QueryAI as a GSQL code generator including query and schema generation, data mapping, and more (Not available in Beta; coming soon)
 
-You can interact with CoPilot through both a chat interface on TigerGraph Cloud and APIs. For beta, your own LLM services (from OpenAI, Azure, GCP and AWS Bedrock) are required to use CoPilot, but in future releases you can use TigerGraph’s LLM or your local LLM as well.
+You can interact with CoPilot through a chat interface on TigerGraph Cloud, a built-in chat interface and APIs. For now, your own LLM services (from OpenAI, Azure, GCP, AWS Bedrock, Ollama, Hugging Face and Groq.) are required to use CoPilot, but in future releases you can use TigerGraph’s LLMs.
 
 ### InquiryAI
 ![./docs/img/InquiryAI-Architecture.png](./docs/img/InquiryAI-Architecture.png)
@@ -36,20 +38,21 @@ Organizing the data as a knowledge graph allows a chatbot to access accurate, fa
 
 
 ### QueryAI
-QueryAI is the third component of TigerGraph CoPilot. It is designed to be used as a developer tool to help generate graph queries in GSQL from an English language description. It can also be used to generate schema, data mapping, and even dashboards. This will enable developers to write GSQL queries more quickly and accurately, and will be especially useful for those who are new to GSQL. QueryAI is available in alpha Q4 2024.
+QueryAI is the third component of TigerGraph CoPilot. It is designed to be used as a developer tool to help generate graph queries in GSQL from an English language description. It can also be used to generate schema, data mapping, and even dashboards. This will enable developers to write GSQL queries more quickly and accurately, and will be especially useful for those who are new to GSQL. Currently, experimental openCypher generation is available.
 
 ## Getting Started
 
 ### TigerGraph Cloud
-CoPilot is available as an add-on service to your workspace on TigerGraph Cloud. Please follow the [instructions here](https://docs.tigergraph.com/tg-copilot/current/getstarted/oncloud) to start on TigerGraph Cloud within minutes.
+CoPilot is available as an add-on service to your workspace on TigerGraph Cloud. It is disabled by default. Please contact beta-support@tigergraph.com to enable TigerGraph CoPilot as an option in the [Marketplace](https://docs.tigergraph.com/cloudBeta/current/integrations/).
 
 ### Self-Managed
-TigerGraph CoPilot is open-source and can be deployed to your own infrastructure. This repo only includes the backend service of CoPilot but you can still access all of its functions through the APIs. What is different from CoPilot on TigerGraph Cloud is the absence of the graphical user interface and the extra steps to set it up and maintenance.
+TigerGraph CoPilot is an open-source project on [GitHub](https://github.com/tigergraph/CoPilot) which can be deployed to your own infrastructure.
 
 If you don’t need to extend the source code of CoPilot, the quickest way is to deploy its docker image with the docker compose file in the repo. In order to take this route, you will need the following prerequisites.
 
 #### Prerequisites
 * Docker
+* TigerGraph DB 3.9+. (For 3.x, you will need to install a few user defined functions (UDFs). Please see Step 5 below for details.)
 * API key of your LLM provider. (An LLM provider refers to a company or organization that offers Large Language Models (LLMs) as a service. The API key verifies the identity of the requester, ensuring that the request is coming from a registered and authorized user or application.) Currently, CoPilot supports the following LLM providers: OpenAI, Azure OpenAI, GCP, AWS Bedrock.
 
 #### Deploy with Docker Compose
@@ -57,22 +60,50 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
   - Download the [docker-compose.yml](https://github.com/tigergraph/copilot/blob/main/docker-compose.yml) file directly , or
   - Clone the repo `git clone https://github.com/tigergraph/CoPilot`
 
-  The docker compose file contains all dependencies for CoPilot including a TigerGraph database. If any service is not needed, please feel free to remove it from the file. Besides, CoPilot comes with a Swagger API documentation page when it is deployed. If you wish to disable it, you can set the PRODUCTION environment variable to true for the CoPilot service in the compose file.
+  The Docker Compose file contains all dependencies for CoPilot including a Milvus database. If you do not need a particular service, you make edit the Compose file to remove it or set its scale to 0 when running the Compose file (details later). Moreover, CoPilot comes with a Swagger API documentation page when it is deployed. If you wish to disable it, you can set the `PRODUCTION` environment variable to true for the CoPilot service in the Compose file.
 
 * Step 2: Set up configurations
   
-  In the same directory as the docker compose file is in, create and fill in the following configuration files: `touch configs/db_config.json configs/llm_config.json configs/milvus_config.json`. Details for each configure file is available below.
-  - [LLM config](#llm-provider-configuration)
-  - [Tigergraph config](#db-configuration)
-  - [Milvus config](#milvus-configuration)
+  Next, in the same directory as the Docker Compose file is in, create and fill in the following configuration files:
+  * [configs/db_config.json](#llm-provider-configuration)
+  * [configs/llm_config.json](#llm-provider-configuration)
+  * [configs/milvus_config.json](#milvus-configuration)
+  * [configs/chat_config.json](#chat-configuration)
+
 
 * Step 3 (Optional): Configure Logging
   
-  `touch configs/log_config.json`. Details for the configure file is available at [Logging config](#logging-configuration).
+  `touch configs/log_config.json`. Details for the configuration is available [here](https://docs.tigergraph.com/tg-copilot/current/getstarted/self-managed#_3_optional_logging).
 
 * Step 4: Start all services
 
-  Simply run `docker compose up -d` and wait for all the services to start.
+  Now, simply run `docker compose up -d` and wait for all the services to start. If you don’t want to use the included Milvus DB, you can set its scale to 0 to not start it: `docker compose up -d --scale milvus-standalone=0 --scale etcd=0 --scale minio=0`.
+
+* Step 5: Install UDFs
+
+  This step is not needed for TigerGraph databases version 4.x. For TigerGraph 3.x, we need to install a few user defined functions (UDFs) for CoPilot to work.
+
+  1. On the machine that hosts the TigerGraph database, switch to the user of TigerGraph: `sudo su - tigergraph`. If TigerGraph is running on a cluster, you can do this on any one of the machines.
+  2. Download the two files [ExprFunctions.hpp](https://raw.githubusercontent.com/tigergraph/CoPilot/dev/copilot/udfs/milvus/rest/ExprFunctions.hpp) and [ExprUtil.hpp](https://raw.githubusercontent.com/tigergraph/CoPilot/dev/copilot/udfs/milvus/rest/ExprUtil.hpp).
+  3. In a terminal, run the following command to enable UDF installation:
+  ```
+  gadmin config set GSQL.UDF.EnablePutTgExpr true
+  gadmin config set GSQL.UDF.Policy.Enable false
+  gadmin config apply
+  gadmin restart GSQL
+  ```
+  4. Enter a GSQL shell, and run the following command to install the UDF files.
+  ```
+  PUT tg_ExprFunctions FROM "./tg_ExprFunctions.hpp"
+  PUT tg_ExprUtil FROM "./tg_ExprUtil.hpp"
+  ```
+  5. Quit the GSQL shell, and run the following command in the terminal to disable UDF installation for security purpose.
+  ```
+  gadmin config set GSQL.UDF.EnablePutTgExpr false
+  gadmin config set GSQL.UDF.Policy.Enable true
+  gadmin config apply
+  gadmin restart GSQL
+  ```
 
 #### Configurations
 
@@ -134,6 +165,7 @@ In the `configs/llm_config.json` file, copy JSON config template from below for 
     ```
 
 * Azure
+
     In addition to the `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `azure_deployment`, `llm_model` and `model_name` can be edited to match your specific configuration details.
     ```json
     {
@@ -192,12 +224,108 @@ In the `configs/llm_config.json` file, copy JSON config template from below for 
       }
   }
   ```
+
+* Ollama
+  ```json
+  {
+    "model_name": "GPT-4",
+    "embedding_service": {
+        "embedding_model_service": "openai",
+        "authentication_configuration": {
+            "OPENAI_API_KEY": ""
+        }
+    },
+    "completion_service": {
+        "llm_service": "ollama",
+        "llm_model": "calebfahlgren/natural-functions",
+        "model_kwargs": {
+            "temperature": 0.0000001
+        },
+        "prompt_path": "./app/prompts/openai_gpt4/"
+    }
+  }
+  ```
+
+* Hugging Face
+
+  Example configuration for a model on Hugging Face with a dedicated endpoint is shown below. Please specify your configuration details:
+  ```json
+  {
+    "model_name": "llama3-8b",
+    "embedding_service": {
+        "embedding_model_service": "openai",
+        "authentication_configuration": {
+            "OPENAI_API_KEY": ""
+        }
+    },
+    "completion_service": {
+        "llm_service": "huggingface",
+        "llm_model": "hermes-2-pro-llama-3-8b-lpt",
+        "endpoint_url": "https:endpoints.huggingface.cloud",
+        "authentication_configuration": {
+            "HUGGINGFACEHUB_API_TOKEN": ""
+        },
+        "model_kwargs": {
+            "temperature": 0.1
+        },
+        "prompt_path": "./app/prompts/openai_gpt4/"
+    }
+  }
+  ```
+
+  Example configuration for a model on Hugging Face with a serverless endpoint is shown below. Please specify your configuration details:
+  ```json
+  {
+    "model_name": "Llama3-70b",
+    "embedding_service": {
+        "embedding_model_service": "openai",
+        "authentication_configuration": {
+            "OPENAI_API_KEY": ""
+        }
+    },
+    "completion_service": {
+        "llm_service": "huggingface",
+        "llm_model": "meta-llama/Meta-Llama-3-70B-Instruct",
+        "authentication_configuration": {
+            "HUGGINGFACEHUB_API_TOKEN": ""
+        },
+        "model_kwargs": {
+            "temperature": 0.1
+        },
+        "prompt_path": "./app/prompts/llama_70b/"
+    }
+  }
+  ```
+
+* Groq
+  ```json
+  {
+    "model_name": "mixtral-8x7b-32768",
+    "embedding_service": {
+        "embedding_model_service": "openai",
+        "authentication_configuration": {
+            "OPENAI_API_KEY": ""
+        }
+    },
+    "completion_service": {
+        "llm_service": "groq",
+        "llm_model": "mixtral-8x7b-32768",
+        "authentication_configuration": {
+            "GROQ_API_KEY": ""
+        },
+        "model_kwargs": {
+            "temperature": 0.1
+        },
+        "prompt_path": "./app/prompts/openai_gpt4/"
+    }
+  }
+  ```
+
 ##### DB configuration
-Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
+Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. If token authentication is enabled in TigerGraph, set `getToken` to `true`. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
 
-If you are running TigerGraph outside of docker compose, change the hostname to match its address (`http://localhost`, `https://your-TgCloud-hostname`). Once authentication is enabled in TigerGraph, set getToken to `true`.
+“ecc” and “chat_history_api” are the addresses of internal components of CoPilot.If you use the Docker Compose file as is, you don’t need to change them. 
 
-You can also disable the consistency_checker, which reconciles Milvus and TigerGraph data, within this config.  It is true by default
 ```json
 {
     "hostname": "http://tigergraph",
@@ -207,12 +335,13 @@ You can also disable the consistency_checker, which reconciles Milvus and TigerG
     "default_timeout": 300,
     "default_mem_threshold": 5000,
     "default_thread_limit": 8,
-    "enable_consistency_checker": true
+    "ecc": "http://eventual-consistency-service:8001",
+    "chat_history_api": "http://chat-history:8002"
 }
 ```
 
 ##### Milvus configuration
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. `process_interval_seconds` is the number of seconds which the eventual-consistency-checker (ECC) service will be scheduled to check for new vertices in TigerGraph in order to create embeddings in Milvus. In the same way `cleanup_interval_seconds` is the number of seconds the ECC service will be scheduled to check for stale Milvus embeddings (e.g. if TigerGraph is restored from backup, or a vertex is deleted).  Batch size is the number of vertices that ECC will process in one workload; this is optional and defaults to 10.
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. 
 ```json
 {
     "host": "milvus-standalone",
@@ -220,132 +349,30 @@ Copy the below into `configs/milvus_config.json` and edit the `host` and `port` 
     "username": "",
     "password": "",
     "enabled": "true",
-    "process_interval_seconds": 1800,
-    "cleanup_interval_seconds": 2592000,
-    "batch_size": 10
+    "sync_interval_seconds": 60
 }
 ```
 
-##### Logging configuration 
-
-Copy the below into `configs/log_config.json` and edit the appropriate values to suit your needs.  The log rotation is based on size and backups are kept.  These configurations are applied in the LogWriter to the standard python logging package.  Operational and audit logs are recorded.  Outputs include log.ERROR, log.INFO, and log.AUDIT-COPILOT
+##### Chat configuration
+Copy the below code into `configs/chat_config.json`. You shouldn’t need to change anything unless you change the port of the chat history service in the Docker Compose file.
 ```json
 {
-    "log_file_path": "logs",
-    "log_max_size": 10485760,
-    "log_backup_count": 10
+    "apiPort":"8002",
+    "dbPath": "chats.db",
+    "dbLogPath": "db.log",
+    "logPath": "requestLogs.jsonl",
+    ​​"conversationAccessRoles": ["superuser", "globaldesigner"]
 }
 ```
-
-To configure the logging level of the service, edit the CoPilot service's `LOGLEVEL` env variable in the docker-compose file. By default, the logging level is set to `"INFO"`.
-
-This line can be changed to support different logging levels. The levels are described below:
-
-* **CRITICAL**: A serious error
-* **ERROR**: Failing to perform functions
-* **WARNING**: Indication of unexpected problems, e.g. failure to map a user's question to the graph schema
-* **INFO**: Confriming that the service is performing as expected.
-* **DEBUG**: Detailed information, e.g. the functions retrieved during the GenerateFunction step, etc.
-* **DEBUG_PII**: Finer-grained information that could potentially include PII, such as a user's question, the complete function call (with parameters), and the LLM's natural language response.
-* **NOTSET**: All messages are processed
 
 ##### Enable openCypher Query Generation in InquiryAI
 If you would like to enable openCypher query generation in InquiryAI, you can set the `USE_CYPHER` environment variable to `"true"` in the CoPilot service in the docker compose file. By default, this is set to `"false"`. **Note**: openCypher query generation is still in beta and may not work as expected, as well as increases the potential of hallucinated answers due to bad code generation. Use with caution, and only in non-production environments.
 
 ## Using TigerGraph CoPilot
 
-### TigerGraph Cloud
-A chat interface is available on TigerGraph Cloud, with which you can “talk” to your graph to get more insights and value from your data. Please follow the [instructions here](https://docs.tigergraph.com/tg-copilot/current/using-copilot/how2-use-on-cloud) to access CoPilot on TigerGraph Cloud.
+CoPilot is friendly to both technical and non-technical users. There is a graphical chat interface as well as API access to CoPilot. Function-wise, CoPilot can answer your questions by calling existing queries in the database (InquiryAI), build a knowledge graph from your documents (SupportAI), and answer knowledge questions based on your documents (SupportAI).
 
-### Using API
-You can also access CoPilot via its API for both self-managed and TigerGraph Cloud-managed services. Two types of API access are provided for now: REST http endpoints and pyTigerGraph interface. Additionally, there is a primitive chatbot interface for testing purpose only. And LangChain interface is available for InquiryAI with more integrations coming soon. 
-
-#### Authentication
-When accessing its API, ​​there are two options to authenticate with the TigerGraph CoPilot service. 
-
-First way is with a username/password pair generated from the TigerGraph database.
-
-The second way is a GSQL secret, also obtained from the database. However, when using the GSQL secret, the username field must be specified as __GSQL__secret, with the password field containing the secret. Note: If pyTigerGraph is being used and a connection is created with the gsqlSecret parameter, this will already be done for you.
-
-#### HTTP Endpoints
-For self-managed services, the full list of available HTTP endpoints can be found at the /docs path on your host’s address, e.g., `http://localhost/docs`. It is a Swagger API doc and you can even try out the endpoints on that page. Note: The Swagger API doc page is disabled on TigerGraph Cloud.
-![./docs/img/SwaggerDocUX.png](./docs/img/SwaggerDocUX.png)
-
-#### Using pyTigerGraph
-First, update pyTigerGraph to utilize the latest build:
-```sh
-pip install -U git+https://github.com/tigergraph/pyTigerGraph.git
-```
-
-Then, the endpoints are availble when configured with a `TigerGraphConnection`:
-
-```py
-from pyTigerGraph import TigerGraphConnection
-
-# create a connection to the database
-conn = TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
-
-### ==== CONFIGURE INQUIRYAI HOST ====
-conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
-
-### ==== RETRIEVE TOP-K DOCS FROM LIBRARY ====
-# `top_k` parameter optional
-conn.ai.retrieveDocs("How many papers are there?", top_k = 5)
-
-### ==== RUN A NATURAL LANGUAGE QUERY ====
-print(conn.ai.query("How many papers are there?"))
-
-# prints: {'natural_language_response': 'There are 736389 papers.', 'answered_question': True, 'query_sources': {'function_call': "getVertexCount('Paper')", 'result': 736389}}
-
-### ==== REGISTER A CUSTOM QUERY ====
-# Prompt for PageRank query - could be read in as JSON file.
-pr_prompt = {
-    "function_header": "tg_pagerank",
-    "description": "Determines the importance or influence of each vertex based on its connections to other vertices.",
-    "docstring": "The PageRank algorithm measures the influence of each vertex on every other vertex. PageRank influence is defined recursively: a vertex’s influence is based on the influence of the vertices which refer to it. A vertex’s influence tends to increase if either of these conditions are met:\n* It has more referring vertices\n* Its referring vertices have higher influence\nTo run this algorithm, use `runInstalledQuery('tg_pagerank', params={'v_type': 'INSERT_V_TYPE_HERE', 'e_type': 'INSERT_E_TYPE_HERE', 'top_k': INSERT_TOP_K_HERE})`, where the parameters are:\n* 'v_type': The vertex type to run the algorithm on.\n* 'e_type': The edge type to run the algorithm on.\n* 'top_k': The number of top scoring vertices to return to the user.",
-    "param_types": {
-        "v_type": "str",
-        "e_type": "str",
-        "top_k": "int"
-    }
-}
-
-# Register Query
-conn.ai.registerCustomQuery(pr_prompt["function_header"], pr_prompt["description"], pr_prompt["docstring"], pr_prompt["param_types"])
-
-# Run Query
-print(conn.ai.query("What are the 5 most influential papers by citations?"))
-
-# prints: {'natural_language_response': 'The top 5 most cited papers are:\n\n1. [Title of paper with Vertex_ID 428523]\n2. [Title of paper with Vertex_ID 384889]\n3. [Title of paper with Vertex_ID 377502]\n4. [Title of paper with Vertex_ID 61855]\n5. [Title of paper with Vertex_ID 416200]', 'answered_question': True, 'query_sources': {'function_call': "runInstalledQuery('tg_pagerank', params={'v_type': 'Paper', 'e_type': 'CITES', 'top_k': 5})", 'result': [{'@@top_scores_heap': [{'Vertex_ID': '428523', 'score': 392.8731}, {'Vertex_ID': '384889', 'score': 251.8021}, {'Vertex_ID': '377502', 'score': 149.1018}, {'Vertex_ID': '61855', 'score': 129.7406}, {'Vertex_ID': '416200', 'score': 129.2286}]}]}}
-```
-
-#### Chat with CoPilot
-Navigate to `http://localhost/graphname/chat` when the Docker container is running, where graphname is the name of the graph you want to query. Note: This chat interface is for testing only. Please use CoPilot on TigerGraph Cloud for a proper chat interface.
-![./docs/img/CoPilot-UX-Demo.png](./docs/img/CoPilot-UX-Demo.png)
-
-#### Using LangChain
-To use LangChain with InquiryAI, first install the LangChain fork here in your Python environment:
-```
-pip install git+https://github.com/langchain-ai/langchain.git
-```
-Then, you can get answers from the graph with the below:
-
-```py
-import pyTigerGraph as tg
-conn = tg.TigerGraphConnection(host="DATABASE_HOST_HERE", graphname="GRAPH_NAME_HERE", username="USERNAME_HERE", password="PASSWORD_HERE")
-
-### ==== CONFIGURE INQUIRYAI HOST ====
-conn.ai.configureInquiryAIHost("INQUIRYAI_HOST_HERE")
-
-from langchain_community.graphs import TigerGraph
-graph = TigerGraph(conn)
-result = graph.query("How many servers are there?")
-print(result)
-# {'natural_language_response': 'There are 46148 servers.', 
-#  'answered_question': True,
-#  'query_sources': {'function_call': 'getVertexCount(vertexType="BareMetalNode")', 
-#                    'result': 46148}
-```
+Please refer to our [official documentation](https://docs.tigergraph.com/tg-copilot/current/using-copilot/) on how to use CoPilot. 
 
 ## Customization and Extensibility
 TigerGraph CoPilot is designed to be easily extensible. The service can be configured to use different LLM providers, different graph schemas, and different LangChain tools. The service can also be extended to use different embedding services, different LLM generation services, and different LangChain tools. For more information on how to extend the service, see the [Developer Guide](./docs/DeveloperGuide.md).
