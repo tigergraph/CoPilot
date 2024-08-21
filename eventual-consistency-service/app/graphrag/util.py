@@ -26,8 +26,6 @@ http_timeout = httpx.Timeout(15.0)
 tg_sem = asyncio.Semaphore(20)
 load_q = reusable_channel.ReuseableChannel()
 
-tg_sem = asyncio.Semaphore(100)
-
 async def install_queries(
     requried_queries: list[str],
     conn: TigerGraphConnection,
