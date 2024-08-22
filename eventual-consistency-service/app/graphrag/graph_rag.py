@@ -173,7 +173,6 @@ async def load(conn: TigerGraphConnection):
 
             loading_event.clear()
             await upsert_batch(conn, data)
-            print("giving the graph time to catch up",flush=True)
             await asyncio.sleep(5)
             loading_event.set()
         else:
