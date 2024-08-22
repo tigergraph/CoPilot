@@ -6,6 +6,9 @@ import traceback
 from glob import glob
 
 import httpx
+from graphrag import reusable_channel, workers
+from pyTigerGraph import TigerGraphConnection
+
 from common.config import (
     doc_processing_config,
     embedding_service,
@@ -17,8 +20,6 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
-from graphrag import reusable_channel, workers
-from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
@@ -26,7 +27,10 @@ http_timeout = httpx.Timeout(15.0)
 tg_sem = asyncio.Semaphore(20)
 load_q = reusable_channel.ReuseableChannel()
 
-tg_sem = asyncio.Semaphore(100)
+# will pause workers until the event is false
+loading_event = asyncio.Event()
+loading_event.set() # set the event to true to allow the workers to run
+
 
 async def install_queries(
     requried_queries: list[str],
@@ -109,7 +113,7 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
-                drop_old=False,
+                drop_old=True,
             )
 
             LogWriter.info(f"Initializing {name}")
@@ -209,7 +213,6 @@ async def upsert_batch(conn: TigerGraphConnection, data: str):
         res.raise_for_status()
 
 
-
 async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
@@ -221,7 +224,8 @@ async def check_vertex_exists(conn, v_id: str):
                 )
 
             except Exception as e:
-                logger.error(f"Check err:\n{e}")
+                err = traceback.format_exc()
+                logger.error(f"Check err:\n{err}")
                 return {"error": True}
 
         try:
