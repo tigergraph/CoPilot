@@ -4,7 +4,8 @@ from typing import List
 from common.extractors.BaseExtractor import BaseExtractor
 from common.llm_services import LLM_Model
 from common.py_schemas import KnowledgeGraph
-
+from langchain_community.graphs.graph_document import Node, Relationship, GraphDocument
+from langchain_core.documents import Document
 
 class LLMEntityRelationshipExtractor(BaseExtractor):
     def __init__(
@@ -19,7 +20,7 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
         self.allowed_edge_types = allowed_relationship_types
         self.strict_mode = strict_mode
 
-    def _extract_kg_from_doc(self, doc, chain, parser):
+    async def _extract_kg_from_doc(self, doc, chain, parser) -> list[GraphDocument]:
         """
         returns:
         {
@@ -49,7 +50,7 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
         """
 
         try:
-            out = chain.invoke(
+            out = await chain.ainvoke(
                 {"input": doc, "format_instructions": parser.get_format_instructions()}
             )
         except Exception as e:
@@ -133,15 +134,30 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
                         for rel in formatted_rels
                         if rel["type"] in self.allowed_edge_types
                     ]
-            return {"nodes": formatted_nodes, "rels": formatted_rels}
+        
+            nodes = []
+            for node in formatted_nodes:
+                nodes.append(Node(id=node["id"],
+                                  type=node["type"],
+                                  properties={"description": node["definition"]}))
+            relationships = []
+            for rel in formatted_rels:
+                relationships.append(Relationship(source=Node(id=rel["source"], type=rel["source"],
+                                                  properties={"description": rel["definition"]}),
+                                                  target=Node(id=rel["target"], type=rel["target"],
+                                                  properties={"description": rel["definition"]}), type=rel["type"]))
+
+            return [GraphDocument(nodes=nodes, relationships=relationships, source=Document(page_content=doc))]
+
         except:
             print("Error Processing: ", out)
-        return {"nodes": [], "rels": []}
+        return [GraphDocument(nodes=[], relationships=[], source=Document(page_content=doc))]
 
-    def document_er_extraction(self, document):
+    async def document_er_extraction(self, document):
         from langchain.prompts import ChatPromptTemplate
         from langchain.output_parsers import PydanticOutputParser
 
+    
         parser = PydanticOutputParser(pydantic_object=KnowledgeGraph)
         prompt = [
             ("system", self.llm_service.entity_relationship_extraction_prompt),
@@ -171,8 +187,13 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
             prompt.append(("human", f"Allowed Edge Types: {self.allowed_edge_types}"))
         prompt = ChatPromptTemplate.from_messages(prompt)
         chain = prompt | self.llm_service.model  # | parser
-        er = self._extract_kg_from_doc(document, chain, parser)
+        er = await self._extract_kg_from_doc(document, chain, parser)
         return er
 
     def extract(self, text):
         return self.document_er_extraction(text)
+    
+    async def aextract(self, text) -> list[GraphDocument]:
+        return await self.document_er_extraction(text)
+    
+

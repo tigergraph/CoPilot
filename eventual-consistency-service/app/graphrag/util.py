@@ -178,7 +178,7 @@ def map_attrs(attributes: dict):
 
 
 def process_id(v_id: str):
-    v_id = v_id.replace(" ", "_").replace("/", "")
+    v_id = v_id.replace(" ", "_").replace("/", "").replace("%", "percent")
 
     has_func = re.compile(r"(.*)\(").findall(v_id)
     if len(has_func) > 0:
