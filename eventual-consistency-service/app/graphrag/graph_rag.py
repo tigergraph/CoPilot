@@ -14,6 +14,7 @@ from graphrag.util import (
     http_timeout,
     init,
     load_q,
+    loading_event,
     make_headers,
     stream_ids,
     tg_sem,
@@ -124,7 +125,7 @@ async def upsert(upsert_chan: Channel):
 async def load(conn: TigerGraphConnection):
     logger.info("Reading from load_q")
     dd = lambda: defaultdict(dd)  # infinite default dict
-    batch_size = 1000
+    batch_size = 500
     # while the load q is still open or has contents
     while not load_q.closed() or not load_q.empty():
         if load_q.closed():
@@ -169,7 +170,11 @@ async def load(conn: TigerGraphConnection):
             logger.info(
                 f"Upserting batch size of {size}. ({n_verts} verts | {n_edges} edges. {len(data.encode())/1000:,} kb)"
             )
+
+            loading_event.clear()
             await upsert_batch(conn, data)
+            await asyncio.sleep(5)
+            loading_event.set()
         else:
             await asyncio.sleep(1)
 
@@ -435,12 +440,12 @@ async def run(graphname: str, conn: TigerGraphConnection):
     if doc_process_switch:
         logger.info("Doc Processing Start")
         docs_chan = Channel(1)
-        embed_chan = Channel(100)
-        upsert_chan = Channel(100)
-        extract_chan = Channel(100)
+        embed_chan = Channel()
+        upsert_chan = Channel()
+        extract_chan = Channel()
         async with asyncio.TaskGroup() as grp:
             # get docs
-            grp.create_task(stream_docs(conn, docs_chan, 10))
+            grp.create_task(stream_docs(conn, docs_chan, 100))
             # process docs
             grp.create_task(
                 chunk_docs(conn, docs_chan, embed_chan, upsert_chan, extract_chan)
@@ -462,8 +467,8 @@ async def run(graphname: str, conn: TigerGraphConnection):
 
     if entity_resolution_switch:
         logger.info("Entity Processing Start")
-        entities_chan = Channel(100)
-        upsert_chan = Channel(100)
+        entities_chan = Channel()
+        upsert_chan = Channel()
         load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             grp.create_task(stream_entities(conn, entities_chan, 50))
@@ -487,10 +492,10 @@ async def run(graphname: str, conn: TigerGraphConnection):
     community_start = time.perf_counter()
     if community_detection_switch:
         logger.info("Community Processing Start")
-        upsert_chan = Channel(10)
-        comm_process_chan = Channel(100)
-        upsert_chan = Channel(100)
-        embed_chan = Channel(100)
+        upsert_chan = Channel()
+        comm_process_chan = Channel()
+        upsert_chan = Channel()
+        embed_chan = Channel()
         load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             # run louvain

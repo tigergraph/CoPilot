@@ -6,6 +6,9 @@ import traceback
 from glob import glob
 
 import httpx
+from graphrag import reusable_channel, workers
+from pyTigerGraph import TigerGraphConnection
+
 from common.config import (
     doc_processing_config,
     embedding_service,
@@ -17,14 +20,16 @@ from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
-from graphrag import reusable_channel, workers
-from pyTigerGraph import TigerGraphConnection
 
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
 
-tg_sem = asyncio.Semaphore(20)
+tg_sem = asyncio.Semaphore(2)
 load_q = reusable_channel.ReuseableChannel()
+
+# will pause workers until the event is false
+loading_event = asyncio.Event()
+loading_event.set() # set the event to true to allow the workers to run
 
 async def install_queries(
     requried_queries: list[str],
@@ -207,7 +212,6 @@ async def upsert_batch(conn: TigerGraphConnection, data: str):
         res.raise_for_status()
 
 
-
 async def check_vertex_exists(conn, v_id: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
@@ -219,7 +223,8 @@ async def check_vertex_exists(conn, v_id: str):
                 )
 
             except Exception as e:
-                logger.error(f"Check err:\n{e}")
+                err = traceback.format_exc()
+                logger.error(f"Check err:\n{err}")
                 return {"error": True}
 
         try:
@@ -264,17 +269,25 @@ async def get_commuinty_children(conn, i: int, c: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
         async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
-                params={"comm": c, "iter": i},
-                headers=headers,
-            )
+            try:
+                resp = await client.get(
+                    f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
+                    params={"comm": c, "iter": i},
+                    headers=headers,
+                )
+            except:
+                logger.error(f"Get Children err:\n{traceback.format_exc()}")
         try:
             resp.raise_for_status()
         except Exception as e:
             logger.error(f"Get Children err:\n{e}")
     descrs = []
-    for d in resp.json()["results"][0]["children"]:
+    try:
+        res = resp.json()["results"][0]["children"]
+    except Exception as e:
+        logger.error(f"Get Children err:\n{e}")
+        res = []
+    for d in res:
         desc = d["attributes"]["description"]
         # if it's the entity iteration
         if i == 1:

@@ -40,10 +40,10 @@ class GraphRAG(BaseRetriever):
         connection: TigerGraphConnectionProxy,
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
-        self._check_query_install("GraphRAG_CommunityRetriever")
+        self._check_query_install("GraphRAG_Community_Retriever")
 
     def search(self, question, community_level: int):
-        res = self.conn.runInstalledQuery("GraphRAG_CommunityRetriever", {"community_level": community_level}, usePost=True)
+        res = self.conn.runInstalledQuery("GraphRAG_Community_Retriever", {"community_level": community_level}, usePost=True)
         return res
     
     async def _generate_candidate(self, question, context):
