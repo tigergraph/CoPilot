@@ -31,7 +31,6 @@ load_q = reusable_channel.ReuseableChannel()
 loading_event = asyncio.Event()
 loading_event.set() # set the event to true to allow the workers to run
 
-
 async def install_queries(
     requried_queries: list[str],
     conn: TigerGraphConnection,
