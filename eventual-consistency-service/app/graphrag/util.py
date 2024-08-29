@@ -112,7 +112,7 @@ async def init(
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
                 vertex_field=vertex_field,
-                drop_old=True,
+                drop_old=False,
             )
 
             LogWriter.info(f"Initializing {name}")
