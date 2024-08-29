@@ -163,9 +163,15 @@ async def embed(
         if not util.loading_event.is_set():
             logger.info("Embed worker waiting for loading event to finish")
             await util.loading_event.wait()
-
-        vec = await embed_svc.aembed_query(content)
-        await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
+        try:
+            vec = await embed_svc.aembed_query(content)
+        except Exception as e:
+            logger.error(f"Failed to embed {v_id}: {e}")
+            return
+        try:
+            await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
+        except Exception as e:
+            logger.error(f"Failed to add embeddings for {v_id}: {e}")
 
 
 async def get_vert_desc(conn, v_id, node: Node):
@@ -196,10 +202,14 @@ async def extract(
         await util.loading_event.wait()
 
     async with extract_sem:
-        extracted: list[GraphDocument] = await extractor.aextract(chunk)
-        logger.info(
-            f"Extracting chunk: {chunk_id} ({len(extracted)} graph docs extracted)"
-        )
+        try:
+            extracted: list[GraphDocument] = await extractor.aextract(chunk)
+            logger.info(
+                f"Extracting chunk: {chunk_id} ({len(extracted)} graph docs extracted)"
+            )
+        except Exception as e:
+            logger.error(f"Failed to extract chunk {chunk_id}: {e}")
+            extracted = []
 
         # upsert nodes and edges to the graph
         for doc in extracted:

@@ -187,7 +187,7 @@ if DOC_PROCESSING_CONFIG is None or (
 ):
     doc_processing_config = {
         "chunker": "semantic",
-        "chunker_config": {"method": "percentile", "threshold": 0.95},
+        "chunker_config": {"method": "percentile", "threshold": 0.90},
         "extractor": "graphrag",
         "extractor_config": {},
     }

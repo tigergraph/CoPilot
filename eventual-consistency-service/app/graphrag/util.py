@@ -24,7 +24,7 @@ from common.logs.logwriter import LogWriter
 logger = logging.getLogger(__name__)
 http_timeout = httpx.Timeout(15.0)
 
-tg_sem = asyncio.Semaphore(20)
+tg_sem = asyncio.Semaphore(2)
 load_q = reusable_channel.ReuseableChannel()
 
 # will pause workers until the event is false
@@ -270,17 +270,25 @@ async def get_commuinty_children(conn, i: int, c: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=None) as client:
         async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
-                params={"comm": c, "iter": i},
-                headers=headers,
-            )
+            try:
+                resp = await client.get(
+                    f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
+                    params={"comm": c, "iter": i},
+                    headers=headers,
+                )
+            except:
+                logger.error(f"Get Children err:\n{traceback.format_exc()}")
         try:
             resp.raise_for_status()
         except Exception as e:
             logger.error(f"Get Children err:\n{e}")
     descrs = []
-    for d in resp.json()["results"][0]["children"]:
+    try:
+        res = resp.json()["results"][0]["children"]
+    except Exception as e:
+        logger.error(f"Get Children err:\n{e}")
+        res = []
+    for d in res:
         desc = d["attributes"]["description"]
         # if it's the entity iteration
         if i == 1:
