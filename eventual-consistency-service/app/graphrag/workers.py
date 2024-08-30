@@ -15,7 +15,7 @@ from pyTigerGraph import TigerGraphConnection
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
-from common.extractors.BaseExtractor import BaseExtractor
+from common.extractors import BaseExtractor, LLMEntityRelationshipExtractor
 from common.logs.logwriter import LogWriter
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
@@ -242,6 +242,39 @@ async def extract(
                         ),
                     )
                 )
+                if isinstance(extractor, LLMEntityRelationshipExtractor):
+                    logger.info("extract writes type vert to upsert")
+                    type_id = util.process_id(node.type)
+                    if len(type_id) == 0:
+                        continue
+                    await upsert_chan.put(
+                        (
+                            util.upsert_vertex,  # func to call
+                            (
+                                conn,
+                                "EntityType",  # v_type
+                                type_id,  # v_id
+                                {  # attrs
+                                    "epoch_added": int(time.time()),
+                                },
+                            )
+                        )
+                    )
+                    logger.info("extract writes entity_has_type edge to upsert")
+                    await upsert_chan.put(
+                        (
+                            util.upsert_edge,
+                            (
+                                conn,
+                                "Entity",  # src_type
+                                v_id,  # src_id
+                                "ENTITY_HAS_TYPE",  # edgeType
+                                "EntityType",  # tgt_type
+                                type_id,  # tgt_id
+                                None,  # attributes
+                            ),
+                        )
+                    )
 
                 # link the entity to the chunk it came from
                 logger.info("extract writes contains edge to upsert")

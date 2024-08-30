@@ -73,6 +73,7 @@ async def init(
         "common/gsql/graphRAG/louvain/graphrag_louvain_communities",
         "common/gsql/graphRAG/louvain/modularity",
         "common/gsql/graphRAG/louvain/stream_community",
+        "common/gsql/supportai/create_entity_type_relationships"
     ]
     # add louvain to queries
     q = [x.split(".gsql")[0] for x in glob("common/gsql/graphRAG/louvain/*")]
@@ -206,9 +207,14 @@ async def upsert_batch(conn: TigerGraphConnection, data: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
-            res = await client.post(
-                f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-            )
+            try:
+                res = await client.post(
+                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
+                )
+            except Exception as e:
+                err = traceback.format_exc()
+                logger.error(f"Upsert err:\n{err}")
+                return {"error": True}
         res.raise_for_status()
 
 
@@ -321,6 +327,23 @@ async def check_all_ents_resolved(conn):
 
     return res
 
+async def add_rels_between_types(conn):
+    headers = make_headers(conn)
+    async with httpx.AsyncClient(timeout=None) as client:
+        async with tg_sem:
+            resp = await client.get(
+                f"{conn.restppUrl}/query/{conn.graphname}/create_entity_type_relationships",
+                headers=headers,
+            )
+        try:
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(f"Check Vert EntityType err:\n{e}")
+
+    res = resp.json()["results"][0]["relationships_inserted"]
+    logger.info(resp.json()["results"])
+
+    return res
 
 async def check_vertex_has_desc(conn, i: int):
     headers = make_headers(conn)
