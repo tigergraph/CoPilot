@@ -213,7 +213,7 @@ async def extract(
 
         # upsert nodes and edges to the graph
         for doc in extracted:
-            for node in doc.nodes:
+            for i, node in enumerate(doc.nodes):
                 logger.info(f"extract writes entity vert to upsert\nNode: {node.id}")
                 v_id = util.process_id(str(node.id))
                 if len(v_id) == 0:
@@ -256,6 +256,22 @@ async def extract(
                             "Entity",  # tgt_type
                             v_id,  # tgt_id
                             None,  # attributes
+                        ),
+                    )
+                )
+                for node2 in doc.nodes[i + 1:]:
+                    v_id2 = util.process_id(str(node2.id))
+                    await upsert_chan.put(
+                    (
+                        util.upsert_edge,
+                        (
+                            conn,
+                            "Entity",  # src_type
+                            v_id,  # src_id
+                            "RELATIONSHIP",  # edgeType
+                            "Entity",  # tgt_type
+                            v_id2,  # tgt_id
+                            {"relation_type": "DOC_CHUNK_COOCCURRENCE"},  # attributes
                         ),
                     )
                 )
