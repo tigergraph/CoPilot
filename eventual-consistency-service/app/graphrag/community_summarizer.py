@@ -43,5 +43,5 @@ class CommunitySummarizer:
                 }
             )
         except Exception as e:
-            return "error generating summary: {}".format(e)
+            return {"summary": f"Error: {e}"}
         return summary.summary

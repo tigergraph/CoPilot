@@ -340,8 +340,12 @@ async def add_rels_between_types(conn):
         except Exception as e:
             logger.error(f"Check Vert EntityType err:\n{e}")
 
-    res = resp.json()["results"][0]["relationships_inserted"]
-    logger.info(resp.json()["results"])
+    if resp.status_code != 200:
+        logger.error(f"Check Vert EntityType err:\n{resp.text}")
+        res = {"error": True}
+    else:
+        res = resp.json()["results"][0]["relationships_inserted"]
+        logger.info(resp.json()["results"])
 
     return res
 
