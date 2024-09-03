@@ -35,10 +35,13 @@ class CommunitySummarizer:
 
         # remove iteration tags from name
         name = id_pat.sub("", name)
-        summary = await chain.ainvoke(
-            {
-                "entity_name": name,
-                "description_list": text,
-            }
-        )
+        try:
+            summary = await chain.ainvoke(
+                {
+                    "entity_name": name,
+                    "description_list": text,
+                }
+            )
+        except Exception as e:
+            return "error generating summary: {}".format(e)
         return summary.summary
