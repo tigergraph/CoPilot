@@ -178,7 +178,7 @@ async def get_vert_desc(conn, v_id, node: Node):
     desc = [node.properties.get("description", "")]
     exists = await util.check_vertex_exists(conn, v_id)
     # if vertex exists, get description content and append this description to it
-    if not exists["error"]:
+    if not exists.get("error", False):
         # deduplicate descriptions
         desc.extend(exists["results"][0]["attributes"]["description"])
         desc = list(set(desc))
@@ -478,6 +478,7 @@ async def process_community(
         # get the children of the community
         children = await util.get_commuinty_children(conn, i, comm_id)
         comm_id = util.process_id(comm_id)
+        err = False
 
         # if the community only has one child, use its description
         if len(children) == 1:
@@ -488,24 +489,26 @@ async def process_community(
             summary = await summarizer.summarize(comm_id, children)
             if summary["error"]:
                 logger.error(f"Failed to summarize community {comm_id}")
+                err = True
             else:
                 summary = summary["summary"]
 
-        logger.debug(f"Community {comm_id}: {children}, {summary}")
-        await upsert_chan.put(
-            (
-                util.upsert_vertex,  # func to call
+        if not err:
+            logger.debug(f"Community {comm_id}: {children}, {summary}")
+            await upsert_chan.put(
                 (
-                    conn,
-                    "Community",  # v_type
-                    comm_id,  # v_id
-                    {  # attrs
-                        "description": summary,
-                        "iteration": i,
-                    },
-                ),
+                    util.upsert_vertex,  # func to call
+                    (
+                        conn,
+                        "Community",  # v_type
+                        comm_id,  # v_id
+                        {  # attrs
+                            "description": summary,
+                            "iteration": i,
+                        },
+                    ),
+                )
             )
-        )
 
-        # (v_id, content, index_name)
-        await embed_chan.put((comm_id, summary, "Community"))
+            # (v_id, content, index_name)
+            await embed_chan.put((comm_id, summary, "Community"))
