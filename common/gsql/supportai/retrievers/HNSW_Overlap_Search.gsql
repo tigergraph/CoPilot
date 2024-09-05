@@ -30,7 +30,12 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STR
   start = SELECT s FROM start:s POST-ACCUM s.@num_times_seen += 1;
   
   FOREACH i IN RANGE[0, num_hops-1] DO
-    start = SELECT t FROM start:s -(:e)- :t
+    start = SELECT t FROM start:s -((RELATIONSHIP|
+                                     CONTAINS_ENTITY|
+                                     IS_AFTER|
+                                     reverse_CONTAINS_ENTITY|
+                                     IS_HEAD_OF|
+                                     HAS_TAIL):e)- :t
             ACCUM @@edges += e
             POST-ACCUM t.@num_times_seen += 1;
   END;
@@ -40,7 +45,11 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STR
           IF s.type == "Relationship" THEN
             @@relationship_info += (s.id -> s.definition)
           ELSE IF s.type == "Entity" THEN
-            @@entity_info += (s.id -> s.definition)
+            STRING tmp_dsc = s.definition,
+            FOREACH dsc IN s.description DO
+              tmp_dsc = tmp_dsc + dsc +";"
+            END,
+            @@entity_info += (s.id -> tmp_dsc)
           ELSE IF s.type == "DocumentChunk" THEN
             @@to_retrieve_content += s 
           END;
