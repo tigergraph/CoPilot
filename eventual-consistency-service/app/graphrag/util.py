@@ -214,7 +214,6 @@ async def upsert_batch(conn: TigerGraphConnection, data: str):
             except Exception as e:
                 err = traceback.format_exc()
                 logger.error(f"Upsert err:\n{err}")
-                return {"error": True}
         res.raise_for_status()
 
 
@@ -231,14 +230,11 @@ async def check_vertex_exists(conn, v_id: str):
             except Exception as e:
                 err = traceback.format_exc()
                 logger.error(f"Check err:\n{err}")
-                return {"error": True}
-
         try:
             res.raise_for_status()
             return res.json()
         except Exception as e:
             logger.error(f"Check err:\n{e}\n{res.text}")
-            return {"error": True}
 
 
 async def upsert_edge(
@@ -342,12 +338,10 @@ async def add_rels_between_types(conn):
 
     if resp.status_code != 200:
         logger.error(f"Check Vert EntityType err:\n{resp.text}")
-        res = {"error": True}
     else:
         res = resp.json()["results"][0]["relationships_inserted"]
         logger.info(resp.json()["results"])
-
-    return res
+        return res
 
 async def check_vertex_has_desc(conn, i: int):
     headers = make_headers(conn)
