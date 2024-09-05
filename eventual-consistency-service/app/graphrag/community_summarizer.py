@@ -44,4 +44,4 @@ class CommunitySummarizer:
             )
         except Exception as e:
             return {"error": True, "summary": ""}
-        return summary.summary
+        return {"error": False, "summary": summary.summary}

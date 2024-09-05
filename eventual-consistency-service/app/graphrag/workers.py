@@ -486,6 +486,10 @@ async def process_community(
             llm = ecc_util.get_llm_service()
             summarizer = community_summarizer.CommunitySummarizer(llm)
             summary = await summarizer.summarize(comm_id, children)
+            if summary["error"]:
+                logger.error(f"Failed to summarize community {comm_id}")
+            else:
+                summary = summary["summary"]
 
         logger.debug(f"Community {comm_id}: {children}, {summary}")
         await upsert_chan.put(

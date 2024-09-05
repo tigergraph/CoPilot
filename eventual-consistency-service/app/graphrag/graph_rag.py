@@ -466,7 +466,11 @@ async def run(graphname: str, conn: TigerGraphConnection):
     # Type Resolution
     type_start = time.perf_counter()
     logger.info("Type Processing Start")
-    await add_rels_between_types(conn)
+    res = await add_rels_between_types(conn)
+    if res["error"]:
+        logger.error(f"Error adding relationships between types: {res}")
+    else:
+        logger.info(f"Added relationships between types: {res}")
     logger.info("Type Processing End")
     type_end = time.perf_counter()
     # Entity Resolution

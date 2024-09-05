@@ -235,6 +235,7 @@ async def check_vertex_exists(conn, v_id: str):
             return res.json()
         except Exception as e:
             logger.error(f"Check err:\n{e}\n{res.text}")
+            return {"error": True, "message": res.text}
 
 
 async def upsert_edge(
@@ -338,6 +339,7 @@ async def add_rels_between_types(conn):
 
     if resp.status_code != 200:
         logger.error(f"Check Vert EntityType err:\n{resp.text}")
+        return {"error": True, "message": resp.text}
     else:
         res = resp.json()["results"][0]["relationships_inserted"]
         logger.info(resp.json()["results"])
