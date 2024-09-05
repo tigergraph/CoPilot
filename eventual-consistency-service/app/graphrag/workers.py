@@ -15,7 +15,7 @@ from pyTigerGraph import TigerGraphConnection
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
-from common.extractors.BaseExtractor import BaseExtractor
+from common.extractors import BaseExtractor, LLMEntityRelationshipExtractor
 from common.logs.logwriter import LogWriter
 
 vertex_field = milvus_config.get("vertex_field", "vertex_id")
@@ -178,7 +178,7 @@ async def get_vert_desc(conn, v_id, node: Node):
     desc = [node.properties.get("description", "")]
     exists = await util.check_vertex_exists(conn, v_id)
     # if vertex exists, get description content and append this description to it
-    if not exists["error"]:
+    if not exists.get("error", False):
         # deduplicate descriptions
         desc.extend(exists["results"][0]["attributes"]["description"])
         desc = list(set(desc))
@@ -242,6 +242,39 @@ async def extract(
                         ),
                     )
                 )
+                if isinstance(extractor, LLMEntityRelationshipExtractor):
+                    logger.info("extract writes type vert to upsert")
+                    type_id = util.process_id(node.type)
+                    if len(type_id) == 0:
+                        continue
+                    await upsert_chan.put(
+                        (
+                            util.upsert_vertex,  # func to call
+                            (
+                                conn,
+                                "EntityType",  # v_type
+                                type_id,  # v_id
+                                {  # attrs
+                                    "epoch_added": int(time.time()),
+                                },
+                            )
+                        )
+                    )
+                    logger.info("extract writes entity_has_type edge to upsert")
+                    await upsert_chan.put(
+                        (
+                            util.upsert_edge,
+                            (
+                                conn,
+                                "Entity",  # src_type
+                                v_id,  # src_id
+                                "ENTITY_HAS_TYPE",  # edgeType
+                                "EntityType",  # tgt_type
+                                type_id,  # tgt_id
+                                None,  # attributes
+                            ),
+                        )
+                    )
 
                 # link the entity to the chunk it came from
                 logger.info("extract writes contains edge to upsert")
@@ -445,6 +478,7 @@ async def process_community(
         # get the children of the community
         children = await util.get_commuinty_children(conn, i, comm_id)
         comm_id = util.process_id(comm_id)
+        err = False
 
         # if the community only has one child, use its description
         if len(children) == 1:
@@ -453,22 +487,28 @@ async def process_community(
             llm = ecc_util.get_llm_service()
             summarizer = community_summarizer.CommunitySummarizer(llm)
             summary = await summarizer.summarize(comm_id, children)
+            if summary["error"]:
+                logger.error(f"Failed to summarize community {comm_id}")
+                err = True
+            else:
+                summary = summary["summary"]
 
-        logger.debug(f"Community {comm_id}: {children}, {summary}")
-        await upsert_chan.put(
-            (
-                util.upsert_vertex,  # func to call
+        if not err:
+            logger.debug(f"Community {comm_id}: {children}, {summary}")
+            await upsert_chan.put(
                 (
-                    conn,
-                    "Community",  # v_type
-                    comm_id,  # v_id
-                    {  # attrs
-                        "description": summary,
-                        "iteration": i,
-                    },
-                ),
+                    util.upsert_vertex,  # func to call
+                    (
+                        conn,
+                        "Community",  # v_type
+                        comm_id,  # v_id
+                        {  # attrs
+                            "description": summary,
+                            "iteration": i,
+                        },
+                    ),
+                )
             )
-        )
 
-        # (v_id, content, index_name)
-        await embed_chan.put((comm_id, summary, "Community"))
+            # (v_id, content, index_name)
+            await embed_chan.put((comm_id, summary, "Community"))
