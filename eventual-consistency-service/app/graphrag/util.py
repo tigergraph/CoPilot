@@ -341,8 +341,8 @@ async def add_rels_between_types(conn):
         logger.error(f"Check Vert EntityType err:\n{resp.text}")
         return {"error": True, "message": resp.text}
     else:
-        res = resp.json()["results"][0]["relationships_inserted"]
-        logger.info(resp.json()["results"])
+        res = resp.json()
+        logger.info(resp.json())
         return res
 
 async def check_vertex_has_desc(conn, i: int):
