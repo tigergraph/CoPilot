@@ -234,8 +234,8 @@ async def check_vertex_exists(conn, v_id: str):
             res.raise_for_status()
             return res.json()
         except Exception as e:
-            logger.error(f"Check err:\n{e}\n{res.text}")
-            return {"error": True, "message": res.text}
+            logger.error(f"Check err:\n{e}\n{e}")
+            return {"error": True, "message": e}
 
 
 async def upsert_edge(
