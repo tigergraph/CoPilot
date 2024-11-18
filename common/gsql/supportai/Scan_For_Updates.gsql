@@ -24,10 +24,10 @@ CREATE DISTRIBUTED QUERY Scan_For_Updates(STRING v_type = "Document",
       res = SELECT s FROM start:s -(HAS_CONTENT)-> Content:c
             ACCUM @@v_and_text += (s.id -> c.text)
             POST-ACCUM s.epoch_processing = datetime_to_epoch(now());
-  ELSE IF v_type == "Concept" THEN
-      res = SELECT s FROM start:s
-            POST-ACCUM @@v_and_text += (s.id -> s.description),
-            s.epoch_processing = datetime_to_epoch(now());
+  // ELSE IF v_type == "Concept" THEN
+  //     res = SELECT s FROM start:s
+  //           POST-ACCUM @@v_and_text += (s.id -> s.description),
+  //           s.epoch_processing = datetime_to_epoch(now());
   ELSE IF v_type == "Entity" THEN
       res = SELECT s FROM start:s
             POST-ACCUM @@v_and_text += (s.id -> s.definition),

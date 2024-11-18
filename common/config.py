@@ -16,15 +16,16 @@ from common.llm_services import (
     AWSBedrock,
     AzureOpenAI,
     GoogleVertexAI,
-    OpenAI,
     Groq,
-    Ollama,
     HuggingFaceEndpoint,
+    LLM_Model,
+    Ollama,
+    OpenAI,
     IBMWatsonX
 )
+from common.logs.logwriter import LogWriter
 from common.session import SessionHandler
 from common.status import StatusManager
-from common.logs.logwriter import LogWriter
 
 security = HTTPBasic()
 session_handler = SessionHandler()
@@ -91,8 +92,6 @@ else:
             "MILVUS_CONFIG must be a .json file or a JSON string, failed with error: "
             + str(e)
         )
-
-
 if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai":
     embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":
@@ -105,7 +104,7 @@ else:
     raise Exception("Embedding service not implemented")
 
 
-def get_llm_service(llm_config):
+def get_llm_service(llm_config) -> LLM_Model:
     if llm_config["completion_service"]["llm_service"].lower() == "openai":
         return OpenAI(llm_config["completion_service"])
     elif llm_config["completion_service"]["llm_service"].lower() == "azure":
@@ -127,11 +126,9 @@ def get_llm_service(llm_config):
     else:
         raise Exception("LLM Completion Service Not Supported")
 
-
 LogWriter.info(
     f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
 )
-
 if os.getenv("INIT_EMBED_STORE", "true")=="true":
     LogWriter.info("Setting up Milvus embedding store for InquiryAI")
     try:
@@ -190,7 +187,7 @@ if DOC_PROCESSING_CONFIG is None or (
 ):
     doc_processing_config = {
         "chunker": "semantic",
-        "chunker_config": {"method": "percentile", "threshold": 0.95},
+        "chunker_config": {"method": "percentile", "threshold": 0.90},
         "extractor": "llm",
         "extractor_config": {},
     }

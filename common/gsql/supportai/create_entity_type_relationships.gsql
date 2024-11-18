@@ -1,0 +1,20 @@
+CREATE DISTRIBUTED QUERY create_entity_type_relationships(/* Parameters here */) SYNTAX v2{ 
+  MapAccum<STRING, MapAccum<STRING, SumAccum<INT>>> @rel_type_count; // entity type, relationship type for entity type, frequency
+  SumAccum<INT> @@rels_inserted;
+  ents = {Entity.*}; 
+  accum_types = SELECT et FROM ents:e -(RELATIONSHIP>:r)- Entity:e2 -(ENTITY_HAS_TYPE>:eht)- EntityType:et
+                WHERE r.relation_type != "DOC_CHUNK_COOCCURRENCE"
+                ACCUM 
+                  e.@rel_type_count += (et.id -> (r.relation_type -> 1));
+  
+  ets = SELECT et FROM ents:e -(ENTITY_HAS_TYPE>:eht)- EntityType:et
+        ACCUM
+          FOREACH (entity_type, rel_type_freq) IN e.@rel_type_count DO
+            FOREACH (rel_type, freq) IN e.@rel_type_count.get(entity_type) DO
+              INSERT INTO RELATIONSHIP_TYPE VALUES (et.id, entity_type, rel_type, freq),
+              @@rels_inserted += 1
+            END
+          END;
+  
+  PRINT @@rels_inserted as relationships_inserted;
+}

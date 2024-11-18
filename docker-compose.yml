@@ -54,14 +54,12 @@ services:
   #   image: tigergraphml/report-service:latest
   #   container_name: report-service
   #   build:
-  #     context: .
-  #     dockerfile: report-service/Dockerfile
+  #     context: chat-history/
+  #     dockerfile: Dockerfile
   #   ports:
   #     - 8002:8002
   #   environment:
-  #     LLM_CONFIG: "/code/configs/llm_config.json"
-  #     DB_CONFIG: "/code/configs/db_config.json"
-  #     MILVUS_CONFIG: "/code/configs/milvus_config.json"
+  #     CONFIG: "/configs/config.json"
   #     LOGLEVEL: "INFO"
   #   volumes:
   #     - ./configs/:/code/configs
