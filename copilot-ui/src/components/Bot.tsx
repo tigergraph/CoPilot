@@ -67,7 +67,7 @@ const Bot = ({ layout, getConversationId }: { layout?: string | undefined, getCo
               <DropdownMenuLabel>Select a RAG Pattern</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                {["HNSW", "HNSW_Overlap", "Sibling"].map((f, i) => (
+                {["HNSW", "HNSW_Overlap", "Sibling", "GraphRAG"].map((f, i) => (
                   <DropdownMenuItem key={i} onSelect={() => handleSelectRag(f)}>
                     {/* <User className="mr-2 h-4 w-4" /> */}
                     <span>{f}</span>
