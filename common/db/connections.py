@@ -90,7 +90,9 @@ def elevate_db_connection_to_token(host, username, password, graphname) -> Tiger
         host=host,
         username=username,
         password=password,
-        graphname=graphname
+        graphname=graphname,
+        restppPort=db_config["restppPort"],
+        gsPort=db_config["gsPort"]
     )
     
     if db_config["getToken"]:
