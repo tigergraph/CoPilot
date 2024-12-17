@@ -10,7 +10,7 @@ import httpx
 from aiochannel import Channel
 from graphrag import community_summarizer, util
 from langchain_community.graphs.graph_document import GraphDocument, Node
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 async def install_query(
-    conn: TigerGraphConnection, query_path: str
+    conn: AsyncTigerGraphConnection, query_path: str
 ) -> dict[str, httpx.Response | str | None]:
     LogWriter.info(f"Installing query {query_path}")
     with open(f"{query_path}.gsql", "r") as f:
@@ -35,19 +35,12 @@ async def install_query(
 USE GRAPH {conn.graphname}
 {query}
 INSTALL QUERY {query_name}"""
-    tkn = base64.b64encode(f"{conn.username}:{conn.password}".encode()).decode()
-    headers = {"Authorization": f"Basic {tkn}"}
-
     async with httpx.AsyncClient(timeout=None) as client:
         async with util.tg_sem:
-            res = await client.post(
-                conn.gsUrl + "/gsqlserver/gsql/file",
-                data=quote_plus(query.encode("utf-8")),
-                headers=headers,
-            )
+            res = await conn.gsql(query)
 
-    if "error" in res.text.lower():
-        LogWriter.error(res.text)
+    if "error" in res:
+        LogWriter.error(res)
         return {
             "result": None,
             "error": True,
@@ -61,7 +54,7 @@ chunk_sem = asyncio.Semaphore(20)
 
 
 async def chunk_doc(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     doc: dict[str, str],
     upsert_chan: Channel,
     embed_chan: Channel,
@@ -100,7 +93,7 @@ async def chunk_doc(
     return doc["v_id"]
 
 
-async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
+async def upsert_chunk(conn: AsyncTigerGraphConnection, doc_id, chunk_id, chunk):
     logger.info(f"Upserting chunk {chunk_id}")
     date_added = int(time.time())
     await util.upsert_vertex(
@@ -192,7 +185,7 @@ async def extract(
     upsert_chan: Channel,
     embed_chan: Channel,
     extractor: BaseExtractor,
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     chunk: str,
     chunk_id: str,
 ):
@@ -375,7 +368,7 @@ resolve_sem = asyncio.Semaphore(20)
 
 
 async def resolve_entity(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     upsert_chan: Channel,
     emb_store: MilvusEmbeddingStore,
     entity_id: str,
@@ -454,7 +447,7 @@ comm_sem = asyncio.Semaphore(20)
 
 
 async def process_community(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     upsert_chan: Channel,
     embed_chan: Channel,
     i: int,

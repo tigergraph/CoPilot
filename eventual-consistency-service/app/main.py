@@ -47,6 +47,7 @@ async def lifespan(_: FastAPI):
                 db_config["username"],
                 db_config["password"],
                 graphname,
+                async_conn=True
             )
             start_ecc_in_thread(graphname, conn)
     yield
@@ -178,6 +179,7 @@ def consistency_status(
         credentials.username,
         credentials.password,
         graphname,
+        async_conn=True
     )
     match ecc_method:
         case SupportAIMethod.SUPPORTAI:

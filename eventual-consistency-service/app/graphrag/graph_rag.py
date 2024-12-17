@@ -21,7 +21,7 @@ from graphrag.util import (
     upsert_batch,
     add_rels_between_types
 )
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import embedding_service
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
@@ -33,7 +33,7 @@ consistency_checkers = {}
 
 
 async def stream_docs(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     docs_chan: Channel,
     ttl_batches: int = 10,
 ):
@@ -76,7 +76,7 @@ async def stream_docs(
 
 
 async def chunk_docs(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     docs_chan: Channel,
     embed_chan: Channel,
     upsert_chan: Channel,
@@ -123,7 +123,7 @@ async def upsert(upsert_chan: Channel):
     load_q.close()
 
 
-async def load(conn: TigerGraphConnection):
+async def load(conn: AsyncTigerGraphConnection):
     logger.info("Reading from load_q")
     dd = lambda: defaultdict(dd)  # infinite default dict
     batch_size = 500
@@ -215,7 +215,7 @@ async def extract(
     upsert_chan: Channel,
     embed_chan: Channel,
     extractor: BaseExtractor,
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
 ):
     """
     Creates and starts one worker for each extract job
@@ -238,7 +238,7 @@ async def extract(
 
 
 async def stream_entities(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     entity_chan: Channel,
     ttl_batches: int = 50,
 ):
@@ -264,7 +264,7 @@ async def stream_entities(
 
 
 async def resolve_entities(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     emb_store: MilvusEmbeddingStore,
     entity_chan: Channel,
     upsert_chan: Channel,
@@ -295,7 +295,7 @@ async def resolve_entities(
         res.raise_for_status()
 
 
-async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
+async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channel):
     """
     Run louvain
     """
@@ -364,7 +364,7 @@ async def communities(conn: TigerGraphConnection, comm_process_chan: Channel):
 
 
 async def stream_communities(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     i: int,
     comm_process_chan: Channel,
 ):
@@ -405,7 +405,7 @@ async def stream_communities(
 
 
 async def summarize_communities(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     comm_process_chan: Channel,
     upsert_chan: Channel,
     embed_chan: Channel,
@@ -419,7 +419,7 @@ async def summarize_communities(
     embed_chan.close()
 
 
-async def run(graphname: str, conn: TigerGraphConnection):
+async def run(graphname: str, conn: AsyncTigerGraphConnection):
     """
     Set up GraphRAG:
         - Install necessary queries.

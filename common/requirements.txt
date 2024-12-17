@@ -133,7 +133,7 @@ python-dotenv==1.0.1
 python-iso639==2024.4.27
 python-magic==0.4.27
 pyTigerDriver==1.0.15
-pyTigerGraph==1.8.1
+pyTigerGraph==1.8.3
 pytz==2024.1
 PyYAML==6.0.2
 rapidfuzz==3.9.6

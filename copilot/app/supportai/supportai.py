@@ -15,7 +15,11 @@ from common.py_schemas.schemas import (
 
 def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, dict]:
     # need to open the file using the absolute path
-    file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
+    ver = conn.getVer().split(".")
+    if int(ver[0]) >= 4 and int(ver[1]) >= 2:
+        file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
+    else:
+        file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
         schema = f.read()
     schema_res = conn.gsql(
