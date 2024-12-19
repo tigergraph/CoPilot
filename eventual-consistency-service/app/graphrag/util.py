@@ -7,7 +7,7 @@ from glob import glob
 
 import httpx
 from graphrag import reusable_channel, workers
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import (
     doc_processing_config,
@@ -33,10 +33,10 @@ loading_event.set() # set the event to true to allow the workers to run
 
 async def install_queries(
     requried_queries: list[str],
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -58,7 +58,7 @@ async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
 
 
 async def init(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
 ) -> tuple[BaseExtractor, dict[str, MilvusEmbeddingStore]]:
     # install requried queries
     requried_queries = [
@@ -126,7 +126,7 @@ async def init(
     return extractor, index_stores
 
 
-def make_headers(conn: TigerGraphConnection):
+def make_headers(conn: AsyncTigerGraphConnection):
     if conn.apiToken is None or conn.apiToken == "":
         tkn = base64.b64encode(f"{conn.username}:{conn.password}".encode()).decode()
         headers = {"Authorization": f"Basic {tkn}"}
@@ -137,7 +137,7 @@ def make_headers(conn: TigerGraphConnection):
 
 
 async def stream_ids(
-    conn: TigerGraphConnection, v_type: str, current_batch: int, ttl_batches: int
+    conn: AsyncTigerGraphConnection, v_type: str, current_batch: int, ttl_batches: int
 ) -> dict[str, str | list[str]]:
     headers = make_headers(conn)
 
@@ -192,7 +192,7 @@ def process_id(v_id: str):
 
 
 async def upsert_vertex(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     vertex_type: str,
     vertex_id: str,
     attributes: dict,
@@ -203,7 +203,7 @@ async def upsert_vertex(
     await load_q.put(("vertices", (vertex_type, vertex_id, attrs)))
 
 
-async def upsert_batch(conn: TigerGraphConnection, data: str):
+async def upsert_batch(conn: AsyncTigerGraphConnection, data: str):
     headers = make_headers(conn)
     async with httpx.AsyncClient(timeout=http_timeout) as client:
         async with tg_sem:
@@ -239,7 +239,7 @@ async def check_vertex_exists(conn, v_id: str):
 
 
 async def upsert_edge(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     src_v_type: str,
     src_v_id: str,
     edge_type: str,
