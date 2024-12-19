@@ -11,7 +11,7 @@ from agent.Q import DONE, Q
 from langgraph.graph import END, StateGraph
 from pyTigerGraph.pyTigerGraphException import TigerGraphException
 from supportai.retrievers import (HNSWOverlapRetriever, HNSWRetriever,
-                                  HNSWSiblingRetriever)
+                                  HNSWSiblingRetriever, GraphRAG)
 from tools import MapQuestionToSchemaException
 from typing_extensions import TypedDict
 
@@ -272,6 +272,32 @@ class TigerGraphAgentGraph:
         state["lookup_source"] = "supportai"
         return state
     
+    def graphrag_search(self, state):
+        """
+        Run the agent graphrag search.
+        """
+        self.emit_progress("Searching the knowledge graph")
+        retriever = GraphRAG(
+            self.embedding_model,
+            self.embedding_store,
+            self.llm_provider.model,
+            self.db_connection,
+        )
+        step = retriever.search(
+            state["question"],
+            community_level=3
+        )
+
+        state["context"] = {
+            "function_call": "GraphRAG",
+            "result": {"@@final_retrieval": step[0]},
+            "query_output_format": self.db_connection.getQueryMetadata(
+                "GraphRAG_Community_Retriever"
+            )["output"],
+        }
+        state["lookup_source"] = "supportai"
+        return state
+    
     def supportai_search(self, state):
         """
         Run the agent supportai search.
@@ -283,6 +309,8 @@ class TigerGraphAgentGraph:
             return self.hnsw_search(state)
         elif self.supportai_retriever == "sibling":
             return self.sibling_search(state)
+        elif self.supportai_retriever == "graphrag":
+            return self.graphrag_search(state)
         else:
             raise ValueError(f"Invalid supportai retriever: {self.supportai_retriever}")
     
