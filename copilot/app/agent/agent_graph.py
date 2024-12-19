@@ -9,7 +9,7 @@ from agent.agent_router import TigerGraphAgentRouter
 from agent.agent_usefulness_check import TigerGraphAgentUsefulnessCheck
 from agent.Q import DONE, Q
 from langgraph.graph import END, StateGraph
-from pyTigerGraph.pyTigerGraphException import TigerGraphException
+from pyTigerGraph.common.exception import TigerGraphException
 from supportai.retrievers import (HNSWOverlapRetriever, HNSWRetriever,
                                   HNSWSiblingRetriever, GraphRAG)
 from tools import MapQuestionToSchemaException
