@@ -173,7 +173,7 @@ async def get_vert_desc(conn, v_id, node: Node):
     # if vertex exists, get description content and append this description to it
     if not exists.get("error", False):
         # deduplicate descriptions
-        desc.extend(exists["results"][0]["attributes"]["description"])
+        desc.extend(exists["resp"][0]["attributes"]["description"])
         desc = list(set(desc))
     return desc
 

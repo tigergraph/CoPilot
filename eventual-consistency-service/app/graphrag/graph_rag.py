@@ -41,33 +41,26 @@ async def stream_docs(
     Streams the document contents into the docs_chan
     """
     logger.info("streaming docs")
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        for i in range(ttl_batches):
-            doc_ids = await stream_ids(conn, "Document", i, ttl_batches)
-            if doc_ids["error"]:
-                # continue to the next batch.
-                # These docs will not be marked as processed, so the ecc will process it eventually.
-                continue
+    for i in range(ttl_batches):
+        doc_ids = await stream_ids(conn, "Document", i, ttl_batches)
+        if doc_ids["error"]:
+            # continue to the next batch.
+            # These docs will not be marked as processed, so the ecc will process it eventually.
+            continue
 
-            for d in doc_ids["ids"]:
-                try:
-                    async with tg_sem:
-                        res = await client.get(
-                            f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
-                            params={"doc": d},
-                            headers=headers,
-                        )
-                    if res.status_code != 200:
-                        # continue to the next doc.
-                        # This doc will not be marked as processed, so the ecc will process it eventually.
-                        continue
-                    logger.info("stream_docs writes to docs")
-                    await docs_chan.put(res.json()["results"][0]["DocContent"][0])
-                except Exception as e:
-                    exc = traceback.format_exc()
-                    logger.error(f"Error retrieving doc: {d} --> {e}\n{exc}")
-                    continue  # try retrieving the next doc
+        for d in doc_ids["ids"]:
+            try:
+                async with tg_sem:
+                    res = await conn.runInstalledQuery(
+                        "StreamDocContent",
+                        params={"doc": d},
+                    )
+                logger.info("stream_docs writes to docs")
+                await docs_chan.put(res[0]["DocContent"][0])
+            except Exception as e:
+                exc = traceback.format_exc()
+                logger.error(f"Error retrieving doc: {d} --> {e}\n{exc}")
+                continue  # try retrieving the next doc
 
     logger.info("stream_docs done")
     # close the docs chan -- this function is the only sender
@@ -285,14 +278,10 @@ async def resolve_entities(
     upsert_chan.close()
 
     # Copy RELATIONSHIP edges to RESOLVED_RELATIONSHIP
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            res = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/ResolveRelationships/",
-                headers=headers,
-            )
-        res.raise_for_status()
+    async with tg_sem:
+        res = await conn.runInstalledQuery(
+            "ResolveRelationships",
+        )
 
 
 async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channel):
@@ -301,25 +290,19 @@ async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channe
     """
     # first pass: Group ResolvedEntities into Communities
     logger.info("Initializing Communities (first louvain pass)")
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            res = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_init",
-                params={"n_batches": 1},
-                headers=headers,
-            )
-        res.raise_for_status()
+
+    async with tg_sem:
+        res = await conn.runInstalledQuery(
+            "graphrag_louvain_init",
+            params={"n_batches": 1}
+        )
     # get the modularity
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            res = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/modularity",
-                params={"iteration": 1, "batch_num": 1},
-                headers=headers,
-            )
-        res.raise_for_status()
-    mod = res.json()["results"][0]["mod"]
+    async with tg_sem:
+        res = await conn.runInstalledQuery(
+            "modularity",
+            params={"iteration": 1, "batch_num": 1}
+        )
+    mod = res[0]["mod"]
     logger.info(f"****mod pass 1: {mod}")
     await stream_communities(conn, 1, comm_process_chan)
 
@@ -331,26 +314,19 @@ async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channe
         i += 1
         logger.info(f"Running louvain on Communities (iteration: {i})")
         # louvain pass
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with tg_sem:
-                res = await client.get(
-                    f"{conn.restppUrl}/query/{conn.graphname}/graphrag_louvain_communities",
-                    params={"n_batches": 1, "iteration": i},
-                    headers=headers,
-                )
-
-        res.raise_for_status()
+        async with tg_sem:
+            res = await conn.runInstalledQuery(
+                "graphrag_louvain_communities",
+                params={"n_batches": 1, "iteration": i},
+            )
 
         # get the modularity
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with tg_sem:
-                res = await client.get(
-                    f"{conn.restppUrl}/query/{conn.graphname}/modularity",
-                    params={"iteration": i + 1, "batch_num": 1},
-                    headers=headers,
-                )
-        res.raise_for_status()
-        mod = res.json()["results"][0]["mod"]
+        async with tg_sem:
+            res = await conn.runInstalledQuery(
+                "modularity",
+                params={"iteration": i + 1, "batch_num": 1},
+            )
+        mod = res[0]["mod"]
         logger.info(f"mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
         if mod == 0 or mod - prev_mod <= -0.05:
             break
@@ -377,15 +353,12 @@ async def stream_communities(
 
     # async for i in community_chan:
     # get the community from that layer
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/stream_community",
-                params={"iter": i},
-                headers=headers,
-            )
-    resp.raise_for_status()
-    comms = resp.json()["results"][0]["Comms"]
+    async with tg_sem:
+        resp = await conn.runInstalledQuery(
+            "stream_community",
+            params={"iter": i}
+        )
+    comms = resp[0]["Comms"]
 
     for c in comms:
         await comm_process_chan.put((i, c["v_id"]))
@@ -467,7 +440,7 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
     type_start = time.perf_counter()
     logger.info("Type Processing Start")
     res = await add_rels_between_types(conn)
-    if res["error"]:
+    if res.get("error", False):
         logger.error(f"Error adding relationships between types: {res}")
     else:
         logger.info(f"Added relationships between types: {res}")

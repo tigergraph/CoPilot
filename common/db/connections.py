@@ -109,12 +109,7 @@ def elevate_db_connection_to_token(host, username, password, graphname, async_co
     
     if db_config["getToken"]:
         try:
-            apiToken = conn._post(
-                conn.restppUrl + "/requesttoken",
-                authMode="pwd",
-                data=str({"graph": conn.graphname}),
-                resKey="results",
-            )["token"]
+            apiToken = conn.getToken()[0]
         except HTTPError:
             LogWriter.error("Failed to get token")
             raise HTTPException(
