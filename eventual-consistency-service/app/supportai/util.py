@@ -33,7 +33,7 @@ async def install_queries(
     conn: TigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -142,20 +142,18 @@ async def stream_ids(
     headers = make_headers(conn)
 
     try:
-        async with httpx.AsyncClient(timeout=http_timeout) as client:
-            async with tg_sem:
-                res = await client.post(
-                    f"{conn.restppUrl}/query/{conn.graphname}/StreamIds",
-                    params={
-                        "current_batch": current_batch,
-                        "ttl_batches": ttl_batches,
-                        "v_type": v_type,
-                    },
-                    headers=headers,
-                )
-        ids = res.json()["results"][0]["@@ids"]
+        async with tg_sem:
+            res = await conn.runInstalledQuery(
+                "StreamIds",
+                params={
+                    "current_batch": current_batch,
+                    "ttl_batches": ttl_batches,
+                    "v_type": v_type,
+                }
+            )
+        ids = res[0]["@@ids"]
         return {"error": False, "ids": ids}
-
+    
     except Exception as e:
         exc = traceback.format_exc()
         LogWriter.error(f"/{conn.graphname}/query/StreamIds\nException Trace:\n{exc}")
@@ -201,50 +199,28 @@ async def upsert_vertex(
     attrs = map_attrs(attributes)
     data = json.dumps({"vertices": {vertex_type: {vertex_id: attrs}}})
     headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            try:
-                res = await client.post(
-                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-                )
+    async with tg_sem:
+        try:
+            res = await conn.upsertData(data)
 
-                res.raise_for_status()
-            except httpx.RequestError as exc:
-                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
-                logger.error(f"Request body: {data}")
-                logger.error(f"Details: {exc}")
-                # Check if the exception has a response attribute
-                if hasattr(exc, 'response') and exc.response is not None:
-                    logger.error(f"Response content: {exc.response.content}")
-            except httpx.HTTPStatusError as exc:
-                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
-                logger.error(f"Response content: {exc.response.content}")
-                logger.error(f"Request body: {data}")
+            logger.info(f"Upsert res: {res}")
+        except Exception as e:
+            err = traceback.format_exc()
+            logger.error(f"Upsert err:\n{err}")
+            return {"error": True, "message": str(e)}
 
 
 async def check_vertex_exists(conn, v_id: str):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            try:
-                res = await client.get(
-                    f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
-                    headers=headers,
-                )
+    async with tg_sem:
+        try:
+            res = await conn.getVerticesById("Entity", v_id)
 
-                res.raise_for_status()
-                return res.json()
-            except httpx.RequestError as exc:
-                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
-                logger.error(f"Details: {exc}")
-                # Check if the exception has a response attribute
-                if hasattr(exc, 'response') and exc.response is not None:
-                    logger.error(f"Response content: {exc.response.content}")
-                return {"error": "Request failed"}
-            except httpx.HTTPStatusError as exc:
-                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
-                logger.error(f"Response content: {exc.response.content}")
-                return {"error": f"HTTP status error {exc.response.status_code}"}
+        except Exception as e:
+            err = traceback.format_exc()
+            logger.error(f"Check err:\n{err}")
+            return {"error": True, "message": str(e)}
+
+        return {"error": False, "resp": res}
 
 
 
@@ -278,22 +254,12 @@ async def upsert_edge(
             }
         }
     )
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            try:
-                res = await client.post(
-                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-                )
-                res.raise_for_status()
-            except httpx.RequestError as exc:
-                logger.error(f"An error occurred while requesting {exc.request.url!r}.")
-                logger.error(f"Request body: {data}")
-                logger.error(f"Details: {exc}")
-                # Check if the exception has a response attribute
-                if hasattr(exc, 'response') and exc.response is not None:
-                    logger.error(f"Response content: {exc.response.content}")
-            except httpx.HTTPStatusError as exc:
-                logger.error(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}.")
-                logger.error(f"Response content: {exc.response.content}")
-                logger.error(f"Request body: {data}")
+    async with tg_sem:
+        try:
+            res = await conn.upsertData(data)
+
+            logger.info(f"Upsert res: {res}")
+        except Exception as e:
+            err = traceback.format_exc()
+            logger.error(f"Upsert err:\n{err}")
+            return {"error": True, "message": str(e)}

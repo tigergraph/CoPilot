@@ -7,7 +7,7 @@ from glob import glob
 
 import httpx
 from graphrag import reusable_channel, workers
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import (
     doc_processing_config,
@@ -33,10 +33,10 @@ loading_event.set() # set the event to true to allow the workers to run
 
 async def install_queries(
     requried_queries: list[str],
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -58,7 +58,7 @@ async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
 
 
 async def init(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
 ) -> tuple[BaseExtractor, dict[str, MilvusEmbeddingStore]]:
     # install requried queries
     requried_queries = [
@@ -126,7 +126,7 @@ async def init(
     return extractor, index_stores
 
 
-def make_headers(conn: TigerGraphConnection):
+def make_headers(conn: AsyncTigerGraphConnection):
     if conn.apiToken is None or conn.apiToken == "":
         tkn = base64.b64encode(f"{conn.username}:{conn.password}".encode()).decode()
         headers = {"Authorization": f"Basic {tkn}"}
@@ -137,23 +137,19 @@ def make_headers(conn: TigerGraphConnection):
 
 
 async def stream_ids(
-    conn: TigerGraphConnection, v_type: str, current_batch: int, ttl_batches: int
+    conn: AsyncTigerGraphConnection, v_type: str, current_batch: int, ttl_batches: int
 ) -> dict[str, str | list[str]]:
-    headers = make_headers(conn)
-
     try:
-        async with httpx.AsyncClient(timeout=http_timeout) as client:
-            async with tg_sem:
-                res = await client.post(
-                    f"{conn.restppUrl}/query/{conn.graphname}/StreamIds",
-                    params={
-                        "current_batch": current_batch,
-                        "ttl_batches": ttl_batches,
-                        "v_type": v_type,
-                    },
-                    headers=headers,
-                )
-        ids = res.json()["results"][0]["@@ids"]
+        async with tg_sem:
+            res = await conn.runInstalledQuery(
+                "StreamIds",
+                params={
+                    "current_batch": current_batch,
+                    "ttl_batches": ttl_batches,
+                    "v_type": v_type,
+                }
+            )
+        ids = res[0]["@@ids"]
         return {"error": False, "ids": ids}
 
     except Exception as e:
@@ -192,7 +188,7 @@ def process_id(v_id: str):
 
 
 async def upsert_vertex(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     vertex_type: str,
     vertex_id: str,
     attributes: dict,
@@ -203,43 +199,32 @@ async def upsert_vertex(
     await load_q.put(("vertices", (vertex_type, vertex_id, attrs)))
 
 
-async def upsert_batch(conn: TigerGraphConnection, data: str):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            try:
-                res = await client.post(
-                    f"{conn.restppUrl}/graph/{conn.graphname}", data=data, headers=headers
-                )
-            except Exception as e:
-                err = traceback.format_exc()
-                logger.error(f"Upsert err:\n{err}")
-        res.raise_for_status()
+async def upsert_batch(conn: AsyncTigerGraphConnection, data: str):
+    async with tg_sem:
+        try:
+            res = await conn.upsertData(data)
+            logger.info(f"Upsert res: {res}")
+        except Exception as e:
+            err = traceback.format_exc()
+            logger.error(f"Upsert err:\n{err}")
+            return {"error": True, "message": str(e)}
 
 
 async def check_vertex_exists(conn, v_id: str):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        async with tg_sem:
-            try:
-                res = await client.get(
-                    f"{conn.restppUrl}/graph/{conn.graphname}/vertices/Entity/{v_id}",
-                    headers=headers,
-                )
-
-            except Exception as e:
-                err = traceback.format_exc()
-                logger.error(f"Check err:\n{err}")
+    async with tg_sem:
         try:
-            res.raise_for_status()
-            return res.json()
+            res = await conn.getVerticesById("Entity", v_id)
+
         except Exception as e:
-            logger.error(f"Check err:\n{e}\n{e}")
-            return {"error": True, "message": e}
+            err = traceback.format_exc()
+            logger.error(f"Check err:\n{err}")
+            return {"error": True, "message": str(e)}
+
+        return {"error": False, "resp": res}
 
 
 async def upsert_edge(
-    conn: TigerGraphConnection,
+    conn: AsyncTigerGraphConnection,
     src_v_type: str,
     src_v_id: str,
     edge_type: str,
@@ -269,24 +254,18 @@ async def upsert_edge(
 
 
 async def get_commuinty_children(conn, i: int, c: str):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with tg_sem:
-            try:
-                resp = await client.get(
-                    f"{conn.restppUrl}/query/{conn.graphname}/get_community_children",
-                    params={"comm": c, "iter": i},
-                    headers=headers,
-                )
-            except:
-                logger.error(f"Get Children err:\n{traceback.format_exc()}")
+    async with tg_sem:
         try:
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Get Children err:\n{e}")
+            resp = await conn.runInstalledQuery(
+                "get_community_children",
+                params={"comm": c, "iter": i}
+            )
+        except:
+            logger.error(f"Get Children err:\n{traceback.format_exc()}")
+
     descrs = []
     try:
-        res = resp.json()["results"][0]["children"]
+        res = resp[0]["children"]
     except Exception as e:
         logger.error(f"Get Children err:\n{e}")
         res = []
@@ -307,59 +286,41 @@ async def get_commuinty_children(conn, i: int, c: str):
 
 
 async def check_all_ents_resolved(conn):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
+    try:
         async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/entities_have_resolution",
-                headers=headers,
+            resp = await conn.runInstalledQuery(
+                "entities_have_resolution"
             )
-        try:
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Check Vert Desc err:\n{e}")
+    except Exception as e:
+        logger.error(f"Check Vert Desc err:\n{e}")
 
-    res = resp.json()["results"][0]["all_resolved"]
-    logger.info(resp.json()["results"])
+    res = resp[0]["all_resolved"]
+    logger.info(resp)
 
     return res
 
 async def add_rels_between_types(conn):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
+    try:
         async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/create_entity_type_relationships",
-                headers=headers,
+            resp = await conn.runInstalledQuery(
+                "create_entity_type_relationships"
             )
-        try:
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Check Vert EntityType err:\n{e}")
-
-    if resp.status_code != 200:
-        logger.error(f"Check Vert EntityType err:\n{resp.text}")
-        return {"error": True, "message": resp.text}
-    else:
-        res = resp.json()
-        logger.info(resp.json())
-        return res
+    except Exception as e:
+        logger.error(f"Check Vert EntityType err:\n{e}")
+        return {"error": True, "message": e}        
+    return resp[0]
 
 async def check_vertex_has_desc(conn, i: int):
-    headers = make_headers(conn)
-    async with httpx.AsyncClient(timeout=None) as client:
+    try:
         async with tg_sem:
-            resp = await client.get(
-                f"{conn.restppUrl}/query/{conn.graphname}/communities_have_desc",
+            resp = await conn.runInstalledQuery(
+                "communities_have_desc",
                 params={"iter": i},
-                headers=headers,
             )
-        try:
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Check Vert Desc err:\n{e}")
+    except Exception as e:
+        logger.error(f"Check Vert Desc err:\n{e}")
 
-    res = resp.json()["results"][0]["all_have_desc"]
-    logger.info(resp.json()["results"])
+    res = resp[0]["all_have_desc"]
+    logger.info(res)
 
     return res

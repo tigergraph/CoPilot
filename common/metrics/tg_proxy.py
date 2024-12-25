@@ -33,7 +33,7 @@ class TigerGraphConnectionProxy:
         else:
             return original_attr
 
-    def _req(self, method: str, url: str, authMode: str, *args, **kwargs):
+    def _req(self, method: str, url: str, authMode: str = "token", *args, **kwargs):
         # we always use token auth
         # always use proxy endpoint in GUI for restpp and gsql
         if self.auth_mode == "pwd":

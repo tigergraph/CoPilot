@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasicCredentials, HTTPAuthorizationCredentials
-from pyTigerGraph import TigerGraphConnection
+from pyTigerGraph import TigerGraphConnection, AsyncTigerGraphConnection
 from pyTigerGraph.common.exception import TigerGraphException
 from requests import HTTPError
 
@@ -21,14 +21,24 @@ consistency_checkers = {}
 def get_db_connection_id_token(
     graphname: str,
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    async_conn: bool = False
 ) -> TigerGraphConnectionProxy:
-    conn = TigerGraphConnection(
-        host=db_config["hostname"],
-        graphname=graphname,
-        apiToken=credentials,
-        tgCloud=True,
-        sslPort=14240,
-    )
+    if async_conn:
+        conn = AsyncTigerGraphConnection(
+            host=db_config["hostname"],
+            graphname=graphname,
+            apiToken=credentials,
+            tgCloud=True,
+            sslPort=14240,
+        )
+    else:
+        conn = TigerGraphConnection(
+            host=db_config["hostname"],
+            graphname=graphname,
+            apiToken=credentials,
+            tgCloud=True,
+            sslPort=14240,
+        )
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
     )
@@ -55,9 +65,10 @@ def get_db_connection_id_token(
 
 
 def get_db_connection_pwd(
-    graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+    graphname, credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+    async_conn: bool = False
 ) -> TigerGraphConnectionProxy:
-    conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname)
+    conn = elevate_db_connection_to_token(db_config["hostname"], credentials.username, credentials.password, graphname, async_conn)
 
     conn.customizeHeader(
         timeout=db_config["default_timeout"] * 1000, responseSize=5000000
@@ -70,12 +81,13 @@ def get_db_connection_pwd(
 
 def get_db_connection_pwd_manual(
     graphname, username: str, password: str,
+    async_conn: bool = False
 ) -> TigerGraphConnectionProxy:
     """
     Manual auth - pass in user/pass not from basic auth
     """
     conn = elevate_db_connection_to_token(
-            db_config["hostname"], username, password, graphname
+            db_config["hostname"], username, password, graphname, async_conn
         )
 
     conn.customizeHeader(
@@ -85,22 +97,19 @@ def get_db_connection_pwd_manual(
     LogWriter.info("Connected to TigerGraph with password")
     return conn
 
-def elevate_db_connection_to_token(host, username, password, graphname) -> TigerGraphConnectionProxy:
+def elevate_db_connection_to_token(host, username, password, graphname, async_conn: bool = False) -> TigerGraphConnectionProxy:
     conn = TigerGraphConnection(
         host=host,
         username=username,
         password=password,
-        graphname=graphname
+        graphname=graphname,
+        restppPort=db_config.get("restppPort", "9000"),
+        gsPort=db_config.get("gsPort", "14240")
     )
     
     if db_config["getToken"]:
         try:
-            apiToken = conn._post(
-                conn.restppUrl + "/requesttoken",
-                authMode="pwd",
-                data=str({"graph": conn.graphname}),
-                resKey="results",
-            )["token"]
+            apiToken = conn.getToken()[0]
         except HTTPError:
             LogWriter.error("Failed to get token")
             raise HTTPException(
@@ -115,13 +124,38 @@ def elevate_db_connection_to_token(host, username, password, graphname) -> Tiger
                 detail="Failed to get token - is the database running?"
             )
 
+        if async_conn:
+            conn = AsyncTigerGraphConnection(
+                host=host,
+                username=username,
+                password=password,
+                graphname=graphname,
+                apiToken=apiToken,
+                restppPort=db_config.get("restppPort", "9000"),
+                gsPort=db_config.get("gsPort", "14240")
+            )
+        else:
+            conn = TigerGraphConnection(
+                host=db_config["hostname"],
+                username=username,
+                password=password,
+                graphname=graphname,
+                apiToken=apiToken,
+                restppPort=db_config.get("restppPort", "9000"),
+                gsPort=db_config.get("gsPort", "14240")
+            )
+    else:
+        if async_conn:
+            conn = AsyncTigerGraphConnection(
+                host=host,
+                username=username,
+                password=password,
+                graphname=graphname,
+                restppPort=db_config.get("restppPort", "9000"),
+                gsPort=db_config.get("gsPort", "14240")
+            )
 
-        conn = TigerGraphConnection(
-            host=db_config["hostname"],
-            username=username,
-            password=password,
-            graphname=graphname,
-            apiToken=apiToken
-        )
+            # temp fix for path
+            conn.restppUrl = conn.restppUrl+"/restpp"
     
     return conn

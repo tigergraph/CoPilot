@@ -34,19 +34,12 @@ async def install_query(
 USE GRAPH {conn.graphname}
 {query}
 INSTALL QUERY {query_name}"""
-    tkn = base64.b64encode(f"{conn.username}:{conn.password}".encode()).decode()
-    headers = {"Authorization": f"Basic {tkn}"}
 
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with util.tg_sem:
-            res = await client.post(
-                conn.gsUrl + "/gsqlserver/gsql/file",
-                data=quote_plus(query.encode("utf-8")),
-                headers=headers,
-            )
+    async with util.tg_sem:
+        res = await conn.gsql(query)
 
-    if "error" in res.text.lower():
-        LogWriter.error(res.text)
+    if "error" in res:
+        LogWriter.error(res)
         return {
             "result": None,
             "error": True,
@@ -54,6 +47,7 @@ INSTALL QUERY {query_name}"""
         }
 
     return {"result": res, "error": False}
+
 
 
 async def chunk_doc(
