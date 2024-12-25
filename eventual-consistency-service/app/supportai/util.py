@@ -33,7 +33,7 @@ async def install_queries(
     conn: TigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
