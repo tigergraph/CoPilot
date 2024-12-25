@@ -43,15 +43,12 @@ async def stream_docs(
             for d in doc_ids["ids"]:
                 try:
                     async with tg_sem:
-                        res = await client.get(
-                            f"{conn.restppUrl}/query/{conn.graphname}/StreamDocContent/",
+                        res = await conn.runInstalledQuery(
+                            "StreamDocContent",
                             params={"doc": d},
-                            headers=headers,
                         )
-                    if res.status_code != 200:
-                        continue
                     logger.info("stream_docs writes to docs")    
-                    await docs_chan.put(res.json()["results"][0]["DocContent"][0])
+                    await docs_chan.put(res[0]["DocContent"][0])
                 except Exception as e:
                     exc = traceback.format_exc()
                     logger.error(f"Error retrieveing doc: {d} --> {e}\n{exc}")
