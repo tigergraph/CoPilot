@@ -35,9 +35,8 @@ async def install_query(
 USE GRAPH {conn.graphname}
 {query}
 INSTALL QUERY {query_name}"""
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with util.tg_sem:
-            res = await conn.gsql(query)
+    async with util.tg_sem:
+        res = await conn.gsql(query)
 
     if "error" in res:
         LogWriter.error(res)
