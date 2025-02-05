@@ -1,4 +1,4 @@
-FROM python:3.11.8-bullseye
+FROM python:3.11.9-bullseye
 WORKDIR /code
 
 COPY common/requirements.txt requirements.txt

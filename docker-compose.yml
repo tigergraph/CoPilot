@@ -146,6 +146,12 @@ services:
       - ui
       - copilot
 
+  tigergraph:
+    container_name: tigergraph
+    image: tigergraph/tigergraph:latest
+    ports:
+      - "14240:14240"
+
 volumes:
   milvus_etcd:
   milvus_minio:
