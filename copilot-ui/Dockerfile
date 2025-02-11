@@ -1,4 +1,4 @@
-FROM node:20-slim 
+FROM node:23.7-slim 
 WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"

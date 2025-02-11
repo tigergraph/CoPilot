@@ -55,16 +55,28 @@ class TigerGraphConnectionProxy:
             )
             result = None
             while not result:
+                ret = self._tg_connection.checkQueryStatus(restppid)
+                LogWriter.info(f"Ret: {ret}")
+                if not ret:
+                    time.sleep(0.1)
+                    continue
                 if (
-                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    ret[0]["status"].lower()
                     == "success"
                 ):
                     LogWriter.info(
                         f"request_id={req_id_cv.get()} query {query_name} completed successfully with RESTPP ID {restppid}"
                     )
-                    result = self._tg_connection.getQueryResult(restppid)
+                    result = None
+                    while not result:
+                        try:
+                            LogWriter.info(f"Trying to get query result for: {restppid}")
+                            result = self._tg_connection.getQueryResult(restppid)
+                        except Exception as e:
+                            result = None
+                            time.sleep(0.1)
                 elif (
-                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    ret[0]["status"].lower()
                     == "aborted"
                 ):
                     LogWriter.error(
@@ -74,7 +86,7 @@ class TigerGraphConnectionProxy:
                         f"Query {query_name} with restppid {restppid} aborted"
                     )
                 elif (
-                    self._tg_connection.checkQueryStatus(restppid)[0]["status"].lower()
+                    ret[0]["status"].lower()
                     == "timeout"
                 ):
                     LogWriter.error(
@@ -83,7 +95,6 @@ class TigerGraphConnectionProxy:
                     raise Exception(
                         f"Query {query_name} with restppid {restppid} timed out"
                     )
-                time.sleep(0.1)
             success = True
         except Exception as e:
             LogWriter.error(f"Error running query {query_name}: {str(e)}")

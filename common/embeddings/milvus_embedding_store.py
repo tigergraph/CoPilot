@@ -34,7 +34,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         vertex_field: str = "",
         username: str = "",
         password: str = "",
-        alias: str = "alias",
+        alias: str = "default",
         retry_interval: int = 2,
         max_retry_attempts: int = 10,
         drop_old=False,
@@ -86,7 +86,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 # metrics.milvus_active_connections.labels(self.collection_name).inc
                 LogWriter.info(
                     f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
-                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, collection={self.collection_name}"""
+                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, alias={self.milvus_connection.get('alias', 'unknown')}, collection={self.collection_name}"""
                 )
                 LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 self.milvus = Milvus(
