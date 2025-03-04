@@ -68,6 +68,18 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         LogWriter.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
         return added
 
+    def has_embeddings(self, ids: List[str]):
+        """Check Existing Embeddings.
+        Check existing embeddings from the vector store.
+        Args:
+            ids (str):
+                ID of the document to remove from the embedding store
+        """
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY has_embeddings()")
+        docs = self.faiss.get_by_ids(ids)
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT has_embeddings()")
+        return [doc.text for doc in docs]
+
     def remove_embeddings(self, ids):
         """Remove Embeddings.
         Remove embeddings from the vector store.
@@ -77,7 +89,7 @@ class FAISS_EmbeddingStore(EmbeddingStore):
         """
         LogWriter.info(f"request_id={req_id_cv.get()} ENTRY remove_embeddings()")
         deleted = self.faiss.delete(ids)
-        LogWriter.info(f"request_id={req_id_cv.get()} EXIT add_embeddings()")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT remove_embeddings()")
         return deleted
 
     def retrieve_similar(self, query_embedding, top_k=10):

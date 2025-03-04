@@ -28,6 +28,16 @@ class EmbeddingStore(ABC):
         pass
 
     @abstractmethod
+    def has_embeddings(self, ids: List[str]) -> List[str]:
+        """Check Existing Embeddings.
+        Check existing embeddings from the vector store.
+        Args:
+            ids (str):
+                ID of the document to remove from the embedding store
+        """
+        pass
+
+    @abstractmethod
     def remove_embeddings(self, ids: List[str]) -> None:
         """Remove Embeddings.
         Remove embeddings from the vector store.

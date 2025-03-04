@@ -22,6 +22,7 @@ from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
 
 logger = logging.getLogger(__name__)
+
 http_timeout = httpx.Timeout(15.0)
 
 tg_sem = asyncio.Semaphore(2)
@@ -36,7 +37,7 @@ async def install_queries(
     conn: AsyncTigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"{conn.graphname}/" in q]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -150,6 +151,7 @@ async def stream_ids(
                 }
             )
         ids = res[0]["@@ids"]
+        logger.debug(f"Fetched ids: {ids}")
         return {"error": False, "ids": ids}
 
     except Exception as e:
@@ -193,7 +195,7 @@ async def upsert_vertex(
     vertex_id: str,
     attributes: dict,
 ):
-    logger.info(f"Upsert vertex: {vertex_type} {vertex_id}")
+    logger.debug(f"Upsert vertex: {vertex_id} as {vertex_type}")
     vertex_id = vertex_id.replace(" ", "_")
     attrs = map_attrs(attributes)
     await load_q.put(("vertices", (vertex_type, vertex_id, attrs)))
@@ -236,6 +238,7 @@ async def upsert_edge(
         attrs = {}
     else:
         attrs = map_attrs(attributes)
+    logger.debug(f"Upsert edge: {src_v_id} -[{edge_type}]-> {tgt_v_id}")
     src_v_id = src_v_id.replace(" ", "_")
     tgt_v_id = tgt_v_id.replace(" ", "_")
     await load_q.put(

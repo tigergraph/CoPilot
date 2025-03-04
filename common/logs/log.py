@@ -92,5 +92,4 @@ for p in log_file_paths.values():
 
 logging.basicConfig(level=LOGLEVEL, handlers=handlers)
 
-
 req_id_cv = contextvars.ContextVar("req_id", default=None)

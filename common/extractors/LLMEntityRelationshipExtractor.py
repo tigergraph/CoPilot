@@ -1,11 +1,14 @@
 import json
 from typing import List
+import logging
 
 from common.extractors.BaseExtractor import BaseExtractor
 from common.llm_services import LLM_Model
 from common.py_schemas import KnowledgeGraph
 from langchain_community.graphs.graph_document import Node, Relationship, GraphDocument
 from langchain_core.documents import Document
+
+logger = logging.getLogger(__name__)
 
 class LLMEntityRelationshipExtractor(BaseExtractor):
     def __init__(
@@ -22,9 +25,11 @@ class LLMEntityRelationshipExtractor(BaseExtractor):
 
     async def _aextract_kg_from_doc(self, doc, chain, parser) -> list[GraphDocument]:
         try:
+            logger.debug(str(doc))
             out = await chain.ainvoke(
                 {"input": doc, "format_instructions": parser.get_format_instructions()}
             )
+            logger.debug(str(out))
         except Exception as e:
             return [GraphDocument(nodes=[], relationships=[], source=Document(page_content=doc))]
         try:
