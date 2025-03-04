@@ -1,12 +1,12 @@
 CREATE SCHEMA_CHANGE JOB add_supportai_schema {
-    ADD VERTEX DocumentChunk(id STRING PRIMARY KEY, idx INT, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX Document(id STRING PRIMARY KEY, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX Concept(id STRING PRIMARY KEY, description STRING, concept_type STRING, human_curated BOOL, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX Entity(id STRING PRIMARY KEY, definition STRING, description SET<STRING>, entity_type STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX Relationship(id STRING PRIMARY KEY, definition STRING, short_name STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX DocumentCollection(id STRING PRIMARY KEY, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX Content(id STRING PRIMARY KEY, text STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX EntityType(id STRING PRIMARY KEY, description STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE";
+    ADD VERTEX DocumentChunk(PRIMARY_ID id STRING, idx INT, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Document(PRIMARY_ID id STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Concept(PRIMARY_ID id STRING, description STRING, concept_type STRING, human_curated BOOL, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Entity(PRIMARY_ID id STRING, definition STRING, description SET<STRING>, entity_type STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Relationship(PRIMARY_ID id STRING, definition STRING, short_name STRING, epoch_added UINT, epoch_processing UINT, epoch_processed UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX DocumentCollection(PRIMARY_ID id STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Content(PRIMARY_ID id STRING, text STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX EntityType(PRIMARY_ID id STRING, description STRING, epoch_added UINT) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
     ADD DIRECTED EDGE HAS_CONTENT(FROM Document, TO Content|FROM DocumentChunk, TO Content) WITH REVERSE_EDGE="reverse_HAS_CONTENT";
     ADD DIRECTED EDGE IS_CHILD_OF(FROM Concept, TO Concept) WITH REVERSE_EDGE="reverse_IS_CHILD_OF";
     ADD DIRECTED EDGE IS_HEAD_OF(FROM Entity, TO Relationship) WITH REVERSE_EDGE="reverse_IS_HEAD_OF";
@@ -23,10 +23,10 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE RELATIONSHIP_TYPE(FROM EntityType, TO EntityType, DISCRIMINATOR(relation_type STRING), frequency INT) WITH REVERSE_EDGE="reverse_RELATIONSHIP_TYPE";
 
     // GraphRAG
-    ADD VERTEX Community (id STRING PRIMARY KEY, iteration UINT, description STRING) WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
-    ADD VERTEX ResolvedEntity(id STRING PRIMARY KEY, entity_type STRING )WITH EMBEDDING ATTRIBUTE embedding(dimension=1536, metric=cosine) STATS="OUTDEGREE_BY_EDGETYPE";
+    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, description STRING) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, entity_type STRING) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
 
-    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP"; 
+    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP";
     ADD DIRECTED EDGE RESOLVES_TO(FROM Entity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVES_TO"; // Connect ResolvedEntities with their children entities
     ADD DIRECTED EDGE RESOLVED_RELATIONSHIP(FROM ResolvedEntity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVED_RELATIONSHIP"; // store edges between entities after they're resolved
 

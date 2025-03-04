@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from threading import Thread
 from typing import Annotated, Callable
 
+import asyncio
 import ecc_util
 import graphrag
 import supportai
@@ -181,6 +182,13 @@ def consistency_status(
         graphname,
         async_conn=True
     )
+
+    asyncio.run(conn.customizeHeader(
+        timeout=db_config["default_timeout"] * 1000, responseSize=5000000
+    ))
+
+    logger.info(f"Connection timeout set is {conn.responseConfigHeader}")
+    
     match ecc_method:
         case SupportAIMethod.SUPPORTAI:
             background.add_task(supportai.run, graphname, conn)

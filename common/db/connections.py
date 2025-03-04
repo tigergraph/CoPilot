@@ -156,6 +156,7 @@ def elevate_db_connection_to_token(host, username, password, graphname, async_co
             )
 
             # temp fix for path
-            conn.restppUrl = conn.restppUrl+"/restpp"
-    
+            if conn.restppPort == conn.gsPort and "/restpp" not in conn.restppUrl:
+                conn.restppUrl = conn.restppUrl+"/restpp"
+
     return conn

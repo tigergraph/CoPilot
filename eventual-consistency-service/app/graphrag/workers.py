@@ -22,7 +22,6 @@ vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
 logger = logging.getLogger(__name__)
 
-
 async def install_query(
     conn: AsyncTigerGraphConnection, query_path: str
 ) -> dict[str, httpx.Response | str | None]:
@@ -74,6 +73,9 @@ async def chunk_doc(
         chunker = ecc_util.get_chunker()
         chunks = chunker.chunk(doc["attributes"]["text"])
         v_id = util.process_id(doc["v_id"])
+        if v_id != doc["v_id"]:
+            await upsert_chan.put((upsert_doc, (conn, doc["v_id"], v_id, doc["attributes"]["text"])))
+       
         logger.info(f"Chunking {v_id}")
         for i, chunk in enumerate(chunks):
             chunk_id = f"{v_id}_chunk_{i}"
@@ -91,6 +93,25 @@ async def chunk_doc(
 
     return doc["v_id"]
 
+
+async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, content_text):
+    logger.info(f"Upserting doc/content {old_doc_id} -> {new_doc_id}")
+    date_added = int(time.time())
+    await util.upsert_vertex(
+        conn,
+        "Document",
+        new_doc_id,
+        attributes={"epoch_added": date_added, "epoch_processed": date_added},
+    )
+    await util.upsert_vertex(
+        conn,
+        "Content",
+        new_doc_id,
+        attributes={"text": content_text, "epoch_added": date_added},
+    )
+    await util.upsert_edge(
+        conn, "Document", new_doc_id, "HAS_CONTENT", "Content", new_doc_id
+    )
 
 async def upsert_chunk(conn: AsyncTigerGraphConnection, doc_id, chunk_id, chunk):
     logger.info(f"Upserting chunk {chunk_id}")
@@ -390,7 +411,9 @@ async def resolve_entity(
 
     async with resolve_sem:
         try:
+            logger.info(f"Resolving Entity {entity_id}")
             results = await emb_store.aget_k_closest(entity_id)
+            logger.info(f"results")
 
         except Exception:
             err = traceback.format_exc()
@@ -410,6 +433,7 @@ async def resolve_entity(
             if len(v) > len(resolved_entity_id):
                 resolved_entity_id = v
 
+        logger.debug(f"Merging {results} to ResolvedEntity {resolved_entity_id}")
         # upsert the resolved entity
         await upsert_chan.put(
             (

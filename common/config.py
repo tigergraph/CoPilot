@@ -80,7 +80,7 @@ else:
 if MILVUS_CONFIG is None or (
     MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)
 ):
-    milvus_config = {"host": "localhost", "port": "19530", "enabled": "false"}
+    milvus_config = {"host": "localhost", "port": "19530", "enabled": "false", "reuse_embedding": "false"}
 elif MILVUS_CONFIG.endswith(".json"):
     with open(MILVUS_CONFIG, "r") as f:
         milvus_config = json.load(f)

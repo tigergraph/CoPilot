@@ -6,7 +6,7 @@ import traceback
 from collections import defaultdict
 
 import httpx
-from aiochannel import Channel
+from aiochannel import Channel, ChannelClosed
 from graphrag import workers
 from graphrag.util import (
     check_all_ents_resolved,
@@ -24,13 +24,14 @@ from graphrag.util import (
 from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import embedding_service
+from common.config import milvus_config
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 
 logger = logging.getLogger(__name__)
 
 consistency_checkers = {}
-
+reuse_embedding = milvus_config.get("reuse_embedding", "false")
 
 async def stream_docs(
     conn: AsyncTigerGraphConnection,
@@ -55,7 +56,7 @@ async def stream_docs(
                         "StreamDocContent",
                         params={"doc": d},
                     )
-                logger.info("stream_docs writes to docs")
+                logger.info(f"stream_docs writes {d} to docs")
                 await docs_chan.put(res[0]["DocContent"][0])
             except Exception as e:
                 exc = traceback.format_exc()
@@ -82,11 +83,17 @@ async def chunk_docs(
     logger.info("Reading from docs channel")
     doc_tasks = []
     async with asyncio.TaskGroup() as grp:
-        async for content in docs_chan:
-            task = grp.create_task(
-                workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
-            )
-            doc_tasks.append(task)
+        while True:
+            try:
+                content = await docs_chan.get()
+                task = grp.create_task(
+                    workers.chunk_doc(conn, content, upsert_chan, embed_chan, extract_chan)
+                )
+                doc_tasks.append(task)
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
 
     logger.info("chunk_docs done")
 
@@ -106,10 +113,16 @@ async def upsert(upsert_chan: Channel):
     logger.info("Reading from upsert channel")
     # consume task queue
     async with asyncio.TaskGroup() as grp:
-        async for func, args in upsert_chan:
-            logger.info(f"{func.__name__}, {args[1]}")
-            # execute the task
-            grp.create_task(func(*args))
+        while True:
+            try:
+                (func, args) = await upsert_chan.get()
+                logger.info(f"{func.__name__}, {args[1]}")
+                # execute the task
+                grp.create_task(func(*args))
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
 
     logger.info("upsert done")
     logger.info("closing load_q chan")
@@ -159,6 +172,8 @@ async def load(conn: AsyncTigerGraphConnection):
                             tgt_v_id
                         ] = attrs
                         n_edges += 1
+                    case _:
+                        logger.debug(f"Unexpected data {t} -> {elem} in load_q")
 
             data = json.dumps(batch)
             logger.info(
@@ -166,8 +181,9 @@ async def load(conn: AsyncTigerGraphConnection):
             )
 
             loading_event.clear()
-            await upsert_batch(conn, data)
-            await asyncio.sleep(5)
+            if n_verts >0 or n_edges >0:
+                await upsert_batch(conn, data)
+                await asyncio.sleep(5)
             loading_event.set()
         else:
             await asyncio.sleep(1)
@@ -188,17 +204,26 @@ async def embed(
     logger.info("Reading from embed channel")
     async with asyncio.TaskGroup() as grp:
         # consume task queue
-        async for v_id, content, index_name in embed_chan:
-            embedding_store = index_stores[f"{graphname}_{index_name}"]
-            logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
-            grp.create_task(
-                workers.embed(
-                    embedding_service,
-                    embedding_store,
-                    v_id,
-                    content,
+        while True:
+            try:
+                (v_id, content, index_name) = await embed_chan.get()
+                embedding_store = index_stores[f"{graphname}_{index_name}"]
+                logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
+                if reuse_embedding == "true" and embedding_store.has_embeddings([v_id]):
+                    logger.info(f"Embeddings for {v_id} already exists, skipping to save cost")
+                    continue
+                grp.create_task(
+                    workers.embed(
+                        embedding_service,
+                        embedding_store,
+                        v_id,
+                        content,
+                    )
                 )
-            )
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
 
     logger.info(f"embed done")
 
@@ -218,10 +243,16 @@ async def extract(
     logger.info("Reading from extract channel")
     # consume task queue
     async with asyncio.TaskGroup() as grp:
-        async for item in extract_chan:
-            grp.create_task(
-                workers.extract(upsert_chan, embed_chan, extractor, conn, *item)
-            )
+        while True:
+            try:
+                item = await extract_chan.get()
+                grp.create_task(
+                    workers.extract(upsert_chan, embed_chan, extractor, conn, *item)
+                )
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
 
     logger.info(f"extract done")
 
@@ -270,19 +301,33 @@ async def resolve_entities(
     """
     async with asyncio.TaskGroup() as grp:
         # for every entity
-        async for entity_id in entity_chan:
-            grp.create_task(
-                workers.resolve_entity(conn, upsert_chan, emb_store, entity_id)
-            )
+        while True:
+            try:
+                entity_id = await entity_chan.get()
+                grp.create_task(
+                    workers.resolve_entity(conn, upsert_chan, emb_store, entity_id)
+                )
+                logger.debug(f"Added Entity to resolve: {entity_id}")
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
     logger.info("closing upsert_chan")
     upsert_chan.close()
+    logger.info("resolve_entities done")
 
-    # Copy RELATIONSHIP edges to RESOLVED_RELATIONSHIP
+async def resolve_relationships(
+    conn: AsyncTigerGraphConnection
+):
+    """
+    Copy RELATIONSHIP edges to RESOLVED_RELATIONSHIP
+    """
+    logger.info("Running ResolveRelationships")
     async with tg_sem:
         res = await conn.runInstalledQuery(
-            "ResolveRelationships",
+            "ResolveRelationships"
         )
-
+    logger.info("resolve_relationships done")
 
 async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channel):
     """
@@ -292,16 +337,26 @@ async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channe
     logger.info("Initializing Communities (first louvain pass)")
 
     async with tg_sem:
-        res = await conn.runInstalledQuery(
-            "graphrag_louvain_init",
-            params={"n_batches": 1}
-        )
+        try:
+            res = await conn.runInstalledQuery(
+                "graphrag_louvain_init",
+                params={"n_batches": 1}
+            )
+        except Exception as e:
+            exc = traceback.format_exc()
+            logger.error(f"Error running query: graphrag_louvain_init\n{exc}")
+
     # get the modularity
     async with tg_sem:
-        res = await conn.runInstalledQuery(
-            "modularity",
-            params={"iteration": 1, "batch_num": 1}
-        )
+        try:
+            res = await conn.runInstalledQuery(
+                "modularity",
+                params={"iteration": 1, "batch_num": 1}
+            )
+        except Exception as e:
+            exc = traceback.format_exc()
+            logger.error(f"Error running query: modularity\n{exc}")
+
     mod = res[0]["mod"]
     logger.info(f"****mod pass 1: {mod}")
     await stream_communities(conn, 1, comm_process_chan)
@@ -337,6 +392,7 @@ async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channe
     # TODO: erase last run since it's ∆q to the run before it will be small
     logger.info("closing communities chan")
     comm_process_chan.close()
+    logger.info("communities done")
 
 
 async def stream_communities(
@@ -375,6 +431,7 @@ async def stream_communities(
                 logger.info("Flushing load_q")
                 await load_q.flush(("FLUSH", None))
         await asyncio.sleep(3)
+    logger.info("stream_communities done")
 
 
 async def summarize_communities(
@@ -384,12 +441,20 @@ async def summarize_communities(
     embed_chan: Channel,
 ):
     async with asyncio.TaskGroup() as tg:
-        async for c in comm_process_chan:
-            tg.create_task(workers.process_community(conn, upsert_chan, embed_chan, *c))
+        while True:
+            try:
+                c = await comm_process_chan.get()
+                tg.create_task(workers.process_community(conn, upsert_chan, embed_chan, *c))
+                logger.debug(f"Added community to process: {c}")
+            except ChannelClosed:
+                break
+            except Exception:
+                raise
 
     logger.info("closing upsert_chan")
     upsert_chan.close()
     embed_chan.close()
+    logger.info("summarize_communities done")
 
 
 async def run(graphname: str, conn: AsyncTigerGraphConnection):
@@ -433,6 +498,14 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
             grp.create_task(
                 extract(extract_chan, upsert_chan, embed_chan, extractor, conn)
             )
+    logger.info("Join docs_chan")
+    await docs_chan.join()
+    logger.info("Join extract_chan")
+    await extract_chan.join()
+    logger.info("Join embed_chan")
+    await embed_chan.join()
+    logger.info("Join upsert_chan")
+    await upsert_chan.join()
     init_end = time.perf_counter()
     logger.info("Doc Processing End")
 
@@ -466,6 +539,13 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
             )
             grp.create_task(upsert(upsert_chan))
             grp.create_task(load(conn))
+        logger.info("Join entities_chan")
+        await entities_chan.join()
+        logger.info("Join upsert_chan")
+        await upsert_chan.join()
+        #Resolve relationsihps
+        await resolve_relationships(conn)
+
     entity_end = time.perf_counter()
     logger.info("Entity Processing End")
     while not await check_all_ents_resolved(conn):
@@ -476,7 +556,6 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
     community_start = time.perf_counter()
     if community_detection_switch:
         logger.info("Community Processing Start")
-        upsert_chan = Channel()
         comm_process_chan = Channel()
         upsert_chan = Channel()
         embed_chan = Channel()
@@ -492,6 +571,12 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
             grp.create_task(upsert(upsert_chan))
             grp.create_task(load(conn))
             grp.create_task(embed(embed_chan, index_stores, graphname))
+        logger.info("Join comm_process_chan")
+        await comm_process_chan.join()
+        logger.info("Join embed_chan")
+        await embed_chan.join()
+        logger.info("Join upsert_chan")
+        await upsert_chan.join()
 
     community_end = time.perf_counter()
     logger.info("Community Processing End")
