@@ -11,6 +11,7 @@ from common.embeddings.embedding_services import (
     VertexAI_PaLM_Embedding,
 )
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.embeddings.tigergraph_embedding_store import TigerGraphEmbeddingStore
 from common.llm_services import (
     AWS_SageMaker_Endpoint,
     AWSBedrock,
@@ -129,7 +130,7 @@ def get_llm_service(llm_config) -> LLM_Model:
 LogWriter.info(
     f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
 )
-if os.getenv("INIT_EMBED_STORE", "true")=="true":
+if os.getenv("INIT_EMBED_STORE", "false")=="true":
     LogWriter.info("Setting up Milvus embedding store for InquiryAI")
     try:
         embedding_store = MilvusEmbeddingStore(
@@ -180,6 +181,11 @@ if os.getenv("INIT_EMBED_STORE", "true")=="true":
         support_ai_embedding_store = None
         service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
         raise
+else:
+    embedding_store = TigerGraphEmbeddingStore(embedding_service,
+                                               support_ai_instance=False)
+    support_ai_embedding_store = TigerGraphEmbeddingStore(embedding_service,
+                                                          support_ai_instance=True)
 
 if DOC_PROCESSING_CONFIG is None or (
     DOC_PROCESSING_CONFIG.endswith(".json")
