@@ -4,6 +4,7 @@ import logging
 import time
 import traceback
 from urllib.parse import quote_plus
+from typing import Iterable, List, Optional, Tuple
 
 import ecc_util
 import httpx
@@ -151,7 +152,7 @@ embed_sem = asyncio.Semaphore(20)
 async def embed(
     embed_svc: EmbeddingModel,
     embed_store: EmbeddingStore,
-    v_id: str,
+    v_id: str | Tuple[str, str],
     content: str,
 ):
     """
@@ -391,7 +392,7 @@ async def resolve_entity(
     conn: AsyncTigerGraphConnection,
     upsert_chan: Channel,
     embed_store: EmbeddingStore,
-    entity_id: str,
+    entity_id: str | Tuple[str, str],
 ):
     """
     get all vectors of E (one name can have multiple discriptions)
@@ -413,7 +414,7 @@ async def resolve_entity(
         try:
             logger.info(f"Resolving Entity {entity_id}")
             results = await embed_store.aget_k_closest(entity_id)
-            logger.info(f"results")
+            logger.info(f"{results}")
 
         except Exception:
             err = traceback.format_exc()

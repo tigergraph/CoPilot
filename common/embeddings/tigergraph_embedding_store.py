@@ -1,6 +1,8 @@
 import logging
 import traceback
+import json
 from time import sleep, time
+from collections import defaultdict
 from typing import Iterable, List, Optional, Tuple
 
 import Levenshtein as lev
@@ -65,7 +67,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         else:
             raise Exception(f"Current TigerGraph version {ver} does not support vector feature!")
 
-    def map_attrs(attributes: Iterable[Tuple[str, List[float]]]):
+    def map_attrs(self, attributes: Iterable[Tuple[str, List[float]]]):
         # map attrs
         attrs = {}
         for (k, v) in attributes:
@@ -89,12 +91,15 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             )
 
             start_time = time()
+            batch = {
+                "vertices": defaultdict(dict[str, any]),
+            }
 
             for i, (_, embedding) in enumerate(embeddings):
                 (v_id, v_type) = metadatas[i].get("vertex_id")
-                attr = self.map_attrs([("embedding", embeddings)])
+                attr = self.map_attrs([("embedding", embedding)])
                 batch["vertices"][v_type][v_id] = attr
-            data = json.dump(batch)
+            data = json.dumps(batch)
             added = self.conn.upsertData(data)
 
             duration = time() - start_time
@@ -128,31 +133,32 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         """
         try:
             LogWriter.info(
-                f"request_id={req_id_cv.get()} TigerGraph ENTRY add_embeddings()"
+                f"request_id={req_id_cv.get()} TigerGraph ENTRY aadd_embeddings()"
             )
 
             start_time = time()
+            batch = {
+                "vertices": defaultdict(dict[str, any]),
+            }
 
             for i, (_, embedding) in enumerate(embeddings):
                 (v_id, v_type) = metadatas[i].get("vertex_id")
-                LogWriter.info(f"v_id fetched: {v_id}")
-                attr = self.map_attrs([("embedding", embeddings)])
+                attr = self.map_attrs([("embedding", embedding)])
                 batch["vertices"][v_type][v_id] = attr
-            data = json.dump(batch)
-            LogWriter.info(f"Data generated: {data}")
+            data = json.dumps(batch)
             added = self.conn.upsertData(data)
 
             duration = time() - start_time
 
-            LogWriter.info(f"request_id={req_id_cv.get()} TigerGraph EXIT add_embeddings()")
+            LogWriter.info(f"request_id={req_id_cv.get()} TigerGraph EXIT aadd_embeddings()")
 
             # Check if registration was successful
             if added:
-                success_message = f"Document registered with id: {added[0]}"
+                success_message = f"Document {metadatas} registered with status: {added}"
                 LogWriter.info(success_message)
                 return success_message
             else:
-                error_message = f"Failed to register document {added}"
+                error_message = f"Failed to register document {metadatas} with status {added}"
                 LogWriter.error(error_message)
                 raise Exception(error_message)
 
@@ -174,10 +180,10 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                         "vertex_id": v_id,
                     }
                 )
-                logger.info(f"Return result {res} for has_embeddings({v_id}")
-                ret = ret and len(res) > 0
+                logger.info(f"Return result {res} for has_embeddings({v_ids})")
+                ret = ret and ("result" in res and len(res["result"]) > 0)
         except Exception as e:
-            logger.info(f"Exception {str(e)} when running has_embeddings({v_type}, {v_id})")
+            logger.info(f"Exception {str(e)} when running has_embeddings({v_type}, {v_id}), return False")
             ret = False
         return ret
 
@@ -224,11 +230,12 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         # Nothing needed for TG
         return query_params
 
-    def aget_k_closest(
+    async def aget_k_closest(
         self, vertex: Tuple[str, str], k=10, threshold_similarity=0.90, edit_dist_threshold_pct=0.75
     ) -> list[Document]:
         threshold_dist = 1 - threshold_similarity
 
+        logger.info(f"Fetch {k} closest entries for {vertex} with threshold {threshold_similarity}")
         # Get all vectors with this ID
         (v_id, v_type) = vertex
         verts = self.conn.runInstalledQuery(
@@ -237,16 +244,22 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 "vertex_id": v_id,
                 "vertex_id.type": v_type,
                 "k": k,
+                "threshold": threshold_similarity,
             }
         )
-        logger.debug(f"Got k closest entries: {verts}")
+        logger.info(f"Got k closest entries for {vertex}: {verts}")
         result = []
-        for v in verts:
-            # get the k closest verts
-            similar_verts = [
-            ]
-            result.extend(similar_verts)
+        for r in verts:
+            if "result" in r:
+                for v in r.result:
+                    result.append(v.v_id)
+        logger.info(f"Returning {result}")
         return set(result)
+
+    def check_embedding_rebuilt(
+        self,
+    ):
+        
 
     def query(self, expr: str, output_fields: List[str]):
         """Get output fields with expression

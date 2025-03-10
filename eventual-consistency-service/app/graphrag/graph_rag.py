@@ -283,7 +283,7 @@ async def stream_entities(
 
         for i in ids["ids"]:
             if len(i) > 0:
-                await entity_chan.put(i)
+                await entity_chan.put((i, "Entity"))
 
     logger.info("stream_enities done")
     # close the docs chan -- this function is the only sender

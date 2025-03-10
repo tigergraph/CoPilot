@@ -231,8 +231,9 @@ async def check_vertex_exists(conn, v_id: str):
             res = await conn.getVerticesById("Entity", v_id)
 
         except Exception as e:
-            err = traceback.format_exc()
-            logger.error(f"Check err:\n{err}")
+            if "is not a valid vertex id" not in str(e):
+                err = traceback.format_exc()
+                logger.error(f"Check err:\n{err}")
             return {"error": True, "message": str(e)}
 
         return {"error": False, "resp": res}
