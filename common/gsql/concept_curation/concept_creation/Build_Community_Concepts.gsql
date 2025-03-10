@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Build_Community_Concepts (SET<STRING> v_type_set, SET<STRING> e_type_set, INT min_comm_size, INT max_comm_size)  SYNTAX V1 {
+CREATE OR REPLACE DISTRIBUTED QUERY Build_Community_Concepts (SET<STRING> v_type_set, SET<STRING> e_type_set, INT min_comm_size, INT max_comm_size)  SYNTAX V1 {
 MinAccum<INT> @min_cc_id = 0;       //each vertex's tentative component id
 MapAccum<INT, INT> @@comp_sizes_map;
 MapAccum<INT, ListAccum<INT>> @@comp_group_by_size_map;

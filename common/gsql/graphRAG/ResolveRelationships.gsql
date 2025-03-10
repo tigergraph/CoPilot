@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY ResolveRelationships(BOOL printResults=FALSE) SYNTAX V2 {
+CREATE OR REPLACE DISTRIBUTED QUERY ResolveRelationships(BOOL printResults=FALSE) SYNTAX V2 {
     /*
      * RE1 <- entity -RELATES-> entity -> RE2
      * to

@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY GraphRAG_Community_Retriever(INT community_level=2) { 
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Retriever(INT community_level=2) { 
   comms = {Community.*};
   
   selected_comms = SELECT c FROM comms:c WHERE c.iteration == community_level and length(c.description) > 0;

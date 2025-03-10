@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY entities_have_resolution() SYNTAX V2{
+CREATE OR REPLACE DISTRIBUTED QUERY entities_have_resolution() SYNTAX V2{
     SumAccum<INT> @@resolved;
     Ents = {Entity.*};
     Ents = SELECT s FROM Ents:s -(RESOLVES_TO>)- ResolvedEntity

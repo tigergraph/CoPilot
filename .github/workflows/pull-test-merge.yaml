@@ -48,7 +48,7 @@ jobs:
           echo "$GCP_CREDS_CONFIG" > configs/GCP_CREDS.json
           echo "$LLM_TEST_EVALUATOR" > configs/test_evaluation_model_config.json
           echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
-          echo "$MILVUS_CONFIG" > configs/milvus_config.json
+          echo "$EMBED_CONFIG" > configs/embed_config.json
         env:
           DB_CONFIG: ${{ secrets.DB_CONFIG }}
           LLM_CONFIG:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
@@ -59,7 +59,7 @@ jobs:
           LLM_CONFIG_BEDROCK_CLAUDE3: ${{ secrets.LLM_CONFIG_BEDROCK_CLAUDE3 }}
           GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
           LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
-          MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
+          EMBED_CONFIG: ${{ secrets.EMBED_CONFIG }}
 
       - name: Run pytest
         run: |
@@ -77,6 +77,6 @@ jobs:
           LLM_CONFIG_BEDROCK_CLAUDE3: ${{ secrets.LLM_CONFIG_BEDROCK_CLAUDE3 }}
           GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
           LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
-          MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
+          EMBED_CONFIG: ${{ secrets.EMBED_CONFIG }}
           PYTHONPATH: /opt/actions-runner/_work/CoPilot/CoPilot:/opt/actions-runner/_work/CoPilot/CoPilot/tests:/opt/actions-runner/_work/CoPilot/CoPilot/tests/app:/opt/actions-runner/_work/_tool/Python/3.11.8/x64/lib/python3.11/site-packages
       

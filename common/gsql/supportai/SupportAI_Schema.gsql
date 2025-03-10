@@ -23,10 +23,10 @@ CREATE SCHEMA_CHANGE JOB add_supportai_schema {
     ADD DIRECTED EDGE RELATIONSHIP_TYPE(FROM EntityType, TO EntityType, DISCRIMINATOR(relation_type STRING), frequency INT) WITH REVERSE_EDGE="reverse_RELATIONSHIP_TYPE";
 
     // GraphRAG
-    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, description STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
-    ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, entity_type STRING) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX Community (PRIMARY_ID id STRING, iteration UINT, description STRING) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
+    ADD VERTEX ResolvedEntity(PRIMARY_ID id STRING, entity_type STRING) WITH STATS="OUTDEGREE_BY_EDGETYPE", PRIMARY_ID_AS_ATTRIBUTE="true";
 
-    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP"; 
+    ADD DIRECTED EDGE RELATIONSHIP(FROM Entity, TO Entity, relation_type STRING) WITH REVERSE_EDGE="reverse_RELATIONSHIP";
     ADD DIRECTED EDGE RESOLVES_TO(FROM Entity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVES_TO"; // Connect ResolvedEntities with their children entities
     ADD DIRECTED EDGE RESOLVED_RELATIONSHIP(FROM ResolvedEntity, TO ResolvedEntity, relation_type STRING) WITH REVERSE_EDGE="reverse_RESOLVED_RELATIONSHIP"; // store edges between entities after they're resolved
 

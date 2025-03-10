@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=5) { 
+CREATE OR REPLACE DISTRIBUTED QUERY Build_Relationship_Concepts(INT occurence_min=5) { 
   MapAccum<STRING, SumAccum<INT>> @@relationship_count;
   SetAccum<STRING> @@impt_relationships;
   SetAccum<STRING> @@created_concepts;

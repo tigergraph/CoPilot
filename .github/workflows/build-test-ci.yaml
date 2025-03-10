@@ -46,7 +46,7 @@ jobs:
         echo "$LLM_CONFIG_BEDROCK_CLAUDE3" > configs/bedrock_config.json
         echo "$LLM_CONFIG_HUGGINGFACE_LLAMA70B" > configs/huggingface_llama70b_config.json
         echo "$LLM_CONFIG_WATSONX_MISTRAL_LARGE" > configs/ibm_watsonx_config.json
-        echo "$MILVUS_CONFIG" > configs/milvus_config.json
+        echo "$EMBED_CONFIG" > configs/embed_config.json
       env:
         DB_CONFIG: ${{ secrets.DB_CONFIG }}
         LLM_CONFIG_OPENAI_GPT4:  ${{ secrets.LLM_CONFIG_OPENAI_GPT4 }}
@@ -61,7 +61,7 @@ jobs:
         LLM_CONFIG_WATSONX_MISTRAL_LARGE: ${{ secrets.LLM_CONFIG_WATSONX_MISTRAL_LARGE }}
         GCP_CREDS_CONFIG: ${{ secrets.GCP_CREDS_CONFIG }}
         LLM_TEST_EVALUATOR: ${{ secrets.LLM_TEST_EVALUATOR }}
-        MILVUS_CONFIG: ${{ secrets.MILVUS_CONFIG }}
+        EMBED_CONFIG: ${{ secrets.EMBED_CONFIG }}
 
 
     - name: Run Docker Container for PR

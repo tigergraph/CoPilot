@@ -13,7 +13,7 @@ services:
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
-      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      EMBED_CONFIG: "/code/configs/embed_config.json"
       LOGLEVEL: "INFO"
       USE_CYPHER: "true"
     volumes:
@@ -30,7 +30,7 @@ services:
     environment:
       LLM_CONFIG: "/code/configs/llm_config.json"
       DB_CONFIG: "/code/configs/db_config.json"
-      MILVUS_CONFIG: "/code/configs/milvus_config.json"
+      EMBED_CONFIG: "/code/configs/embed_config.json"
       LOGLEVEL: "INFO"
       INIT_EMBED_STORE: "false"
     volumes:

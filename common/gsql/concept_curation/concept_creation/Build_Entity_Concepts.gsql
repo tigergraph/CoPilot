@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Build_Entity_Concepts(/* Parameters here */) { 
+CREATE OR REPLACE DISTRIBUTED QUERY Build_Entity_Concepts(/* Parameters here */) { 
   ListAccum<STRING> @rel_concepts;
   cpts = {Concept.*};
   

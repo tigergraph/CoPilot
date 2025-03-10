@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY modularity(UINT iteration=1) SYNTAX V2 {
+CREATE OR REPLACE DISTRIBUTED QUERY modularity(UINT iteration=1) SYNTAX V2 {
     SumAccum<DOUBLE> @@sum_weight; // the sum of the weights of all the links in the network
     MinAccum<STRING> @community_id; // the community ID of the node
     MapAccum<STRING, SumAccum<DOUBLE>> @@community_total_weight_map; // community ID C -> the sum of the weights of the links incident to nodes in C

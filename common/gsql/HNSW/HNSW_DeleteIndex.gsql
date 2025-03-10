@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY HNSW_DeleteIndex(STRING index_name) { 
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_DeleteIndex(STRING index_name) { 
   SetAccum<STRING> @@t_type;
   entry = {HNSWEntrypoint.*};
   

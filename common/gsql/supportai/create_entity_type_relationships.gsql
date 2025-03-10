@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY create_entity_type_relationships(/* Parameters here */) SYNTAX v2{ 
+CREATE OR REPLACE DISTRIBUTED QUERY create_entity_type_relationships(/* Parameters here */) SYNTAX v2{ 
   MapAccum<STRING, MapAccum<STRING, SumAccum<INT>>> @rel_type_count; // entity type, relationship type for entity type, frequency
   SumAccum<INT> @@rels_inserted;
   ents = {Entity.*}; 

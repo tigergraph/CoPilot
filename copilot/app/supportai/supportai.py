@@ -16,10 +16,7 @@ from common.py_schemas.schemas import (
 def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, dict]:
     # need to open the file using the absolute path
     ver = conn.getVer().split(".")
-    if int(ver[0]) >= 4 and int(ver[1]) >= 2:
-        file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
-    else:
-        file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
+    file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
     with open(file_path, "r") as f:
         schema = f.read()
     schema_res = conn.gsql(
@@ -27,6 +24,15 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
             graphname, schema
         )
     )
+    if int(ver[0]) >= 4 and int(ver[1]) >= 2:
+        file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
+        with open(file_path, "r") as f:
+            schema = f.read()
+        schema_res = conn.gsql(
+            """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_vector""".format(
+                graphname, schema
+            )
+        )
 
     file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
     with open(file_path) as f:

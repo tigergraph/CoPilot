@@ -12,13 +12,13 @@ from graphrag import community_summarizer, util
 from langchain_community.graphs.graph_document import GraphDocument, Node
 from pyTigerGraph import AsyncTigerGraphConnection
 
-from common.config import milvus_config
+from common.config import embed_config
 from common.embeddings.embedding_services import EmbeddingModel
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors import BaseExtractor, LLMEntityRelationshipExtractor
 from common.logs.logwriter import LogWriter
 
-vertex_field = milvus_config.get("vertex_field", "vertex_id")
+vertex_field = embed_config.get("vertex_field", "vertex_id")
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ embed_sem = asyncio.Semaphore(20)
 
 async def embed(
     embed_svc: EmbeddingModel,
-    embed_store: MilvusEmbeddingStore,
+    embed_store: EmbeddingStore,
     v_id: str,
     content: str,
 ):
@@ -390,7 +390,7 @@ resolve_sem = asyncio.Semaphore(20)
 async def resolve_entity(
     conn: AsyncTigerGraphConnection,
     upsert_chan: Channel,
-    emb_store: MilvusEmbeddingStore,
+    embed_store: EmbeddingStore,
     entity_id: str,
 ):
     """
@@ -412,7 +412,7 @@ async def resolve_entity(
     async with resolve_sem:
         try:
             logger.info(f"Resolving Entity {entity_id}")
-            results = await emb_store.aget_k_closest(entity_id)
+            results = await embed_store.aget_k_closest(entity_id)
             logger.info(f"results")
 
         except Exception:

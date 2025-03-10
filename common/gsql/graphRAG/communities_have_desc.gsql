@@ -1,9 +1,9 @@
-CREATE DISTRIBUTED QUERY communities_have_desc(UINT iter, BOOL p=False) SYNTAX V2{
+CREATE OR REPLACE DISTRIBUTED QUERY communities_have_desc(UINT iter, BOOL p=False) SYNTAX V2{
     SumAccum<INT> @@descrs;
     Comms = {Community.*};
     Comms = SELECT c FROM Comms:c
             WHERE c.iteration == iter
-            ACCUM
+            POST-ACCUM
                 IF length(c.description) > 0 THEN
                     @@descrs += 1
                 END;

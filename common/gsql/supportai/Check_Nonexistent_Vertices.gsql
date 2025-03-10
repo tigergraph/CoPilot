@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Check_Nonexistent_Vertices(STRING v_type, SET<STRING> vertex_ids) {
+CREATE OR REPLACE DISTRIBUTED QUERY Check_Nonexistent_Vertices(STRING v_type, SET<STRING> vertex_ids) {
   SetAccum<STRING> @@missing_vertices;
   seeds = {v_type};
 

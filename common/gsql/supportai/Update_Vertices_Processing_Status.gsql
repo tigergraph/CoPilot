@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed_vertices) { 
+CREATE OR REPLACE DISTRIBUTED QUERY Update_Vertices_Processing_Status(SET<VERTEX> processed_vertices) { 
   start = {processed_vertices};
   
   res = SELECT s FROM start:s

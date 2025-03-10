@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY SetEpochProcessing(Vertex<Entity> v_id) {
+CREATE OR REPLACE DISTRIBUTED QUERY SetEpochProcessing(Vertex<Entity> v_id) {
     Verts = {v_id};
 
     // mark the vertex as processed
