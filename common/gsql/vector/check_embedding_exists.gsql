@@ -1,14 +1,14 @@
 CREATE OR REPLACE DISTRIBUTED QUERY check_embedding_exists(String vertex_type, String vertex_id, Bool p = false) SYNTAX V2 {
-  vset = {vertex_type.*};
-
-  result = SELECT v FROM vset:v where v.id == vertex_id;
-  IF result.size() > 0 THEN
-    result = SELECT v FROM vset:v where v.id == vertex_id and v.embedding.size() > 0;
-  END;
-
-  IF p THEN
-      PRINT result;
-  ELSE
-      PRINT result[result.id];
-  END;
+    vset = {vertex_type.*};
+  
+    results = SELECT v FROM vset:v where v.id == vertex_id;
+    IF results.size() > 0 THEN
+        results = SELECT v FROM vset:v where v.id == vertex_id and v.embedding.size() > 0;
+    END;
+  
+    IF p THEN
+        PRINT results;
+    ELSE
+        PRINT results[results.id as id] as results;
+    END;
 }

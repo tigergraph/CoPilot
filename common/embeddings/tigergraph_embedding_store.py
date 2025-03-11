@@ -42,6 +42,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         ver = tg_version.split(".")
         if int(ver[0]) >= 4 and int(ver[1]) >= 2:
             vector_queries = [
+                "vertices_have_embedding",
                 "check_embedding_exists",
                 "get_topk_similar",
                 "get_topk_closest",
@@ -181,11 +182,34 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                     }
                 )
                 logger.info(f"Return result {res} for has_embeddings({v_ids})")
-                ret = ret and ("result" in res and len(res["result"]) > 0)
+                found = False
+                if "results" in res[0]:
+                    for v in r["results"]:
+                        if v["v_id"] == v_id:
+                            found = True
+                            break
+                ret = ret and found 
         except Exception as e:
             logger.info(f"Exception {str(e)} when running has_embeddings({v_type}, {v_id}), return False")
             ret = False
         return ret
+
+    def check_embedding_rebuilt(
+        self,
+        v_type: str
+    ):
+        try:
+            res = self.conn.runInstalledQuery(
+                "vertices_have_embedding",
+                params={
+                    "vertex_type": v_type,
+                }
+            )
+            logger.info(f"Return result {res} for all_has_embeddings({v_type})")
+            return res[0]["all_have_embedding"]
+        except Exception as e:
+            logger.info(f"Exception {str(e)} when running has_embeddings({v_type}, {v_id}), return False")
+        return False
 
     def remove_embeddings(
         self, ids: Optional[List[str]] = None, expr: Optional[str] = None
@@ -241,8 +265,8 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         verts = self.conn.runInstalledQuery(
             "get_topk_closest",
             params={
+                "vertex_type": v_type,
                 "vertex_id": v_id,
-                "vertex_id.type": v_type,
                 "k": k,
                 "threshold": threshold_similarity,
             }
@@ -250,16 +274,12 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         logger.info(f"Got k closest entries for {vertex}: {verts}")
         result = []
         for r in verts:
-            if "result" in r:
-                for v in r.result:
-                    result.append(v.v_id)
+            if "results" in r:
+                for v in r["results"]:
+                    result.append(v["v_id"])
         logger.info(f"Returning {result}")
         return set(result)
 
-    def check_embedding_rebuilt(
-        self,
-    ):
-        
 
     def query(self, expr: str, output_fields: List[str]):
         """Get output fields with expression

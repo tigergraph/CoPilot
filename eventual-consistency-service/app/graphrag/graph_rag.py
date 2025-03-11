@@ -11,6 +11,7 @@ from graphrag import workers
 from graphrag.util import (
     check_all_ents_resolved,
     check_vertex_has_desc,
+    check_embedding_rebuilt,
     http_timeout,
     init,
     load_q,
@@ -24,7 +25,7 @@ from graphrag.util import (
 from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import embedding_service
-from common.config import embed_config
+from common.config import embed_config, embed_store_type
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 
@@ -528,6 +529,10 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
 
     if entity_resolution_switch:
         logger.info("Entity Processing Start")
+        if embed_store_type == "tigergraph":
+            while not await check_embedding_rebuilt(conn, "Entity"):
+                logger.info(f"Waiting for embedding to finish rebuilding")
+                await asyncio.sleep(1)
         entities_chan = Channel()
         upsert_chan = Channel()
         load_q.reopen()

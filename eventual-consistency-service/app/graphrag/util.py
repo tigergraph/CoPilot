@@ -341,3 +341,20 @@ async def check_vertex_has_desc(conn, i: int):
     logger.info(res)
 
     return res
+
+async def check_embedding_rebuilt(conn, v_type: str):
+    try:
+        async with tg_sem:
+            resp = await conn.runInstalledQuery(
+                "vertices_have_embedding",
+                params={
+                    "vertex_type": v_type,
+                }
+            )
+    except Exception as e:
+        logger.error(f"Check embedding rebuilt err:\n{e}")
+
+    res = resp[0]["all_have_embedding"]
+    logger.info(resp)
+
+    return res

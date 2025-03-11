@@ -332,6 +332,11 @@ async def extract(
                 if len(v_id) == 0:
                     continue
                 desc = await get_vert_desc(conn, v_id, edge.source)
+                if len(desc[0]) == 0:
+                    await embed_chan.put((v_id, v_id, "Entity"))
+                else:
+                    # (v_id, content, index_name)
+                    await embed_chan.put((v_id, desc[0], "Entity"))
                 await upsert_chan.put(
                     (
                         util.upsert_vertex,  # func to call
@@ -350,6 +355,11 @@ async def extract(
                 if len(v_id) == 0:
                     continue
                 desc = await get_vert_desc(conn, v_id, edge.target)
+                if len(desc[0]) == 0:
+                    await embed_chan.put((v_id, v_id, "Entity"))
+                else:
+                    # (v_id, content, index_name)
+                    await embed_chan.put((v_id, desc[0], "Entity"))
                 await upsert_chan.put(
                     (
                         util.upsert_vertex,  # func to call
