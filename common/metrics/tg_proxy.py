@@ -69,6 +69,7 @@ class TigerGraphConnectionProxy:
                         try:
                             LogWriter.info(f"Trying to get query result for: {restppid}")
                             result = self._tg_connection.getQueryResult(restppid)
+                            break
                         except Exception as e:
                             result = None
                             if i >= 9:
