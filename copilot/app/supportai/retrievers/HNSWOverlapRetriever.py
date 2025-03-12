@@ -14,11 +14,12 @@ class HNSWOverlapRetriever(BaseRetriever):
         connection: TigerGraphConnectionProxy,
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
-        self._check_query_install("HNSW_Search_Sub")
-        self._check_query_install("HNSW_Overlap_Search")
 
     def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1):
         if embed_store_type == "miluvs":
+            self._check_query_install("HNSW_Search_Sub")
+            self._check_query_install("HNSW_Overlap_Search")
+
             query_embedding = self._generate_embedding(question)
 
             res = self.conn.runInstalledQuery(
@@ -36,11 +37,12 @@ class HNSWOverlapRetriever(BaseRetriever):
                 usePost=True
             )
         else:
-            query_embedding = self._generate_embedding(question, "list")
-            logger.info(f"Use embedding {query_embedding} with dimension {len(query_embedding)}")
+            self._check_query_install("HNSW_Overlap_Vector_Search")
+
+            query_embedding = self._generate_embedding(question, False)
 
             res = self.conn.runInstalledQuery(
-                "HNSW_Overlap_Search",
+                "HNSW_Overlap_Vector_Search",
                 params = {
                     "v_types": indices,
                     "query_vector": query_embedding,

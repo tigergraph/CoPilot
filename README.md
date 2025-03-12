@@ -67,7 +67,7 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
   Next, in the same directory as the Docker Compose file is in, create and fill in the following configuration files:
   * [configs/db_config.json](#llm-provider-configuration)
   * [configs/llm_config.json](#llm-provider-configuration)
-  * [configs/embed_config.json](#embed-store-configuration)
+  * [configs/milvus_config.json](#embed-store-configuration)
   * [configs/chat_config.json](#chat-configuration)
 
 
@@ -341,7 +341,7 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
 ```
 
 ##### Embedding store configuration
-Copy the below into `configs/embed_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. 
+Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup.  `enabled` should always be set to "true" for now as Milvus is only the embedding store supported. 
 ```json
 {
     "host": "milvus-standalone",

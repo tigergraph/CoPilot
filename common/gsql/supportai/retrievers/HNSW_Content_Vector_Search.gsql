@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Search_Content(STRING v_type,
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
   INT top_k=5, LIST<FLOAT> query_vector) { 
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;

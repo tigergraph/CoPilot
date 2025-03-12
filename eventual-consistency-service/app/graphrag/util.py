@@ -14,7 +14,7 @@ from common.config import (
     embedding_service,
     get_llm_service,
     llm_config,
-    embed_config,
+    milvus_config,
     embed_store_type,
 )
 from common.embeddings.base_embedding_store import EmbeddingStore
@@ -40,7 +40,7 @@ async def install_queries(
     conn: AsyncTigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"{conn.graphname}/" in q]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"/{conn.graphname}/" in q]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -93,8 +93,8 @@ async def init(
         raise ValueError("Invalid extractor type")
 
     if embed_store_type == "milvus":
-        vertex_field = embed_config.get("vertex_field", "vertex_id")
-        index_names = embed_config.get(
+        vertex_field = milvus_config.get("vertex_field", "vertex_id")
+        index_names = milvus_config.get(
             "indexes",
             [
                 "Document",
@@ -110,14 +110,14 @@ async def init(
                 name = conn.graphname + "_" + index_name
                 s = MilvusEmbeddingStore(
                     embedding_service,
-                    host=embed_config["host"],
-                    port=embed_config["port"],
+                    host=milvus_config["host"],
+                    port=milvus_config["port"],
                     support_ai_instance=True,
                     collection_name=name,
-                    username=embed_config.get("username", ""),
-                    password=embed_config.get("password", ""),
-                    vector_field=embed_config.get("vector_field", "document_vector"),
-                    text_field=embed_config.get("text_field", "document_content"),
+                    username=milvus_config.get("username", ""),
+                    password=milvus_config.get("password", ""),
+                    vector_field=milvus_config.get("vector_field", "document_vector"),
+                    text_field=milvus_config.get("text_field", "document_content"),
                     vertex_field=vertex_field,
                     drop_old=False,
                 )

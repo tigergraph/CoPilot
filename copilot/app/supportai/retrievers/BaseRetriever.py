@@ -36,7 +36,7 @@ class BaseRetriever:
         endpoints = self.conn.getEndpoints(
             dynamic=True
         )  # installed queries in database
-        installed_queries = [q.split("/")[-1] for q in endpoints]
+        installed_queries = [q.split("/")[-1] for q in endpoints if f"/{self.conn.graphname}/" in q]
 
         if query_name not in installed_queries:
             return self._install_query(query_name)
@@ -56,9 +56,9 @@ class BaseRetriever:
 
         return {"response": generated, "retrieved": retrieved}
 
-    def _generate_embedding(self, text, mode = "str") -> str:
+    def _generate_embedding(self, text, str_mode: bool = True) -> str:
         embedding = self.emb_service.embed_query(text)
-        if mode == "str":
+        if str_mode:
             return (
                 str(embedding)
                 .strip("[")
@@ -68,7 +68,7 @@ class BaseRetriever:
         else:
             return embedding
 
-    def _hyde_embedding(self, text) -> str:
+    def _hyde_embedding(self, text, str_mode: bool = True) -> str:
         model = self.llm_service.llm
         prompt = self.llm_service.hyde_prompt
 
@@ -79,7 +79,7 @@ class BaseRetriever:
 
         generated = chain.invoke({"question": text})
 
-        return self._generate_embedding(generated)
+        return self._generate_embedding(generated, str_mode)
 
     """    
     def _get_entities_relationships(self, text: str, extractor: BaseExtractor):

@@ -71,7 +71,7 @@ class EventualConsistencyChecker:
         endpoints = self.conn.getEndpoints(
             dynamic=True
         )  # installed queries in database
-        installed_queries = [q.split("/")[-1] for q in endpoints]
+        installed_queries = [q.split("/")[-1] for q in endpoints if f"/{conn.graphname}/" in q]
 
         if query_name not in installed_queries:
             return self._install_query(query_name)

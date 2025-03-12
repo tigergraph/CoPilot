@@ -36,7 +36,7 @@ service_status = {}
 # Configs
 LLM_SERVICE = os.getenv("LLM_CONFIG", "configs/llm_config.json")
 DB_CONFIG = os.getenv("DB_CONFIG", "configs/db_config.json")
-EMBED_CONFIG = os.getenv("EMBED_CONFIG", "configs/embed_config.json")
+MILVUS_CONFIG = os.getenv("MILVUS_CONFIG", "configs/milvus_config.json")
 DOC_PROCESSING_CONFIG = os.getenv(
     "DOC_PROCESSING_CONFIG", "configs/doc_processing_config.json"
 )
@@ -77,20 +77,22 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
 
+embed_store_type = db_config.get("embedding_store", "tigergraph")
+reuse_embedding = db_config.get("reuse_embedding", True)
 
-if EMBED_CONFIG is None or (
-    EMBED_CONFIG.endswith(".json") and not os.path.exists(EMBED_CONFIG)
+if MILVUS_CONFIG is None or (
+    MILVUS_CONFIG.endswith(".json") and not os.path.exists(MILVUS_CONFIG)
 ):
-    embed_config = {"embedding_store": "milvus", "host": "localhost", "port": "19530", "enabled": "false", "reuse_embedding": "false"}
-elif EMBED_CONFIG.endswith(".json"):
-    with open(EMBED_CONFIG, "r") as f:
-        embed_config = json.load(f)
+    milvus_config = {"host": "localhost", "port": "19530", "enabled": "false"}
+elif MILVUS_CONFIG.endswith(".json"):
+    with open(MILVUS_CONFIG, "r") as f:
+        milvus_config = json.load(f)
 else:
     try:
-        embed_config = json.loads(str(EMBED_CONFIG))
+        milvus_config = json.loads(str(MILVUS_CONFIG))
     except json.JSONDecodeError as e:
         raise Exception(
-            "EMBED_CONFIG must be a .json file or a JSON string, failed with error: "
+            "MILVUS_CONFIG must be a .json file or a JSON string, failed with error: "
             + str(e)
         )
 
@@ -127,23 +129,22 @@ def get_llm_service(llm_config) -> LLM_Model:
     else:
         raise Exception("LLM Completion Service Not Supported")
 
-embed_store_type = embed_config.get("embedding_store", "tigergraph")
 #if embed_store_type == "milvus":
 if os.getenv("INIT_EMBED_STORE", "true") == "true":
     LogWriter.info(
-        f"Milvus enabled for host {embed_config['host']} at port {embed_config['port']}"
+        f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
     )
 
     try:
         embedding_store = MilvusEmbeddingStore(
             embedding_service,
-            host=embed_config["host"],
-            port=embed_config["port"],
+            host=milvus_config["host"],
+            port=milvus_config["port"],
             collection_name="tg_inquiry_documents",
             support_ai_instance=False,
-            username=embed_config.get("username", ""),
-            password=embed_config.get("password", ""),
-            alias=embed_config.get("alias", "default"),
+            username=milvus_config.get("username", ""),
+            password=milvus_config.get("password", ""),
+            alias=milvus_config.get("alias", "default"),
         )
         service_status["embedding_store"] = {"status": "ok", "error": None}
     except MilvusException as e:
@@ -155,24 +156,24 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
         service_status["embedding_store"] = {"status": "embedding error", "error": str(e)}
         raise
 
-    support_collection_name = embed_config.get("collection_name", "tg_support_documents")
+    support_collection_name = milvus_config.get("collection_name", "tg_support_documents")
     LogWriter.info(
         f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
     )
-    vertex_field = embed_config.get("vertex_field", "vertex_id")
+    vertex_field = milvus_config.get("vertex_field", "vertex_id")
     try:
         support_ai_embedding_store = MilvusEmbeddingStore(
             embedding_service,
-            host=embed_config["host"],
-            port=embed_config["port"],
+            host=milvus_config["host"],
+            port=milvus_config["port"],
             support_ai_instance=True,
             collection_name=support_collection_name,
-            username=embed_config.get("username", ""),
-            password=embed_config.get("password", ""),
-            vector_field=embed_config.get("vector_field", "document_vector"),
-            text_field=embed_config.get("text_field", "document_content"),
+            username=milvus_config.get("username", ""),
+            password=milvus_config.get("password", ""),
+            vector_field=milvus_config.get("vector_field", "document_vector"),
+            text_field=milvus_config.get("text_field", "document_content"),
             vertex_field=vertex_field,
-            alias=embed_config.get("alias", "default"),
+            alias=milvus_config.get("alias", "default"),
         )
         service_status["support_ai_embedding_store"] = {"status": "ok", "error": None}
     except MilvusException as e:

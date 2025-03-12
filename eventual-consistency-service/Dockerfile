@@ -11,7 +11,7 @@ COPY common /code/common
 
 ENV LLM_CONFIG="/llm_config.json"
 ENV DB_CONFIG="/db_config.json"
-ENV EMBED_CONFIG="/embed_config.json"
+ENV MILVUS_CONFIG="/milvus_config.json"
 ENV LOGLEVEL="INFO"
 
 EXPOSE 8001

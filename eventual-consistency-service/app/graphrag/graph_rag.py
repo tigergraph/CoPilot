@@ -25,14 +25,13 @@ from graphrag.util import (
 from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import embedding_service
-from common.config import embed_config, embed_store_type
+from common.config import milvus_config, embed_store_type, reuse_embedding
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 
 logger = logging.getLogger(__name__)
 
 consistency_checkers = {}
-reuse_embedding = embed_config.get("reuse_embedding", "false")
 
 async def stream_docs(
     conn: AsyncTigerGraphConnection,
@@ -214,7 +213,7 @@ async def embed(
                 else:
                     embedding_store = index_stores[f"{graphname}_{index_name}"]
                 logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
-                if reuse_embedding == "true" and embedding_store.has_embeddings([v_id]):
+                if reuse_embedding and embedding_store.has_embeddings([v_id]):
                     logger.info(f"Embeddings for {v_id} already exists, skipping to save cost")
                     continue
                 grp.create_task(

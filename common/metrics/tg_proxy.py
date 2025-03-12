@@ -60,35 +60,28 @@ class TigerGraphConnectionProxy:
                 if not ret:
                     time.sleep(0.1)
                     continue
-                if (
-                    ret[0]["status"].lower()
-                    == "success"
-                ):
+                if ret[0]["status"].lower() == "success":
                     LogWriter.info(
                         f"request_id={req_id_cv.get()} query {query_name} completed successfully with RESTPP ID {restppid}"
                     )
                     result = None
-                    while not result:
+                    for i in range(10):
                         try:
                             LogWriter.info(f"Trying to get query result for: {restppid}")
                             result = self._tg_connection.getQueryResult(restppid)
                         except Exception as e:
                             result = None
+                            if i >= 9:
+                                raise e
                             time.sleep(0.1)
-                elif (
-                    ret[0]["status"].lower()
-                    == "aborted"
-                ):
+                elif ret[0]["status"].lower() == "aborted":
                     LogWriter.error(
                         f"request_id={req_id_cv.get()} query {query_name} with RESTPP ID {restppid} aborted"
                     )
                     raise Exception(
                         f"Query {query_name} with restppid {restppid} aborted"
                     )
-                elif (
-                    ret[0]["status"].lower()
-                    == "timeout"
-                ):
+                elif ret[0]["status"].lower() == "timeout":
                     LogWriter.error(
                         f"request_id={req_id_cv.get()} query {query_name} with restppid {restppid} timed out"
                     )

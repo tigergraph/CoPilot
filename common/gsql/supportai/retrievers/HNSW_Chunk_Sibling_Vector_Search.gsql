@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type,
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_type,
   LIST<FLOAT> query_vector, UINT top_k=5, UINT lookback=3, INT lookahead=3) { 
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;

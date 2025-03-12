@@ -9,7 +9,7 @@ import ecc_util
 from aiochannel import Channel
 from supportai import util
 from pyTigerGraph import TigerGraphConnection
-from common.config import embed_config
+from common.config import milvus_config
 from langchain_community.graphs.graph_document import GraphDocument, Node
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore
@@ -17,7 +17,7 @@ from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
 
 
-vertex_field = embed_config.get("vertex_field", "vertex_id")
+vertex_field = milvus_config.get("vertex_field", "vertex_id")
 
 logger = logging.getLogger(__name__)
 

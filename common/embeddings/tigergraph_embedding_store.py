@@ -54,7 +54,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             )
             logger.info(f"Done installing GDS library with status {q_res}")
 
-            installed_queries = [q.split("/")[-1] for q in self.conn.getEndpoints(dynamic=True) if f"{self.conn.graphname}/" in q]
+            installed_queries = [q.split("/")[-1] for q in self.conn.getEndpoints(dynamic=True) if f"/{self.conn.graphname}/" in q]
             for q_name in vector_queries:
                 if q_name not in installed_queries:
                     with open(f"common/gsql/vector/{q_name}.gsql", "r") as f:

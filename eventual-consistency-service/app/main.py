@@ -22,7 +22,7 @@ from common.config import (
     embedding_service,
     get_llm_service,
     llm_config,
-    embed_config,
+    milvus_config,
     embed_store_type,
     security,
 )
@@ -88,35 +88,35 @@ def initialize_eventual_consistency_checker(
                 support_ai_instance=False,
             )
         else:
-            process_interval_seconds = embed_config.get(
+            process_interval_seconds = milvus_config.get(
                 "process_interval_seconds", 1800
             )  # default 30 minutes
-            cleanup_interval_seconds = embed_config.get(
+            cleanup_interval_seconds = milvus_config.get(
                 "cleanup_interval_seconds", 86400
             )  # default 30 days,
-            batch_size = embed_config.get("batch_size", 10)
+            batch_size = milvus_config.get("batch_size", 10)
             index_stores = {}
             vertex_field = None
 
-            if embed_config.get("enabled") == "true":
-                vertex_field = embed_config.get("vertex_field", "vertex_id")
-                index_names = embed_config.get(
+            if milvus_config.get("enabled") == "true":
+                vertex_field = milvus_config.get("vertex_field", "vertex_id")
+                index_names = milvus_config.get(
                     "indexes",
                     ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"],
                 )
                 for index_name in index_names:
                     index_stores[graphname + "_" + index_name] = MilvusEmbeddingStore(
                         embedding_service,
-                        host=embed_config["host"],
-                        port=embed_config["port"],
+                        host=milvus_config["host"],
+                        port=milvus_config["port"],
                         support_ai_instance=True,
                         collection_name=graphname + "_" + index_name,
-                        username=embed_config.get("username", ""),
-                        password=embed_config.get("password", ""),
-                        vector_field=embed_config.get("vector_field", "document_vector"),
-                        text_field=embed_config.get("text_field", "document_content"),
+                        username=milvus_config.get("username", ""),
+                        password=milvus_config.get("password", ""),
+                        vector_field=milvus_config.get("vector_field", "document_vector"),
+                        text_field=milvus_config.get("text_field", "document_content"),
                         vertex_field=vertex_field,
-                        alias=embed_config.get("alias", "default"),
+                        alias=milvus_config.get("alias", "default"),
                     )
 
         chunker = ecc_util.get_chunker()
@@ -149,7 +149,7 @@ def initialize_eventual_consistency_checker(
         consistency_checkers[graphname] = checker
 
         # start the longer cleanup process that will run in further spaced-out intervals
-        if embed_config.get("cleanup_enabled", True):
+        if milvus_config.get("cleanup_enabled", True):
             cleanup_thread = Thread(target=checker.initialize_cleanup, daemon=True)
             cleanup_thread.start()
 
