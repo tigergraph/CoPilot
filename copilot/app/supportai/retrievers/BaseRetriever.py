@@ -56,13 +56,17 @@ class BaseRetriever:
 
         return {"response": generated, "retrieved": retrieved}
 
-    def _generate_embedding(self, text) -> str:
-        return (
-            str(self.emb_service.embed_query(text))
-            .strip("[")
-            .strip("]")
-            .replace(" ", "")
-        )
+    def _generate_embedding(self, text, mode = "str") -> str:
+        embedding = self.emb_service.embed_query(text)
+        if mode == "str":
+            return (
+                str(embedding)
+                .strip("[")
+                .strip("]")
+                .replace(" ", "")
+            )
+        else:
+            return embedding
 
     def _hyde_embedding(self, text) -> str:
         model = self.llm_service.llm

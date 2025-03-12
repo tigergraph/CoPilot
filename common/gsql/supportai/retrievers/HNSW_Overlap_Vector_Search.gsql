@@ -1,0 +1,65 @@
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, 
+  LIST<FLOAT> query_vector, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
+  TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
+  HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
+  SetAccum<VERTEX> @@start_set;
+  SetAccum<VERTEX> @@tmp_start_set;
+  SetAccum<EDGE> @@edges;
+  SumAccum<INT> @num_times_seen;
+  MapAccum<STRING, STRING> @@relationship_info;
+  MapAccum<STRING, STRING> @@entity_info;
+  MapAccum<STRING, STRING> @@doc_chunk_info;
+  SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
+  MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
+  INT inc_top_k = top_k * 2;
+  
+  FOREACH v_type IN v_types DO
+    vset = {v_type.*};
+    result = SELECT v FROM vset:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
+  END;
+
+  WHILE True LIMIT top_k DO
+    @@start_set += @@topk_set.pop().v;
+  END;
+  
+  start = {@@start_set};
+  
+  start = SELECT s FROM start:s POST-ACCUM s.@num_times_seen += 1;
+  
+  FOREACH i IN RANGE[0, num_hops-1] DO
+    start = SELECT t FROM start:s -((RELATIONSHIP|
+                                     CONTAINS_ENTITY|
+                                     IS_AFTER|
+                                     reverse_CONTAINS_ENTITY|
+                                     IS_HEAD_OF|
+                                     HAS_TAIL):e)- :t
+            ACCUM @@edges += e
+            POST-ACCUM t.@num_times_seen += 1;
+  END;
+  
+  res = SELECT s FROM start:s WHERE s.@num_times_seen >= num_seen_min AND s.type != "Document"
+        POST-ACCUM
+          IF s.type == "Relationship" THEN
+            @@relationship_info += (s.id -> s.definition)
+          ELSE IF s.type == "Entity" THEN
+            STRING tmp_dsc = s.definition,
+            FOREACH dsc IN s.description DO
+              tmp_dsc = tmp_dsc + dsc +";"
+            END,
+            @@entity_info += (s.id -> tmp_dsc)
+          ELSE IF s.type == "DocumentChunk" THEN
+            @@to_retrieve_content += s 
+          END;
+  
+  doc_chunks = {@@to_retrieve_content};
+  
+  res = SELECT t FROM doc_chunks:s -(HAS_CONTENT)- Content:t 
+        ACCUM
+          @@doc_chunk_info += (s.id -> t.text);
+  
+  @@final_retrieval += ("DocumentChunkInfo" -> @@doc_chunk_info);
+  @@final_retrieval += ("RelationshipInfo" -> @@relationship_info);
+  @@final_retrieval += ("EntityInfo" -> @@entity_info);
+  
+  PRINT @@final_retrieval, @@edges;
+}

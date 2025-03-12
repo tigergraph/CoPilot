@@ -1,0 +1,9 @@
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Search_Sub(String vertex_type, UINT k=10, LIST<Float> query_vector) RETURNS(SetAccum<VERTEX>) SYNTAX V2 {
+    SetAccum<VERTEX> @@return_set;
+    vset = {vertex_type.*};
+  
+    result = SELECT v FROM vset:v ORDER BY gds.vector.distance(query_vector, v.embedding, "COSINE") LIMIT k;
+    result = SELECT v from result:v POST-ACCUM @@return_set += v;
+  
+    RETURN @@return_set;
+}
