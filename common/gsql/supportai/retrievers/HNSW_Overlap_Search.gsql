@@ -1,6 +1,6 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host, 
   UINT milvus_port, STRING collection_prefix, STRING vector_field_name, 
-  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
+  STRING vertex_id_field_name, STRING metric_type="COSINE",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1, BOOL verbose = False) { 
   SetAccum<VERTEX> @@start_set;
   SetAccum<VERTEX> @@tmp_start_set;
   SetAccum<EDGE> @@edges;

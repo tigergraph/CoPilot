@@ -77,7 +77,7 @@ else:
     with open(DB_CONFIG, "r") as f:
         db_config = json.load(f)
 
-embed_store_type = db_config.get("embedding_store", "tigergraph")
+embedding_store_type = db_config.get("embedding_store", "tigergraph")
 reuse_embedding = db_config.get("reuse_embedding", True)
 
 if MILVUS_CONFIG is None or (
@@ -130,7 +130,7 @@ def get_llm_service(llm_config) -> LLM_Model:
         raise Exception("LLM Completion Service Not Supported")
 
 if os.getenv("INIT_EMBED_STORE", "true") == "true":
-    if embed_store_type == "milvus":
+    if embedding_store_type == "milvus":
         LogWriter.info(
             f"Milvus enabled for host {milvus_config['host']} at port {milvus_config['port']}"
         )

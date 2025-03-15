@@ -2,7 +2,7 @@ import json
 import uuid
 
 from pyTigerGraph import TigerGraphConnection
-from common.config import embed_store_type
+from common.config import embedding_store_type
 
 from common.py_schemas.schemas import (
     # CoPilotResponse,
@@ -26,7 +26,7 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
         )
     )
 
-    if embed_store_type == "tigergraph":
+    if embedding_store_type == "tigergraph":
         if int(ver[0]) >= 4 and int(ver[1]) >= 2:
             file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
             with open(file_path, "r") as f:

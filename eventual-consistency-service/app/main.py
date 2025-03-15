@@ -23,7 +23,7 @@ from common.config import (
     get_llm_service,
     llm_config,
     milvus_config,
-    embed_store_type,
+    embedding_store_type,
     security,
 )
 from common.db.connections import elevate_db_connection_to_token
@@ -78,15 +78,16 @@ def initialize_eventual_consistency_checker(
         return consistency_checkers[graphname]
 
     try:
-        maj, minor, patch = conn.getVer().split(".")
-        if  maj >= "4" and minor >= "2":
-            # TigerGraph native vector support
-            index_stores = {}
-            index_stores["all"] = TigerGraphEmbeddingStore(
-                conn,
-                embedding_service,
-                support_ai_instance=False,
-            )
+        if embedding_store_type == "tigergraph":
+            maj, minor, patch = conn.getVer().split(".")
+            if  maj >= "4" and minor >= "2":
+                # TigerGraph native vector support
+                index_stores = {}
+                index_stores["tigergraph"] = TigerGraphEmbeddingStore(
+                    conn,
+                    embedding_service,
+                    support_ai_instance=False,
+                )
         else:
             process_interval_seconds = milvus_config.get(
                 "process_interval_seconds", 1800

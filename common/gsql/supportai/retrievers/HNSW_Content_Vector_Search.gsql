@@ -1,5 +1,5 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
-  INT top_k=5, LIST<FLOAT> query_vector) { 
+  INT top_k=5, LIST<FLOAT> query_vector, BOOL verbose = False) { 
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;

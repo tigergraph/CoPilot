@@ -15,7 +15,7 @@ from common.config import (
     get_llm_service,
     llm_config,
     milvus_config,
-    embed_store_type,
+    embedding_store_type,
 )
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.embeddings.tigergraph_embedding_store import TigerGraphEmbeddingStore
@@ -92,7 +92,7 @@ async def init(
     else:
         raise ValueError("Invalid extractor type")
 
-    if embed_store_type == "milvus":
+    if embedding_store_type == "milvus":
         vertex_field = milvus_config.get("vertex_field", "vertex_id")
         index_names = milvus_config.get(
             "indexes",
@@ -135,7 +135,7 @@ async def init(
             embedding_service,
             support_ai_instance=True,
         )
-        index_stores = {"all": s}
+        index_stores = {"tigergraph": s}
 
     return extractor, index_stores
 

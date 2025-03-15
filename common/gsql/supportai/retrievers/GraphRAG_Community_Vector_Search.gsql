@@ -1,0 +1,29 @@
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Vector_Search(LIST<FLOAT> query_vector, INT community_level=2, INT top_k = 3, BOOL with_chunk = true, BOOL verbose = false) { 
+  //TYPEDEF Tuple<VERTEX v_id, STRING description> SelectedComms;
+  //SetAccum<SelectedComms> @@result_contexts;
+  MapAccum<Vertex, SetAccum<String>> @@result_contexts;
+  SetAccum<STRING> @context;
+  SetAccum<Vertex> @@start_set;
+  comms = {Community.*};
+  
+  selected_comms = SELECT c FROM comms:c WHERE c.iteration == community_level and length(c.description) > 0;
+  selected_comms = vectorSearch({Community.embedding}, query_vector, top_k, {candidate_set: selected_comms});
+
+  IF with_chunk THEN
+      FOREACH i IN RANGE[2, community_level] DO
+          selected_comms = SELECT c FROM Community:c -(HAS_PARENT>)- selected_comms:s;
+                           //POST-ACCUM(c) @@result_contexts += SelectedComms(c, c.description);
+                   
+      END;
+      start_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- DocumentChunk:d -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
+                     ACCUM m.@context += c.text, @@start_set += c, @@start_set += m;
+  END;
+
+  selected_comms = SELECT c FROM selected_comms:c ACCUM c.@context += c.description POST-ACCUM(c) @@result_contexts += (c -> c.@context);
+
+  PRINT @@result_contexts as selected_comms;
+
+  IF verbose THEN
+      PRINT @@start_set as context_sets;
+  END;
+}

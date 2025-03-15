@@ -16,7 +16,7 @@ from supportai.retrievers import (
     HNSWOverlapRetriever,
     HNSWRetriever,
     HNSWSiblingRetriever,
-    GraphRAG
+    GraphRAGRetriever
 )
 
 from common.config import (
@@ -177,10 +177,20 @@ def search(
         )
         res = retriever.search(query.question, query.method_params["top_k"])
     elif query.method.lower() == "graphrag":
-        retriever = GraphRAG(
+        retriever = GraphRAGRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
-        res = retriever.search(query.question, query.method_params["community_level"])
+        if "with_chunk" not in query.method_params:
+            query.method_params["with_chunk"] = True
+        if "verbose" not in query.method_params:
+            query.method_params["verbose"] = True
+        res = retriever.search(
+            query.question,
+            query.method_params["community_level"],
+            query.method_params["top_k"],
+            query.method_params["with_chunk"],
+            query.method_params["verbose"],
+        )
     return res
 
 
@@ -195,6 +205,8 @@ def answer_question(
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
+    if "verbose" not in query.method_params:
+        query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -205,6 +217,7 @@ def answer_question(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
@@ -217,6 +230,7 @@ def answer_question(
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
@@ -231,6 +245,7 @@ def answer_question(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(
@@ -239,13 +254,17 @@ def answer_question(
         res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
 
     elif query.method.lower() == "graphrag":
-        retriever = GraphRAG(
+        retriever = GraphRAGRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
+        if "with_chunk" not in query.method_params:
+            query.method_params["with_chunk"] = True
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["community_level"],
-            query.method_params["top_k_answer_candidates"]
+            query.method_params["top_k"],
+            query.method_params["with_chunk"],
+            query.method_params["verbose"],
         )
     else:
         raise Exception("Method not implemented")

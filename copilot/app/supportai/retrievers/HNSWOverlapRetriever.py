@@ -1,9 +1,6 @@
 from supportai.retrievers import BaseRetriever
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
-from common.config import embed_store_type
-import logging
-
-logger = logging.getLogger(__name__)
+from common.config import embedding_store_type
 
 class HNSWOverlapRetriever(BaseRetriever):
     def __init__(
@@ -15,8 +12,8 @@ class HNSWOverlapRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1):
-        if embed_store_type == "miluvs":
+    def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1, verbose=False):
+        if embedding_store_type == "milvus":
             self._check_query_install("HNSW_Search_Sub")
             self._check_query_install("HNSW_Overlap_Search")
 
@@ -32,6 +29,7 @@ class HNSWOverlapRetriever(BaseRetriever):
                         "top_k": top_k,
                         "num_hops": num_hops,
                         "num_seen_min": num_seen_min,
+                        "verbose": verbose,
                     }
                 ),
                 usePost=True
@@ -49,11 +47,13 @@ class HNSWOverlapRetriever(BaseRetriever):
                     "top_k": top_k,
                     "num_hops": num_hops,
                     "num_seen_min": num_seen_min,
+                    "verbose": verbose,
                 },
                 usePost=True
             )            
+        self.logger.info(f"Retrived HNSWOverlap query result: {res}")
         return res
 
-    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1):
-        retrieved = self.search(question, index, top_k, num_hops, num_seen_min)
+    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, verbose=False):
+        retrieved = self.search(question, index, top_k, num_hops, num_seen_min, verbose)
         return self._generate_response(question, retrieved)

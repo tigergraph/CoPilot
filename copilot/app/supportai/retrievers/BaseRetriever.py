@@ -5,6 +5,7 @@ from common.llm_services.base_llm import LLM_Model
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+import logging
 
 class BaseRetriever:
     def __init__(
@@ -18,6 +19,7 @@ class BaseRetriever:
         self.llm_service = llm_service
         self.conn = connection
         self.embedding_store = embedding_store
+        self.logger = logging.getLogger(__name__)
 
     def _install_query(self, query_name):
         with open(f"common/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:

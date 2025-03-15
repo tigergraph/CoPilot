@@ -1,5 +1,5 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_types, 
-  LIST<FLOAT> query_vector, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) { 
+  LIST<FLOAT> query_vector, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1, BOOL verbose = False) { 
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;

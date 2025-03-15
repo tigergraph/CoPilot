@@ -7,7 +7,7 @@ import httpx
 from aiochannel import Channel
 from pyTigerGraph import TigerGraphConnection
 
-from common.config import embedding_service
+from common.config import embedding_service, embedding_store_type
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from supportai import workers
@@ -123,8 +123,8 @@ async def embed(
     async with asyncio.TaskGroup() as sp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
-            if "all" in index_stores:
-                embedding_store = index_stores["all"]
+            if embedding_store_type == "tigergraph":
+                embedding_store = index_stores["tigergraph"]
             else:
                 embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
