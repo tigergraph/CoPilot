@@ -78,8 +78,8 @@ class GraphRAGRetriever(BaseRetriever):
                 },
                 usePost=True
             )
-        if "verbose" in res[0]:
-            verbose_info = json.dumps(res[0]['verbose'])
+        if len(res) > 1 and "verbose" in res[1]:
+            verbose_info = json.dumps(res[1]['verbose'])
             self.logger.info(f"Retrived GraphRAG query verbose info: {verbose_info}")
         return res
     
@@ -127,7 +127,7 @@ class GraphRAGRetriever(BaseRetriever):
         
         resp = self._generate_response(question, new_context)
 
-        if verbose and "verbose" in retrieved[0]:
-            resp["verbose"] = retrieved[0]["verbose"]
+        if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
+            resp["verbose"] = retrieved[1]["verbose"]
 
         return resp
