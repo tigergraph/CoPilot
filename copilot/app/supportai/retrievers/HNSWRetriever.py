@@ -47,6 +47,9 @@ class HNSWRetriever(BaseRetriever):
                 "verbose": verbose,
             }
             res = self.conn.runInstalledQuery("HNSW_Content_Vector_Search", params, usePost=True)
+        if "verbose" in res[0]:
+            verbose_info = json.dumps(res[0]['verbose'])
+            self.logger.info(f"Retrived HNSW query verbose info: {verbose_info}")
         return res
 
     def retrieve_answer(self, question, index, top_k=1, withHyDE=False, verbose=False):

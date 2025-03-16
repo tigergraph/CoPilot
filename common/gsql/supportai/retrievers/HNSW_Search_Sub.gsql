@@ -7,24 +7,24 @@ CREATE OR REPLACE QUERY HNSW_Search_Sub(STRING v_type, STRING milvus_host,
     INT inc_top_k = top_k;
     start = {v_type};
 
-    WHILE @@return_set.size() < top_k LIMIT 5 DO
-    @@vertexIds = tg_searchInMilvus(milvus_host, milvus_port, 
-      collection_name, vector_field_name, vertex_id_field_name, query_vector_as_string, metric_type, inc_top_k); 
-  
-    res = SELECT s FROM start:s
-          POST-ACCUM
-            FOREACH id IN @@vertexIds DO
-              IF id == s.id THEN
-                IF v_type == "Community" THEN
-                  IF s.iteration == community_level THEN
-                    @@return_set += s
+    WHILE @@return_set.size() < top_k LIMIT 3 DO
+        @@vertexIds = tg_searchInMilvus(milvus_host, milvus_port, 
+          collection_name, vector_field_name, vertex_id_field_name, query_vector_as_string, metric_type, inc_top_k); 
+      
+        res = SELECT s FROM start:s
+              POST-ACCUM
+                FOREACH id IN @@vertexIds DO
+                  IF id == s.id THEN
+                    IF v_type == "Community" THEN
+                      IF s.iteration == community_level THEN
+                        @@return_set += s
+                      END
+                    ELSE
+                      @@return_set += s
+                    END
                   END
-                ELSE
-                  @@return_set += s
-                END
-              END
-            END;
-    inc_top_k = inc_top_k * 2;
+                END;
+        inc_top_k = inc_top_k * 2;
     END;
     
     RETURN @@return_set;

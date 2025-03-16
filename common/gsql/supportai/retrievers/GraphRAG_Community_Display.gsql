@@ -1,0 +1,31 @@
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_ids, UINT community_level = 2, BOOL with_chunk = true) { 
+  MapAccum<Vertex, SetAccum<String>> @@result_set;
+  SetAccum<EDGE> @@edges;
+  SetAccum<STRING> @context;
+  SetAccum<Vertex> @children;
+  SetAccum<Vertex> @@start_set;
+  SetAccum<STRING> @@start_vids;
+
+  JSONARRAY v_ids = parse_json_array(json_list_ids);
+  FOREACH i IN RANGE[0, v_ids.size()-1] DO
+    @@start_vids += v_ids.getString(i);
+  END;
+
+  comms = {Community.*};
+  
+  selected_comms = SELECT c FROM comms:c WHERE c.id IN @@start_vids;
+
+  IF with_chunk THEN
+      FOREACH i IN RANGE[2, community_level] DO
+          selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT:e)- Community:c
+              ACCUM s.@children += c, @@edges += e;
+      END;
+      related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT:e1)- DocumentChunk:d -(CONTAINS_ENTITY>:e2)- Entity:v -(RESOLVES_TO>:e3)- ResolvedEntity:r -(IN_COMMUNITY>:e4)- selected_comms:m
+          ACCUM m.@context += c.text, m.@children += d, @@edges += e1, @@edges += e2, @@edges += e3, @@edges += e4;
+  END;
+
+  selected_comms = SELECT c FROM selected_comms:c WHERE c.type == "Community"
+      ACCUM c.@context += c.description, @@start_set += c POST-ACCUM(c) @@result_set += (c -> c.@context);
+
+  PRINT @@edges as results;
+}

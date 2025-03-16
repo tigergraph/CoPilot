@@ -134,6 +134,10 @@ def search(
 ):
     check_embedding_store_status()
     conn = conn.state.conn
+    if "combine" not in query.method_params:
+        query.method_params["combine"] = False
+    if "verbose" not in query.method_params:
+        query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
@@ -144,6 +148,7 @@ def search(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
         if "index" not in query.method_params:
@@ -156,6 +161,7 @@ def search(
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
@@ -170,6 +176,7 @@ def search(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(
@@ -182,8 +189,6 @@ def search(
         )
         if "with_chunk" not in query.method_params:
             query.method_params["with_chunk"] = True
-        if "verbose" not in query.method_params:
-            query.method_params["verbose"] = True
         res = retriever.search(
             query.question,
             query.method_params["community_level"],
@@ -205,6 +210,8 @@ def answer_question(
     conn = conn.state.conn
     resp = CoPilotResponse
     resp.response_type = "supportai"
+    if "combine" not in query.method_params:
+        query.method_params["combine"] = False
     if "verbose" not in query.method_params:
         query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":

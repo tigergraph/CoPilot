@@ -1,3 +1,4 @@
+import json
 from supportai.retrievers import BaseRetriever
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.config import embedding_store_type
@@ -51,9 +52,20 @@ class HNSWOverlapRetriever(BaseRetriever):
                 },
                 usePost=True
             )            
-        self.logger.info(f"Retrived HNSWOverlap query result: {res}")
+        if "verbose" in res[0]:
+            verbose_info = json.dumps(res[0]['verbose'])
+            self.logger.info(f"Retrived HNSWOverlap query verbose info: {verbose_info}")
         return res
 
-    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, verbose=False):
+    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, combine: bool = False, verbose: bool = False):
         retrieved = self.search(question, index, top_k, num_hops, num_seen_min, verbose)
-        return self._generate_response(question, retrieved)
+        context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
+        if combine:
+            context = ["\n".join(context)]
+
+        resp = self._generate_response(question, context)
+        
+        if verbose and "verbose" in retrieved[0]:
+            resp["verbose"] = retrieved[0]["verbose"]
+      
+        return resp

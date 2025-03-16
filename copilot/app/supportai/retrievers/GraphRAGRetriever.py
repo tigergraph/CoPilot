@@ -1,13 +1,13 @@
-from supportai.retrievers import BaseRetriever
+import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
-from common.metrics.tg_proxy import TigerGraphConnectionProxy
 
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
 
+from supportai.retrievers import BaseRetriever
+from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services import LLM_Model
 from common.config import embedding_store_type
 
@@ -78,7 +78,9 @@ class GraphRAGRetriever(BaseRetriever):
                 },
                 usePost=True
             )
-        self.logger.info(f"Retrived GraphRAG query result: {res}")
+        if "verbose" in res[0]:
+            verbose_info = json.dumps(res[0]['verbose'])
+            self.logger.info(f"Retrived GraphRAG query verbose info: {verbose_info}")
         return res
     
     async def _generate_candidate(self, question, context):
@@ -107,9 +109,12 @@ class GraphRAGRetriever(BaseRetriever):
                         community_level: int,
                         top_k: int = 1,
                         with_chunk: bool = False,
+                        combine: bool = False,
                         verbose: bool = False):
         retrieved = self.search(question, community_level, top_k, with_chunk, verbose)
         context = ["\n".join(retrieved[0]["selected_comms"][x]) for x in retrieved[0]["selected_comms"]]
+        if combine:
+            context = ["\n".join(context)]
         
         with ThreadPoolExecutor() as executor:
             res = executor.submit(self.gather_candidates, question, context).result()
@@ -120,4 +125,9 @@ class GraphRAGRetriever(BaseRetriever):
         new_context = [{"candidate_answer": x.answer,
                         "score": x.quality_score} for x in res[:top_k]]
         
-        return self._generate_response(question, new_context)
+        resp = self._generate_response(question, new_context)
+
+        if verbose and "verbose" in retrieved[0]:
+            resp["verbose"] = retrieved[0]["verbose"]
+
+        return resp
