@@ -52,6 +52,6 @@ class HNSWRetriever(BaseRetriever):
             self.logger.info(f"Retrived HNSW query verbose info: {verbose_info}")
         return res
 
-    def retrieve_answer(self, question, index, top_k=1, withHyDE=False, verbose=False):
+    def retrieve_answer(self, question, index, top_k=1, withHyDE=False, combine: bool=False, verbose=False):
         retrieved = self.search(question, index, top_k, withHyDE, verbose)
         return self._generate_response(question, retrieved)

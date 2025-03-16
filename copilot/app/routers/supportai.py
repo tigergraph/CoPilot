@@ -148,6 +148,7 @@ def search(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
@@ -161,6 +162,7 @@ def search(
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
@@ -176,6 +178,7 @@ def search(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
@@ -194,6 +197,7 @@ def search(
             query.method_params["community_level"],
             query.method_params["top_k"],
             query.method_params["with_chunk"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     return res
@@ -224,6 +228,7 @@ def answer_question(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
@@ -237,6 +242,7 @@ def answer_question(
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
@@ -252,6 +258,7 @@ def answer_question(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
@@ -271,6 +278,7 @@ def answer_question(
             query.method_params["community_level"],
             query.method_params["top_k"],
             query.method_params["with_chunk"],
+            query.method_params["combine"],
             query.method_params["verbose"],
         )
     else:

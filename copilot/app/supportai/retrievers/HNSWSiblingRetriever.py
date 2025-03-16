@@ -63,7 +63,7 @@ class HNSWSiblingRetriever(BaseRetriever):
         return res
 
     def retrieve_answer(
-        self, question, index, top_k=1, lookback=3, lookahead=3, withHyDE=False, verbose=False
+        self, question, index, top_k=1, lookback=3, lookahead=3, withHyDE=False, combine: bool=False, verbose=False
     ):
         retrieved = self.search(question, index, top_k, lookback, lookahead, withHyDE, verbose)
         return self._generate_response(question, retrieved)
