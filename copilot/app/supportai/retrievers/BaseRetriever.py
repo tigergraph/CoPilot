@@ -5,6 +5,7 @@ from common.llm_services.base_llm import LLM_Model
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
+import logging
 
 class BaseRetriever:
     def __init__(
@@ -18,6 +19,7 @@ class BaseRetriever:
         self.llm_service = llm_service
         self.conn = connection
         self.embedding_store = embedding_store
+        self.logger = logging.getLogger(__name__)
 
     def _install_query(self, query_name):
         with open(f"common/gsql/supportai/retrievers/{query_name}.gsql", "r") as f:
@@ -36,7 +38,7 @@ class BaseRetriever:
         endpoints = self.conn.getEndpoints(
             dynamic=True
         )  # installed queries in database
-        installed_queries = [q.split("/")[-1] for q in endpoints]
+        installed_queries = [q.split("/")[-1] for q in endpoints if f"/{self.conn.graphname}/" in q]
 
         if query_name not in installed_queries:
             return self._install_query(query_name)
@@ -56,15 +58,19 @@ class BaseRetriever:
 
         return {"response": generated, "retrieved": retrieved}
 
-    def _generate_embedding(self, text) -> str:
-        return (
-            str(self.emb_service.embed_query(text))
-            .strip("[")
-            .strip("]")
-            .replace(" ", "")
-        )
+    def _generate_embedding(self, text, str_mode: bool = True) -> str:
+        embedding = self.emb_service.embed_query(text)
+        if str_mode:
+            return (
+                str(embedding)
+                .strip("[")
+                .strip("]")
+                .replace(" ", "")
+            )
+        else:
+            return embedding
 
-    def _hyde_embedding(self, text) -> str:
+    def _hyde_embedding(self, text, str_mode: bool = True) -> str:
         model = self.llm_service.llm
         prompt = self.llm_service.hyde_prompt
 
@@ -75,7 +81,7 @@ class BaseRetriever:
 
         generated = chain.invoke({"question": text})
 
-        return self._generate_embedding(generated)
+        return self._generate_embedding(generated, str_mode)
 
     """    
     def _get_entities_relationships(self, text: str, extractor: BaseExtractor):

@@ -11,6 +11,7 @@ from graphrag import workers
 from graphrag.util import (
     check_all_ents_resolved,
     check_vertex_has_desc,
+    check_embedding_rebuilt,
     http_timeout,
     init,
     load_q,
@@ -24,14 +25,13 @@ from graphrag.util import (
 from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import embedding_service
-from common.config import milvus_config
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.config import milvus_config, embedding_store_type, reuse_embedding
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 
 logger = logging.getLogger(__name__)
 
 consistency_checkers = {}
-reuse_embedding = milvus_config.get("reuse_embedding", "false")
 
 async def stream_docs(
     conn: AsyncTigerGraphConnection,
@@ -194,7 +194,7 @@ async def load(conn: AsyncTigerGraphConnection):
 
 
 async def embed(
-    embed_chan: Channel, index_stores: dict[str, MilvusEmbeddingStore], graphname: str
+    embed_chan: Channel, index_stores: dict[str, EmbeddingStore], graphname: str
 ):
     """
     Creates and starts one worker for each embed job
@@ -207,9 +207,13 @@ async def embed(
         while True:
             try:
                 (v_id, content, index_name) = await embed_chan.get()
-                embedding_store = index_stores[f"{graphname}_{index_name}"]
+                if embedding_store_type == "tigergraph":
+                    embedding_store = index_stores["tigergraph"]
+                    v_id = (v_id, index_name)
+                else:
+                    embedding_store = index_stores[f"{graphname}_{index_name}"]
                 logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
-                if reuse_embedding == "true" and embedding_store.has_embeddings([v_id]):
+                if reuse_embedding and embedding_store.has_embeddings([v_id]):
                     logger.info(f"Embeddings for {v_id} already exists, skipping to save cost")
                     continue
                 grp.create_task(
@@ -279,7 +283,10 @@ async def stream_entities(
 
         for i in ids["ids"]:
             if len(i) > 0:
-                await entity_chan.put(i)
+                if embedding_store_type == "tigergraph":
+                    await entity_chan.put((i, "Entity"))
+                else:
+                    await entity_chan.put(i)
 
     logger.info("stream_enities done")
     # close the docs chan -- this function is the only sender
@@ -289,7 +296,7 @@ async def stream_entities(
 
 async def resolve_entities(
     conn: AsyncTigerGraphConnection,
-    emb_store: MilvusEmbeddingStore,
+    emb_store: EmbeddingStore,
     entity_chan: Channel,
     upsert_chan: Channel,
 ):
@@ -524,15 +531,23 @@ async def run(graphname: str, conn: AsyncTigerGraphConnection):
 
     if entity_resolution_switch:
         logger.info("Entity Processing Start")
+        if embedding_store_type == "tigergraph":
+            while not await check_embedding_rebuilt(conn, "Entity"):
+                logger.info(f"Waiting for embedding to finish rebuilding")
+                await asyncio.sleep(1)
         entities_chan = Channel()
         upsert_chan = Channel()
         load_q.reopen()
         async with asyncio.TaskGroup() as grp:
             grp.create_task(stream_entities(conn, entities_chan, 50))
+            if embedding_store_type == "tigergraph":
+                embedding_store = index_stores["tigergraph"]
+            else:
+                embedding_store = index_stores[f"{conn.graphname}_Entity"]
             grp.create_task(
                 resolve_entities(
                     conn,
-                    index_stores[f"{conn.graphname}_Entity"],
+                    embedding_store,
                     entities_chan,
                     upsert_chan,
                 )

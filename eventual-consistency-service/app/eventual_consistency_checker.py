@@ -4,10 +4,11 @@ from typing import Dict, List
 
 from common.logs.logwriter import LogWriter
 from common.embeddings.embedding_services import EmbeddingModel
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.chunkers import BaseChunker
 from common.extractors import BaseExtractor
+from common.config import embedding_store_type
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class EventualConsistencyChecker:
         vertex_field,
         embedding_service: EmbeddingModel,
         embedding_indices: List[str],
-        embedding_stores: Dict[str, MilvusEmbeddingStore],
+        embedding_stores: Dict[str, EmbeddingStore],
         conn: TigerGraphConnectionProxy,
         chunker: BaseChunker,
         extractor: BaseExtractor,
@@ -71,7 +72,7 @@ class EventualConsistencyChecker:
         endpoints = self.conn.getEndpoints(
             dynamic=True
         )  # installed queries in database
-        installed_queries = [q.split("/")[-1] for q in endpoints]
+        installed_queries = [q.split("/")[-1] for q in endpoints if f"/{conn.graphname}/" in q]
 
         if query_name not in installed_queries:
             return self._install_query(query_name)
@@ -217,17 +218,25 @@ class EventualConsistencyChecker:
         )[0]["@@v_and_text"]
 
     def _remove_existing_entries(self, v_type, vertex_ids):
-        LogWriter.info(f"Remove existing entries from Milvus with vertex_ids in {str(vertex_ids)}")
-        self.embedding_stores[self.graphname + "_" + v_type].remove_embeddings(
+        if embedding_store_type == "tigergraph":
+            vector_index = "tigergraph"
+        else:
+            vector_index = self.graphname + "_" + v_type
+        LogWriter.info(f"Remove existing entries with vertex_ids in {str(vertex_ids)}")
+        self.embedding_stores[vector_index].remove_embeddings(
             expr=f"{self.vertex_field} in {str(vertex_ids)}"
         )
 
     def _process_content(self, v_type, vertex_ids_content_map):
+        if embedding_store_type == "tigergraph":
+            vector_index = "tigergraph"
+        else:
+            vector_index = self.graphname + "_" + v_type
         LogWriter.info(f"Embedding content from vertex type: {v_type}")
         for vertex_id, content in vertex_ids_content_map.items():
             if content:
                 vec = self.embedding_service.embed_query(content)
-                self.embedding_stores[self.graphname + "_" + v_type].add_embeddings(
+                self.embedding_stores[vector_index].add_embeddings(
                     [(content, vec)], [{self.vertex_field: vertex_id}]
                 )
 
@@ -267,10 +276,14 @@ class EventualConsistencyChecker:
 
 
     def verify_and_cleanup_embeddings(self, batch_size=10):
+        if embedding_store_type == "tigergraph":
+            vector_index = "tigergraph"
+        else:
+            vector_index = self.graphname + "_" + v_type
         for v_type in self.embedding_indices:
             LogWriter.info(f"Running cleanup for vertex type {v_type}")
 
-            query_result = self.embedding_stores[self.graphname + "_" + v_type].query("pk > 0", [self.vertex_field, 'pk'])
+            query_result = self.embedding_stores[vector_index].query("pk > 0", [self.vertex_field, 'pk'])
             if not query_result:
                 LogWriter.info(f"No vertices to process for vertex type {v_type}")
                 continue
@@ -299,8 +312,12 @@ class EventualConsistencyChecker:
         return vertex_id_map, duplicates_to_remove
 
     def _remove_duplicates(self, v_type, duplicates_to_remove):
+        if embedding_store_type == "tigergraph":
+            vector_index = "tigergraph"
+        else:
+            vector_index = self.graphname + "_" + v_type
         for pk in duplicates_to_remove:
-            self.embedding_stores[self.graphname + "_" + v_type].remove_embeddings(
+            self.embedding_stores[vector_index].remove_embeddings(
                 expr=f"pk == {pk}"
             )
             LogWriter.info(f"Removed duplicate with pk {pk} from Milvus")
@@ -320,8 +337,12 @@ class EventualConsistencyChecker:
                 LogWriter.info(f"No cleanup needed for current batch of vertex type {v_type}")
 
     def _cleanup_nonexistent_vertices(self, v_type, non_existent_vertices):
+        if embedding_store_type == "tigergraph":
+            vector_index = "tigergraph"
+        else:
+            vector_index = self.graphname + "_" + v_type
         for vertex_id in non_existent_vertices:
-            self.embedding_stores[self.graphname + "_" + v_type].remove_embeddings(
+            self.embedding_stores[vector_index].remove_embeddings(
                 expr=f"{self.vertex_field} == '{vertex_id}'"
             )
 

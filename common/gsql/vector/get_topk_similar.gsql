@@ -1,0 +1,7 @@
+CREATE OR REPLACE DISTRIBUTED QUERY get_topk_similar(String vertex_type, LIST<Float> query_vector, UINT k=10) SYNTAX V2 {
+    vset = {vertex_type.*};
+  
+    result = SELECT v FROM vset:v ORDER BY gds.vector.distance(query_vector, v.embedding, "COSINE") LIMIT k;
+  
+    PRINT result;
+}

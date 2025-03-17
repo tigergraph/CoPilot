@@ -7,8 +7,8 @@ import httpx
 from aiochannel import Channel
 from pyTigerGraph import TigerGraphConnection
 
-from common.config import embedding_service
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.config import embedding_service, embedding_store_type
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from supportai import workers
 from supportai.util import (
@@ -111,7 +111,7 @@ async def upsert(
 
 async def embed(
     embed_chan: Channel,
-    index_stores: dict[str, MilvusEmbeddingStore],
+    index_stores: dict[str, EmbeddingStore],
     graphname: str
 ):  
     """
@@ -123,7 +123,10 @@ async def embed(
     async with asyncio.TaskGroup() as sp:
         # consume task queue
         async for v_id, content, index_name in embed_chan:
-            embedding_store = index_stores[f"{graphname}_{index_name}"]
+            if embedding_store_type == "tigergraph":
+                embedding_store = index_stores["tigergraph"]
+            else:
+                embedding_store = index_stores[f"{graphname}_{index_name}"]
             logger.info(f"Embed to {graphname}_{index_name}: {v_id}")
             sp.create_task(
                 workers.embed(

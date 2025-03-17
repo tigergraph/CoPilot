@@ -15,7 +15,10 @@ from common.config import (
     get_llm_service,
     llm_config,
     milvus_config,
+    embedding_store_type,
 )
+from common.embeddings.base_embedding_store import EmbeddingStore
+from common.embeddings.tigergraph_embedding_store import TigerGraphEmbeddingStore
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
@@ -37,7 +40,7 @@ async def install_queries(
     conn: AsyncTigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"{conn.graphname}/" in q]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"/{conn.graphname}/" in q]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -45,10 +48,21 @@ async def install_queries(
         q_name = q.split("/")[-1]
         # if the query is not installed, install it
         if q_name not in installed_queries:
-            res = await workers.install_query(conn, q)
+            res = await workers.install_query(conn, q, False)
             # stop system if a required query doesn't install
             if res["error"]:
                 raise Exception(res["message"])
+            logger.info(f"Successfully created query '{q_name}'.")
+    query = f"""\
+USE GRAPH {conn.graphname}
+INSTALL QUERY ALL
+"""
+    async with tg_sem:
+        res = await conn.gsql(query)
+        if "error" in res:
+            raise Exception(res)
+
+    logger.info("Finished processing all required queries.")
 
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
@@ -60,7 +74,7 @@ async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
 
 async def init(
     conn: AsyncTigerGraphConnection,
-) -> tuple[BaseExtractor, dict[str, MilvusEmbeddingStore]]:
+) -> tuple[BaseExtractor, dict[str, EmbeddingStore]]:
     # install requried queries
     requried_queries = [
         "common/gsql/graphRAG/StreamIds",
@@ -88,41 +102,51 @@ async def init(
         extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
     else:
         raise ValueError("Invalid extractor type")
-    vertex_field = milvus_config.get("vertex_field", "vertex_id")
-    index_names = milvus_config.get(
-        "indexes",
-        [
-            "Document",
-            "DocumentChunk",
-            "Entity",
-            "Relationship",
-            "Community",
-        ],
-    )
-    index_stores = {}
-    async with asyncio.TaskGroup() as tg:
-        for index_name in index_names:
-            name = conn.graphname + "_" + index_name
-            s = MilvusEmbeddingStore(
-                embedding_service,
-                host=milvus_config["host"],
-                port=milvus_config["port"],
-                support_ai_instance=True,
-                collection_name=name,
-                username=milvus_config.get("username", ""),
-                password=milvus_config.get("password", ""),
-                vector_field=milvus_config.get("vector_field", "document_vector"),
-                text_field=milvus_config.get("text_field", "document_content"),
-                vertex_field=vertex_field,
-                drop_old=False,
-            )
 
-            LogWriter.info(f"Initializing {name}")
-            # init collection if it doesn't exist
-            if not s.check_collection_exists():
-                tg.create_task(init_embedding_index(s, vertex_field))
+    if embedding_store_type == "milvus":
+        vertex_field = milvus_config.get("vertex_field", "vertex_id")
+        index_names = milvus_config.get(
+            "indexes",
+            [
+                "Document",
+                "DocumentChunk",
+                "Entity",
+                "Relationship",
+                "Community",
+            ],
+        )
+        index_stores = {}
+        async with asyncio.TaskGroup() as tg:
+            for index_name in index_names:
+                name = conn.graphname + "_" + index_name
+                s = MilvusEmbeddingStore(
+                    embedding_service,
+                    host=milvus_config["host"],
+                    port=milvus_config["port"],
+                    support_ai_instance=True,
+                    collection_name=name,
+                    username=milvus_config.get("username", ""),
+                    password=milvus_config.get("password", ""),
+                    vector_field=milvus_config.get("vector_field", "document_vector"),
+                    text_field=milvus_config.get("text_field", "document_content"),
+                    vertex_field=vertex_field,
+                    drop_old=False,
+                )
 
-            index_stores[name] = s
+                LogWriter.info(f"Initializing {name}")
+                # init collection if it doesn't exist
+                if not s.check_collection_exists():
+                    tg.create_task(init_embedding_index(s, vertex_field))
+
+                index_stores[name] = s
+    else:
+        index_stores = {}
+        s = TigerGraphEmbeddingStore(
+            conn,
+            embedding_service,
+            support_ai_instance=True,
+        )
+        index_stores = {"tigergraph": s}
 
     return extractor, index_stores
 
@@ -218,8 +242,9 @@ async def check_vertex_exists(conn, v_id: str):
             res = await conn.getVerticesById("Entity", v_id)
 
         except Exception as e:
-            err = traceback.format_exc()
-            logger.error(f"Check err:\n{err}")
+            if "is not a valid vertex id" not in str(e):
+                err = traceback.format_exc()
+                logger.error(f"Check err:\n{err}")
             return {"error": True, "message": str(e)}
 
         return {"error": False, "resp": res}
@@ -325,5 +350,22 @@ async def check_vertex_has_desc(conn, i: int):
 
     res = resp[0]["all_have_desc"]
     logger.info(res)
+
+    return res
+
+async def check_embedding_rebuilt(conn, v_type: str):
+    try:
+        async with tg_sem:
+            resp = await conn.runInstalledQuery(
+                "vertices_have_embedding",
+                params={
+                    "vertex_type": v_type,
+                }
+            )
+    except Exception as e:
+        logger.error(f"Check embedding rebuilt err:\n{e}")
+
+    res = resp[0]["all_have_embedding"]
+    logger.info(resp)
 
     return res

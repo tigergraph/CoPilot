@@ -11,7 +11,7 @@ from agent.Q import DONE, Q
 from langgraph.graph import END, StateGraph
 from pyTigerGraph.common.exception import TigerGraphException
 from supportai.retrievers import (HNSWOverlapRetriever, HNSWRetriever,
-                                  HNSWSiblingRetriever, GraphRAG)
+                                  HNSWSiblingRetriever, GraphRAGRetriever)
 from tools import MapQuestionToSchemaException
 from typing_extensions import TypedDict
 
@@ -239,7 +239,7 @@ class TigerGraphAgentGraph:
             "function_call": "HNSW_Search",
             "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
-                "HNSW_Search_Content"
+                "HNSW_Content_Search"
             )["output"],
         }
         state["lookup_source"] = "supportai"
@@ -277,7 +277,7 @@ class TigerGraphAgentGraph:
         Run the agent graphrag search.
         """
         self.emit_progress("Searching the knowledge graph")
-        retriever = GraphRAG(
+        retriever = GraphRAGRetriever(
             self.embedding_model,
             self.embedding_store,
             self.llm_provider.model,
@@ -289,10 +289,10 @@ class TigerGraphAgentGraph:
         )
 
         state["context"] = {
-            "function_call": "GraphRAG",
+            "function_call": "GraphRAG_Community_Search",
             "result": {"@@final_retrieval": step[0]},
             "query_output_format": self.db_connection.getQueryMetadata(
-                "GraphRAG_Community_Retriever"
+                "GraphRAG_Community_Search"
             )["output"],
         }
         state["lookup_source"] = "supportai"

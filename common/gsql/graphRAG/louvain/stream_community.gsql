@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY stream_community(UINT iter) {
+CREATE OR REPLACE DISTRIBUTED QUERY stream_community(UINT iter) {
     Comms = {Community.*};
 
     // Get communities of the current iteration

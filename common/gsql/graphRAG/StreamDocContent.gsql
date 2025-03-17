@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY StreamDocContent(Vertex<Document> doc) {
+CREATE OR REPLACE DISTRIBUTED QUERY StreamDocContent(Vertex<Document> doc) {
     Doc = {doc};
 
     // Get the document's content and mark it as processed

@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Build_Concept_Tree(INT min_cooccurence=10) { 
+CREATE OR REPLACE DISTRIBUTED QUERY Build_Concept_Tree(INT min_cooccurence=10) { 
   MapAccum<STRING, SumAccum<INT>> @concept_cooccurence;
   SetAccum<VERTEX<Concept>> @@unmerged_concepts;
   SetAccum<STRING> @source_concepts;

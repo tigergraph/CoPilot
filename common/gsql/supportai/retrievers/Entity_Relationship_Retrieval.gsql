@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Entity_Relationship_Retrieval(SET<STRING> entities, SET<STRING> relationships, INT top_k=5) { 
+CREATE OR REPLACE DISTRIBUTED QUERY Entity_Relationship_Retrieval(SET<STRING> entities, SET<STRING> relationships, INT top_k=5) { 
   SumAccum<INT> @num_touched;
   MapAccum<STRING, MapAccum<STRING, STRING>> @@final_retrieval;
   SetAccum<VERTEX> @@starting_ents;

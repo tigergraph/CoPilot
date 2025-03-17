@@ -77,7 +77,7 @@ def validate_function_call(conn, generated_call: str, valid_functions: list) -> 
     # LogWriter.info(f"generated_call: {generated_call}")
     # LogWriter.info(f"valid_headers: {valid_headers}")
     endpoints = conn.getEndpoints(dynamic=True)  # installed queries in database
-    installed_queries = [q.split("/")[-1] for q in endpoints]
+    installed_queries = [q.split("/")[-1] for q in endpoints if f"/{conn.graphname}/" in q]
 
     if "runInstalledQuery(" == generated_call[:18]:
         LogWriter.info(f"request_id={req_id_cv.get()} validate_function_call() validating custom query")

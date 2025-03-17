@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY StreamIds(INT current_batch, INT ttl_batches, STRING v_type) {
+CREATE OR REPLACE DISTRIBUTED QUERY StreamIds(INT current_batch, INT ttl_batches, STRING v_type) {
     /* 
      * Get the IDs of entities that have not already been processed 
      * (one batch at a time)

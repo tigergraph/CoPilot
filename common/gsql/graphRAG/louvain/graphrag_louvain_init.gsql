@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches = 1) {
+CREATE OR REPLACE DISTRIBUTED QUERY graphrag_louvain_init(UINT max_hop = 10, UINT n_batches = 1) {
     /*
      * Initialize GraphRAG's hierarchical communities.
      */

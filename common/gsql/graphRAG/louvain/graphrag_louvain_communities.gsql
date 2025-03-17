@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY graphrag_louvain_communities(UINT iteration=1, UINT max_hop = 10, UINT n_batches = 1) SYNTAX V2{
+CREATE OR REPLACE DISTRIBUTED QUERY graphrag_louvain_communities(UINT iteration=1, UINT max_hop = 10, UINT n_batches = 1) SYNTAX V2{
     /*
      * This is the same query as tg_louvain, just that Paper-related schema
      * are changed to Community-related schema
@@ -172,7 +172,7 @@ CREATE DISTRIBUTED QUERY graphrag_louvain_communities(UINT iteration=1, UINT max
           POST-ACCUM
               // Write the results to a new community vertex (iteration + 1)
               //                              ID                      , iter, edges within the community
-              INSERT INTO Community VALUES (s.id+"_"+to_string(iteration+1), iteration+1, ""),
+              INSERT INTO Community VALUES (s.@community_vid+"_"+to_string(iteration+1), iteration+1, ""),
               INSERT INTO HAS_PARENT VALUES (s, s.@community_vid+"_"+to_string(iteration+1)) // link Community's child/parent community
           ;  
 

@@ -23,9 +23,12 @@ from common.config import (
     get_llm_service,
     llm_config,
     milvus_config,
+    embedding_store_type,
     security,
 )
 from common.db.connections import elevate_db_connection_to_token
+from common.embeddings.base_embedding_store import EmbeddingStore
+from common.embeddings.tigergraph_embedding_store import TigerGraphEmbeddingStore
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.logs.logwriter import LogWriter
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
@@ -75,36 +78,47 @@ def initialize_eventual_consistency_checker(
         return consistency_checkers[graphname]
 
     try:
-        process_interval_seconds = milvus_config.get(
-            "process_interval_seconds", 1800
-        )  # default 30 minutes
-        cleanup_interval_seconds = milvus_config.get(
-            "cleanup_interval_seconds", 86400
-        )  # default 30 days,
-        batch_size = milvus_config.get("batch_size", 10)
-        vector_indices = {}
-        vertex_field = None
-
-        if milvus_config.get("enabled") == "true":
-            vertex_field = milvus_config.get("vertex_field", "vertex_id")
-            index_names = milvus_config.get(
-                "indexes",
-                ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"],
-            )
-            for index_name in index_names:
-                vector_indices[graphname + "_" + index_name] = MilvusEmbeddingStore(
+        if embedding_store_type == "tigergraph":
+            maj, minor, patch = conn.getVer().split(".")
+            if  maj >= "4" and minor >= "2":
+                # TigerGraph native vector support
+                index_stores = {}
+                index_stores["tigergraph"] = TigerGraphEmbeddingStore(
+                    conn,
                     embedding_service,
-                    host=milvus_config["host"],
-                    port=milvus_config["port"],
-                    support_ai_instance=True,
-                    collection_name=graphname + "_" + index_name,
-                    username=milvus_config.get("username", ""),
-                    password=milvus_config.get("password", ""),
-                    vector_field=milvus_config.get("vector_field", "document_vector"),
-                    text_field=milvus_config.get("text_field", "document_content"),
-                    vertex_field=vertex_field,
-                    alias=milvus_config.get("alias", "default"),
+                    support_ai_instance=False,
                 )
+        else:
+            process_interval_seconds = milvus_config.get(
+                "process_interval_seconds", 1800
+            )  # default 30 minutes
+            cleanup_interval_seconds = milvus_config.get(
+                "cleanup_interval_seconds", 86400
+            )  # default 30 days,
+            batch_size = milvus_config.get("batch_size", 10)
+            index_stores = {}
+            vertex_field = None
+
+            if milvus_config.get("enabled") == "true":
+                vertex_field = milvus_config.get("vertex_field", "vertex_id")
+                index_names = milvus_config.get(
+                    "indexes",
+                    ["Document", "DocumentChunk", "Entity", "Relationship", "Concept"],
+                )
+                for index_name in index_names:
+                    index_stores[graphname + "_" + index_name] = MilvusEmbeddingStore(
+                        embedding_service,
+                        host=milvus_config["host"],
+                        port=milvus_config["port"],
+                        support_ai_instance=True,
+                        collection_name=graphname + "_" + index_name,
+                        username=milvus_config.get("username", ""),
+                        password=milvus_config.get("password", ""),
+                        vector_field=milvus_config.get("vector_field", "document_vector"),
+                        text_field=milvus_config.get("text_field", "document_content"),
+                        vertex_field=vertex_field,
+                        alias=milvus_config.get("alias", "default"),
+                    )
 
         chunker = ecc_util.get_chunker()
 
@@ -127,7 +141,7 @@ def initialize_eventual_consistency_checker(
             vertex_field,
             embedding_service,
             index_names,
-            vector_indices,
+            index_stores,
             conn,
             chunker,
             extractor,

@@ -17,7 +17,10 @@ from common.config import (
     get_llm_service,
     llm_config,
     milvus_config,
+    embedding_store_type,
 )
+from common.embeddings.base_embedding_store import EmbeddingStore
+from common.embeddings.tigergraph_embedding_store import TigerGraphEmbeddingStore
 from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
 from common.extractors import GraphExtractor, LLMEntityRelationshipExtractor
 from common.extractors.BaseExtractor import BaseExtractor
@@ -33,7 +36,7 @@ async def install_queries(
     conn: TigerGraphConnection,
 ):
     # queries that are currently installed
-    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True)]
+    installed_queries = [q.split("/")[-1] for q in await conn.getEndpoints(dynamic=True) if f"/{conn.graphname}/" in q]
 
     # doesn't need to be parallel since tg only does it one at a time
     for q in requried_queries:
@@ -43,19 +46,27 @@ async def install_queries(
         if q_name not in installed_queries:
             logger.info(f"Query '{q_name}' not found in installed queries. Attempting to install...")
             try:
-                res = await workers.install_query(conn, q)
+                res = await workers.install_query(conn, q, False)
                 # stop system if a required query doesn't install
                 if res["error"]:
-                    logger.error(f"Failed to install query '{q_name}'. Error: {res['message']}")
+                    logger.error(f"Failed to create query '{q_name}'. Error: {res['message']}")
                     raise Exception(f"Installation of query '{q_name}' failed with message: {res['message']}")
                 else:
-                    logger.info(f"Successfully installed query '{q_name}'.")
+                    logger.info(f"Successfully created query '{q_name}'.")
                     
             except Exception as e:
                 logger.critical(f"Critical error during installation of query '{q_name}': {e}")
                 raise e
         else:
             logger.info(f"Query '{q_name}' is already installed.")
+    query = f"""\
+USE GRAPH {conn.graphname}
+INSTALL QUERY ALL
+"""
+    async with tg_sem:
+        res = await conn.gsql(query)
+        if "error" in res:
+            raise Exception(res)
     
     logger.info("Finished processing all required queries.")
 
@@ -69,7 +80,7 @@ async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
 
 async def init(
     conn: TigerGraphConnection,
-) -> tuple[BaseExtractor, dict[str, MilvusEmbeddingStore]]:
+) -> tuple[BaseExtractor, dict[str, EmbeddingStore]]:
     # install requried queries
     requried_queries = [
         "common/gsql/supportai/Scan_For_Updates",
@@ -88,40 +99,50 @@ async def init(
         extractor = LLMEntityRelationshipExtractor(get_llm_service(llm_config))
     else:
         raise ValueError("Invalid extractor type")
-    vertex_field = milvus_config.get("vertex_field", "vertex_id")
-    index_names = milvus_config.get(
-        "indexes",
-        [
-            "Document",
-            "DocumentChunk",
-            "Entity",
-            "Relationship"
-        ],
-    )
-    index_stores = {}
-    async with asyncio.TaskGroup() as tg:
-        for index_name in index_names:
-            name = conn.graphname + "_" + index_name
-            s = MilvusEmbeddingStore(
-                embedding_service,
-                host=milvus_config["host"],
-                port=milvus_config["port"],
-                support_ai_instance=True,
-                collection_name=name,
-                username=milvus_config.get("username", ""),
-                password=milvus_config.get("password", ""),
-                vector_field=milvus_config.get("vector_field", "document_vector"),
-                text_field=milvus_config.get("text_field", "document_content"),
-                vertex_field=vertex_field,
-                drop_old=False,
-            )
 
-            LogWriter.info(f"Initializing {name}")
-            # init collection if it doesn't exist
-            if not s.check_collection_exists():
-                tg.create_task(init_embedding_index(s, vertex_field))
+    if embedding_store_type == "milvus":
+        vertex_field = milvus_config.get("vertex_field", "vertex_id")
+        index_names = milvus_config.get(
+            "indexes",
+            [
+                "Document",
+                "DocumentChunk",
+                "Entity",
+                "Relationship"
+            ],
+        )
+        index_stores = {}
+        async with asyncio.TaskGroup() as tg:
+            for index_name in index_names:
+                name = conn.graphname + "_" + index_name
+                s = MilvusEmbeddingStore(
+                    embedding_service,
+                    host=milvus_config["host"],
+                    port=milvus_config["port"],
+                    support_ai_instance=True,
+                    collection_name=name,
+                    username=milvus_config.get("username", ""),
+                    password=milvus_config.get("password", ""),
+                    vector_field=milvus_config.get("vector_field", "document_vector"),
+                    text_field=milvus_config.get("text_field", "document_content"),
+                    vertex_field=vertex_field,
+                    drop_old=False,
+                )
 
-            index_stores[name] = s
+                LogWriter.info(f"Initializing {name}")
+                # init collection if it doesn't exist
+                if not s.check_collection_exists():
+                    tg.create_task(init_embedding_index(s, vertex_field))
+
+                index_stores[name] = s
+    else:
+        index_stores = {}
+        s = TigerGraphEmbeddingStore(
+            conn,
+            embedding_service,
+            support_ai_instance=True,
+        )
+        index_stores = {"tigergraph": s}
 
     return extractor, index_stores
 

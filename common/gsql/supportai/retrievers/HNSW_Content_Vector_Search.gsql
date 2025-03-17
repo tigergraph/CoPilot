@@ -1,0 +1,31 @@
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
+  INT top_k=5, LIST<FLOAT> query_vector, BOOL verbose = False) { 
+  TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
+  HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
+  SetAccum<VERTEX> @@start_set;
+  MapAccum<STRING, STRING> @@final_retrieval;
+  INT inc_top_k = top_k * 2;
+  
+  vset = {v_type.*};
+  result = SELECT v FROM vset:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
+
+  FOREACH item IN @@topk_set DO
+    @@start_set += item.v;
+  END;
+    
+  src = {@@start_set};
+    
+  res = SELECT s FROM src:s -(:e)- :tgt
+        ACCUM
+          IF (s.type == "DocumentChunk" OR s.type == "Document") AND tgt.type == "Content" THEN
+            @@final_retrieval += (s.id -> tgt.text)
+          END
+        POST-ACCUM
+          IF s.type == "Relationship" OR s.type == "Entity" OR s.type == "Concept" THEN
+            @@final_retrieval += (s.id -> s.definition)
+          ELSE IF s.type == "Community" THEN
+            @@final_retrieval += (s.id -> s.description)
+          END;
+    
+  PRINT @@final_retrieval as final_retrieval;     
+}

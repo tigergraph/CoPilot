@@ -1,0 +1,35 @@
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host,
+  UINT milvus_port, STRING collection_prefix, STRING vector_field_name,
+  STRING vertex_id_field_name, STRING metric_type="COSINE", STRING query_vector_as_string, INT community_level=1, INT top_k = 3, BOOL with_chunk = true, BOOL verbose = false) {
+  MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
+  MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
+  SetAccum<STRING> @context;
+  SetAccum<Vertex> @children;
+  SetAccum<Vertex> @@start_set;
+
+  STRING v_type = "Community";
+  @@start_set = HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string, community_level);
+  selected_comms = {@@start_set};
+
+  @@verbose_info += ("start_set" -> @@start_set);
+
+  IF with_chunk THEN
+      FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
+          selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT)- Community:c
+              ACCUM s.@children += c
+              POST-ACCUM @@verbose_info += ("community_level_"+to_string(i-1) -> s.@children);
+      END;        
+      related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- DocumentChunk:d -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
+          ACCUM m.@context += c.text, m.@children += d
+          POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
+  END;
+
+  selected_comms = SELECT c FROM selected_comms:c WHERE c.type == "Community"
+      ACCUM c.@context += c.description POST-ACCUM(c) @@final_retrieval += (c -> c.@context);
+
+  PRINT @@final_retrieval as final_retrieval;
+
+  IF verbose THEN
+      PRINT @@verbose_info as verbose;
+  END;
+}

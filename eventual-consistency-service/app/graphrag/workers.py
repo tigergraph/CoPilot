@@ -4,6 +4,7 @@ import logging
 import time
 import traceback
 from urllib.parse import quote_plus
+from typing import Iterable, List, Optional, Tuple
 
 import ecc_util
 import httpx
@@ -14,7 +15,7 @@ from pyTigerGraph import AsyncTigerGraphConnection
 
 from common.config import milvus_config
 from common.embeddings.embedding_services import EmbeddingModel
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors import BaseExtractor, LLMEntityRelationshipExtractor
 from common.logs.logwriter import LogWriter
 
@@ -23,7 +24,7 @@ vertex_field = milvus_config.get("vertex_field", "vertex_id")
 logger = logging.getLogger(__name__)
 
 async def install_query(
-    conn: AsyncTigerGraphConnection, query_path: str
+    conn: AsyncTigerGraphConnection, query_path: str, install: bool = True
 ) -> dict[str, httpx.Response | str | None]:
     LogWriter.info(f"Installing query {query_path}")
     with open(f"{query_path}.gsql", "r") as f:
@@ -33,7 +34,11 @@ async def install_query(
     query = f"""\
 USE GRAPH {conn.graphname}
 {query}
-INSTALL QUERY {query_name}"""
+"""
+    if install:
+       query += f"""
+INSTALL QUERY {query_name}
+"""
     async with util.tg_sem:
         res = await conn.gsql(query)
 
@@ -150,8 +155,8 @@ embed_sem = asyncio.Semaphore(20)
 
 async def embed(
     embed_svc: EmbeddingModel,
-    embed_store: MilvusEmbeddingStore,
-    v_id: str,
+    embed_store: EmbeddingStore,
+    v_id: str | Tuple[str, str],
     content: str,
 ):
     """
@@ -331,6 +336,11 @@ async def extract(
                 if len(v_id) == 0:
                     continue
                 desc = await get_vert_desc(conn, v_id, edge.source)
+                if len(desc[0]) == 0:
+                    await embed_chan.put((v_id, v_id, "Entity"))
+                else:
+                    # (v_id, content, index_name)
+                    await embed_chan.put((v_id, desc[0], "Entity"))
                 await upsert_chan.put(
                     (
                         util.upsert_vertex,  # func to call
@@ -349,6 +359,11 @@ async def extract(
                 if len(v_id) == 0:
                     continue
                 desc = await get_vert_desc(conn, v_id, edge.target)
+                if len(desc[0]) == 0:
+                    await embed_chan.put((v_id, v_id, "Entity"))
+                else:
+                    # (v_id, content, index_name)
+                    await embed_chan.put((v_id, desc[0], "Entity"))
                 await upsert_chan.put(
                     (
                         util.upsert_vertex,  # func to call
@@ -390,8 +405,8 @@ resolve_sem = asyncio.Semaphore(20)
 async def resolve_entity(
     conn: AsyncTigerGraphConnection,
     upsert_chan: Channel,
-    emb_store: MilvusEmbeddingStore,
-    entity_id: str,
+    embed_store: EmbeddingStore,
+    entity_id: str | Tuple[str, str],
 ):
     """
     get all vectors of E (one name can have multiple discriptions)
@@ -412,8 +427,8 @@ async def resolve_entity(
     async with resolve_sem:
         try:
             logger.info(f"Resolving Entity {entity_id}")
-            results = await emb_store.aget_k_closest(entity_id)
-            logger.info(f"results")
+            results = await embed_store.aget_k_closest(entity_id)
+            logger.info(f"{results}")
 
         except Exception:
             err = traceback.format_exc()

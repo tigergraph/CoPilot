@@ -1,0 +1,15 @@
+CREATE OR REPLACE DISTRIBUTED QUERY get_topk_closest(STRING vertex_type, STRING vertex_id, UINT k=10, FLOAT threshold = 0.00) SYNTAX V2 {
+    ListAccum<Float> @@query_vector;
+    MaxAccum<Float> @similarity;
+    
+    vset = {vertex_type.*};
+  
+    q = SELECT s FROM vset:s WHERE s.id == vertex_id POST-ACCUM @@query_vector += s.embedding;
+  
+    result = SELECT v FROM vset:v
+        ACCUM v.@similarity = 1 - gds.vector.distance(@@query_vector, v.embedding, "COSINE")
+        HAVING v.@similarity >= threshold - 0.000001
+        ORDER BY v.@similarity LIMIT k;
+    
+    PRINT result[result.@similarity as similarity] as results;
+}

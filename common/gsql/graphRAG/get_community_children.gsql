@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY get_community_children(Vertex<Community> comm, UINT iter) SYNTAX V2{
+CREATE OR REPLACE DISTRIBUTED QUERY get_community_children(Vertex<Community> comm, UINT iter) SYNTAX V2{
     Comms = {comm};
 
     IF iter > 1 THEN

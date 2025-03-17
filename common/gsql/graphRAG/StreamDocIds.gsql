@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY StreamDocIds(INT current_batch, INT ttl_batches) {
+CREATE OR REPLACE DISTRIBUTED QUERY StreamDocIds(INT current_batch, INT ttl_batches) {
     /* 
      * Get the IDs of documents that have not already been processed (one
      * batch at a time)

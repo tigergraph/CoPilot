@@ -1,4 +1,4 @@
-CREATE DISTRIBUTED QUERY Scan_For_Updates(STRING v_type = "Document",
+CREATE OR REPLACE DISTRIBUTED QUERY Scan_For_Updates(STRING v_type = "Document",
                                           UINT expire_window=3600,
                                           UINT num_samples = 10) { 
   TYPEDEF TUPLE <VERTEX to_process, UINT priority> ProcessInfo;

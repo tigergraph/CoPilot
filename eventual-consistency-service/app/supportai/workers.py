@@ -12,7 +12,7 @@ from pyTigerGraph import TigerGraphConnection
 from common.config import milvus_config
 from langchain_community.graphs.graph_document import GraphDocument, Node
 from common.embeddings.embedding_services import EmbeddingModel
-from common.embeddings.milvus_embedding_store import MilvusEmbeddingStore
+from common.embeddings.base_embedding_store import EmbeddingStore
 from common.extractors.BaseExtractor import BaseExtractor
 from common.logs.logwriter import LogWriter
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 async def install_query(
-    conn: TigerGraphConnection, query_path: str
+    conn: TigerGraphConnection, query_path: str, install: bool = True
 ) -> dict[str, httpx.Response | str | None]:
     LogWriter.info(f"Installing query {query_path}")
     with open(f"{query_path}.gsql", "r") as f:
@@ -33,7 +33,11 @@ async def install_query(
     query = f"""\
 USE GRAPH {conn.graphname}
 {query}
-INSTALL QUERY {query_name}"""
+"""
+    if install:
+       query += f"""
+INSTALL QUERY {query_name}
+"""
 
     async with util.tg_sem:
         res = await conn.gsql(query)
@@ -117,7 +121,7 @@ async def upsert_chunk(conn: TigerGraphConnection, doc_id, chunk_id, chunk):
 
 async def embed(
     embed_svc: EmbeddingModel,
-    embed_store: MilvusEmbeddingStore,
+    embed_store: EmbeddingStore,
     v_id: str,
     content: str,
 ):

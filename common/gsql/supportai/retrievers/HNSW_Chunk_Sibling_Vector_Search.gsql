@@ -1,25 +1,22 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_host, 
-  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
-  STRING vertex_id_field_name, STRING metric_type="COSINE",  STRING query_vector_as_string, UINT top_k=5, UINT lookback=3, INT lookahead=3, BOOL verbose = False) { 
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_type,
+  LIST<FLOAT> query_vector, UINT top_k=5, UINT lookback=3, INT lookahead=3, BOOL verbose = False) { 
+  TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
+  HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
   MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@final_retrieval;
   OrAccum @touched;
   SetAccum<VERTEX> @@start_set;
-  INT inc_top_k = top_k * 2;
   
-  all_chunks = {v_type};
-  @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
+  all_chunks = {v_type.*};
+  result = SELECT v FROM all_chunks:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
 
-  WHILE @@start_set.size() < top_k LIMIT 5 DO
-    @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
-    inc_top_k = inc_top_k * 2;
+  FOREACH item IN @@topk_set DO
+    @@start_set += item.v;
   END;
 
-
   seeds = {@@start_set};
-  start = SELECT s FROM seeds:s LIMIT top_k;
-  start = SELECT s FROM start:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  start = SELECT s FROM seeds:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
   FOREACH i IN RANGE[1, lookback] DO
     start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
           ACCUM 
