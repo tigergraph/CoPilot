@@ -48,10 +48,21 @@ async def install_queries(
         q_name = q.split("/")[-1]
         # if the query is not installed, install it
         if q_name not in installed_queries:
-            res = await workers.install_query(conn, q)
+            res = await workers.install_query(conn, q, False)
             # stop system if a required query doesn't install
             if res["error"]:
                 raise Exception(res["message"])
+            logger.info(f"Successfully created query '{q_name}'.")
+    query = f"""\
+USE GRAPH {conn.graphname}
+INSTALL QUERY ALL
+"""
+    async with tg_sem:
+        res = await conn.gsql(query)
+        if "error" in res:
+            raise Exception(res)
+
+    logger.info("Finished processing all required queries.")
 
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):

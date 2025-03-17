@@ -81,11 +81,18 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
             q_body = f.read()
         q_name, extension = os.path.splitext(os.path.basename(filename))
         q_res = conn.gsql(
-            """USE GRAPH {}\nBEGIN\n{}\nEND\nINSTALL QUERY {}""".format(
+            """USE GRAPH {}\nBEGIN\n{}\nEND\n""".format(
                 conn.graphname, q_body, q_name
             )
         )
         logger.info(f"Done installing support ai query {q_name} with status {q_res}")
+
+    q_res = conn.gsql(
+        """USE GRAPH {}\nINSTALL QUERY ALL\n""".format(
+            conn.graphname
+        )
+    )
+    logger.info(f"Done installing support ai query all with status {q_res}")
 
     return schema_res, index_res
 

@@ -46,19 +46,27 @@ async def install_queries(
         if q_name not in installed_queries:
             logger.info(f"Query '{q_name}' not found in installed queries. Attempting to install...")
             try:
-                res = await workers.install_query(conn, q)
+                res = await workers.install_query(conn, q, False)
                 # stop system if a required query doesn't install
                 if res["error"]:
-                    logger.error(f"Failed to install query '{q_name}'. Error: {res['message']}")
+                    logger.error(f"Failed to create query '{q_name}'. Error: {res['message']}")
                     raise Exception(f"Installation of query '{q_name}' failed with message: {res['message']}")
                 else:
-                    logger.info(f"Successfully installed query '{q_name}'.")
+                    logger.info(f"Successfully created query '{q_name}'.")
                     
             except Exception as e:
                 logger.critical(f"Critical error during installation of query '{q_name}': {e}")
                 raise e
         else:
             logger.info(f"Query '{q_name}' is already installed.")
+    query = f"""\
+USE GRAPH {conn.graphname}
+INSTALL QUERY ALL
+"""
+    async with tg_sem:
+        res = await conn.gsql(query)
+        if "error" in res:
+            raise Exception(res)
     
     logger.info("Finished processing all required queries.")
 

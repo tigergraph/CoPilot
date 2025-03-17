@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 async def install_query(
-    conn: TigerGraphConnection, query_path: str
+    conn: TigerGraphConnection, query_path: str, install: bool = True
 ) -> dict[str, httpx.Response | str | None]:
     LogWriter.info(f"Installing query {query_path}")
     with open(f"{query_path}.gsql", "r") as f:
@@ -33,7 +33,11 @@ async def install_query(
     query = f"""\
 USE GRAPH {conn.graphname}
 {query}
-INSTALL QUERY {query_name}"""
+"""
+    if install:
+       query += f"""
+INSTALL QUERY {query_name}
+"""
 
     async with util.tg_sem:
         res = await conn.gsql(query)
