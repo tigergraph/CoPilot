@@ -23,7 +23,7 @@ You can interact with CoPilot through a chat interface on TigerGraph Cloud, a bu
 
 When a question is posed in natural language, CoPilot (InquiryAI) employs a novel three-phase interaction with both the TigerGraph database and a LLM of the user's choice, to obtain accurate and relevant responses.
 
-The first phase aligns the question with the particular data available in the database. CoPilot uses the LLM to compare the question with the graph’s schema and replace entities in the question by graph elements. For example, if there is a vertex type of “BareMetalNode” and the user asks “How many servers are there?”, the question will be translated to “How many BareMetalNode vertices are there?”. In the second phase, CoPilot uses the LLM to compare the transformed question with a set of curated database queries and functions in order to select the best match. In the third phase, CoPilot executes the identified query and returns the result in natural language along with the reasoning behind the actions. 
+The first phase aligns the question with the particular data available in the database. CoPilot uses the LLM to compare the question with the graph’s schema and replace entities in the question by graph elements. For example, if there is a vertex type of `BareMetalNodeq and the user asks `How many servers are there?q, the question will be translated to `How many BareMetalNode vertices are there?q. In the second phase, CoPilot uses the LLM to compare the transformed question with a set of curated database queries and functions in order to select the best match. In the third phase, CoPilot executes the identified query and returns the result in natural language along with the reasoning behind the actions. 
 
 Using pre-approved queries provides multiple benefits. First and foremost, it reduces the likelihood of hallucinations, because the meaning and behavior of each query has been validated.  Second, the system has the potential of predicting the execution resources needed to answer the question. 
 
@@ -324,7 +324,9 @@ In the `configs/llm_config.json` file, copy JSON config template from below for 
 ##### DB configuration
 Copy the below into `configs/db_config.json` and edit the `hostname` and `getToken` fields to match your database's configuration. If token authentication is enabled in TigerGraph, set `getToken` to `true`. Set the timeout, memory threshold, and thread limit parameters as desired to control how much of the database's resources are consumed when answering a question.
 
-“ecc” and “chat_history_api” are the addresses of internal components of CoPilot.If you use the Docker Compose file as is, you don’t need to change them. 
+`embedding_store` selects the vector db to use, currently supports `tigergraph` and `milvus`. Set `reuse_embedding` to `true` will skip re-generating the embedding if it already exists.
+
+`eccq and `chat_history_apiq are the addresses of internal components of CoPilot.If you use the Docker Compose file as is, you don’t need to change them. 
 
 ```json
 {
@@ -335,6 +337,8 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
     "default_timeout": 300,
     "default_mem_threshold": 5000,
     "default_thread_limit": 8,
+    "embedding_store": "milvus",
+    "reuse_embedding": false,
     "ecc": "http://eventual-consistency-service:8001",
     "chat_history_api": "http://chat-history:8002"
 }
