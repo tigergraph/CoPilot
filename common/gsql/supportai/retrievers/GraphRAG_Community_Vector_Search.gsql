@@ -7,11 +7,18 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Vector_Search(LIST<FLOAT>
   comms = {Community.*};
   
   filtered_comms = SELECT c FROM comms:c WHERE c.iteration == community_level and length(c.description) > 0;
-  selected_comms = vectorSearch({Community.embedding}, query_vector, top_k, {candidate_set: filtered_comms});
+  start_comms = vectorSearch({Community.embedding}, query_vector, top_k, {candidate_set: filtered_comms});
 
+  start_comms = SELECT c FROM start_comms:c WHERE c.type == "Community"
+      POST-ACCUM @@start_set += c;
+
+  @@verbose_info += ("start_set" -> @@start_set);
+
+  selected_comms = start_comms;
   IF with_chunk THEN
       FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
           selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT)- Community:c
+              WHERE s.iteration == i
               ACCUM s.@children += c
               POST-ACCUM @@verbose_info += ("community_level_"+to_string(i-1) -> s.@children);
       END;
@@ -20,10 +27,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Vector_Search(LIST<FLOAT>
           POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
   END;
 
-  selected_comms = SELECT c FROM selected_comms:c WHERE c.type == "Community"
-      ACCUM c.@context += c.description, @@start_set += c POST-ACCUM(c) @@final_retrieval += (c -> c.@context);
-
-  @@verbose_info += ("start_set" -> @@start_set);
+  selected_comms = SELECT c FROM selected_comms:c -(HAS_PARENT>*1..)- start_comms:s WHERE s.type == c.type and c.type == "Community"
+      ACCUM s.@context += s.description, s.@context += c.@context
+      POST-ACCUM(s) @@final_retrieval += (s -> s.@context);
 
   PRINT @@final_retrieval as final_retrieval;
 

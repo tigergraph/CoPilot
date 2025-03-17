@@ -77,7 +77,10 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
 
 * Step 4: Start all services
 
-  Now, simply run `docker compose up -d` and wait for all the services to start. If you don’t want to use the included Milvus DB, you can set its scale to 0 to not start it: `docker compose up -d --scale milvus-standalone=0 --scale etcd=0 --scale minio=0`.
+> NOTE: when TigerGraph is used as the embedding store, please comment out `etcd`, `minio`, `milvus-standalone` and related volumes. Or set Milvus DB's scale to 0 to not start it: `docker compose up -d --scale milvus-standalone=0 --scale etcd=0 --scale minio=0`.
+>       Also uncomment `tigergraph` section from `docker-compose.yaml`. Please follow the [instructions](https://github.com/tigergraph/ecosys/blob/master/tutorials/GSQL.md#set-up-environment) to download TigerGraph docker image.
+
+  Now, simply run `docker compose up -d` and wait for all the services to start.
 
 * Step 5: Install UDFs
 
@@ -337,15 +340,15 @@ Copy the below into `configs/db_config.json` and edit the `hostname` and `getTok
     "default_timeout": 300,
     "default_mem_threshold": 5000,
     "default_thread_limit": 8,
-    "embedding_store": "milvus",
+    "embedding_store": "tigergraph",
     "reuse_embedding": false,
     "ecc": "http://eventual-consistency-service:8001",
     "chat_history_api": "http://chat-history:8002"
 }
 ```
 
-##### Embedding store configuration
-Copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup. 
+##### Milvus configuration
+Milvus can be configured as the embedding store via setting `"embedding_store": "milvus"` in `db_config.json`. Next, copy the below into `configs/milvus_config.json` and edit the `host` and `port` fields to match your Milvus configuration (keeping in mind docker configuration).  `username` and `password` can also be configured below if required by your Milvus setup. 
 ```json
 {
     "host": "milvus-standalone",

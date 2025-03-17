@@ -5,17 +5,30 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host
   MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
   SetAccum<STRING> @context;
   SetAccum<Vertex> @children;
+  SetAccum<Vertex> @@tmp_start_set;
   SetAccum<Vertex> @@start_set;
+  INT inc_top_k = top_k * 2;
 
   STRING v_type = "Community";
-  @@start_set = HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string, community_level);
-  selected_comms = {@@start_set};
+  @@tmp_start_set = HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string, community_level);
+
+  WHILE @@tmp_start_set.size() < top_k LIMIT 5 DO
+      @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string, community_level);
+      inc_top_k = inc_top_k * 2;
+  END;
+
+  tmp = {@@tmp_start_set};
+  tmp2 = SELECT s FROM tmp:s WHERE s.iteration == community_level LIMIT top_k;
+  tmp3 = SELECT s FROM tmp2:s POST-ACCUM @@start_set += s;
 
   @@verbose_info += ("start_set" -> @@start_set);
 
+  start_comms = {@@start_set};
+  selected_comms = start_comms;
   IF with_chunk THEN
       FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
           selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT)- Community:c
+              WHERE s.iteration == i
               ACCUM s.@children += c
               POST-ACCUM @@verbose_info += ("community_level_"+to_string(i-1) -> s.@children);
       END;        
@@ -24,8 +37,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host
           POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
   END;
 
-  selected_comms = SELECT c FROM selected_comms:c WHERE c.type == "Community"
-      ACCUM c.@context += c.description POST-ACCUM(c) @@final_retrieval += (c -> c.@context);
+  selected_comms = SELECT c FROM selected_comms:c -(HAS_PARENT>*1..)- start_comms:s WHERE s.type == c.type and c.type == "Community"
+      ACCUM s.@context += s.description, s.@context += c.@context
+      POST-ACCUM(s) @@final_retrieval += (s -> s.@context);
 
   PRINT @@final_retrieval as final_retrieval;
 

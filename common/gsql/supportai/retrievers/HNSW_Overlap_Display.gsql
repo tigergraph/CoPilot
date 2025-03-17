@@ -1,5 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_ids,
-  Set<STRING> v_types, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) {
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;
@@ -11,17 +10,11 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_ids,
   SetAccum<STRING> @context;
   SetAccum<VERTEX> @parents;
   SetAccum<EDGE> @paths;
-  SetAccum<STRING> @@start_vids;
 
-  JSONARRAY v_ids = parse_json_array(json_list_ids);
-  FOREACH i IN RANGE[0, v_ids.size()-1] DO
-    @@start_vids += v_ids.getString(i);
-  END;
-
-  FOREACH v_type IN v_types DO
-    vset = {v_type.*};
-    //vid is expected to be uniq among DocumentChunk, Entity, Relationship
-    result = SELECT v FROM vset:v WHERE v.id IN @@start_vids POST-ACCUM @@start_set += v;
+  JSONARRAY vts = parse_json_array(json_list_vts);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
   END;
 
   start = {@@start_set};

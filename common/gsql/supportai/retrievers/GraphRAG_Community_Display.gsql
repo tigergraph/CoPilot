@@ -16,8 +16,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_
   selected_comms = SELECT c FROM comms:c WHERE c.id IN @@start_vids;
 
   IF with_chunk THEN
-      FOREACH i IN RANGE[2, community_level] DO
+      FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
           selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT:e)- Community:c
+              WHERE s.iteration == i
               ACCUM s.@children += c, @@edges += e;
       END;
       related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT:e1)- DocumentChunk:d -(CONTAINS_ENTITY>:e2)- Entity:v -(RESOLVES_TO>:e3)- ResolvedEntity:r -(IN_COMMUNITY>:e4)- selected_comms:m

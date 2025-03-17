@@ -1,13 +1,16 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_types,
   LIST<FLOAT> query_vector, UINT top_k=3, UINT num_hops=5, UINT num_seen_min=1, BOOL verbose = False) {
+  TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;
+  SetAccum<VertexTypes> @@start_set_type;
   SetAccum<VERTEX> @@tmp_start_set;
+  SetAccum<VertexTypes> @@tmp_start_set_type;
   SetAccum<EDGE> @@edges;
   SumAccum<INT> @num_times_seen;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
-  MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
+  MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
   SetAccum<STRING> @context;
   SetAccum<VERTEX> @parents;
@@ -15,6 +18,10 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   INT inc_top_k = top_k * 2;
 
   FOREACH v_type IN v_types DO
+    IF v_type == "Document" THEN
+        CONTINUE;
+    END;
+
     vset = {v_type.*};
     result = SELECT v FROM vset:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
   END;
@@ -24,10 +31,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   END;
 
   start = {@@start_set};
+  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_start_set += s, @@start_set_type += VertexTypes(s, s.type);
 
-  @@verbose_info += ("start" -> @@start_set);
-  
-  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_start_set += s;
+  @@verbose_info += ("start_set" -> @@start_set_type);
   
   FOREACH i IN RANGE[0, num_hops-1] DO
     start = SELECT t FROM start:s -((RELATIONSHIP>|
@@ -62,14 +68,14 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
             @@to_retrieve_content += s
           END
         POST-ACCUM
-          @@tmp_start_set += s, @@edges += s.@paths,
+          @@tmp_start_set_type += VertexTypes(s, s.type), @@edges += s.@paths,
           FOREACH v IN s.@parents DO
             IF v IN @@start_set THEN
               @@result_set += (v -> s.@context)
             END
           END;
 
-  @@verbose_info += ("selected" -> @@tmp_start_set);
+  @@verbose_info += ("selected_set" -> @@tmp_start_set_type);
 
   doc_chunks = {@@to_retrieve_content};
 
