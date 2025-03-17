@@ -60,7 +60,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                     with open(f"common/gsql/vector/{q_name}.gsql", "r") as f:
                         q_body = f.read()
                     q_res = self.conn.gsql(
-                        """USE GRAPH {}\n{}\ninstall query {}""".format(
+                        """USE GRAPH {}\nBEGIN\n{}\nEND\ninstall query {}""".format(
                             self.conn.graphname, q_body, q_name
                         )
                     )

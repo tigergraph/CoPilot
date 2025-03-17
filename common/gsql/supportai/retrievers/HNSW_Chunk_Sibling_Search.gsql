@@ -49,6 +49,6 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STR
             @@final_retrieval += (key -> (s -> ("content" -> s.@content)))
           END;
   
-  PRINT @@final_retrieval;
+  PRINT @@final_retrieval as final_retrieval;
   
 }

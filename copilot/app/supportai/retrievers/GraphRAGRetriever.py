@@ -112,7 +112,7 @@ class GraphRAGRetriever(BaseRetriever):
                         combine: bool = False,
                         verbose: bool = False):
         retrieved = self.search(question, community_level, top_k, with_chunk, verbose)
-        context = ["\n".join(retrieved[0]["selected_comms"][x]) for x in retrieved[0]["selected_comms"]]
+        context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
         if combine:
             context = ["\n".join(context)]
         

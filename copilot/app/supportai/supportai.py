@@ -1,5 +1,7 @@
+import os
 import json
 import uuid
+import logging
 
 from pyTigerGraph import TigerGraphConnection
 from common.config import embedding_store_type
@@ -13,6 +15,7 @@ from common.py_schemas.schemas import (
     # SupportAIQuestion,
 )
 
+logger = logging.getLogger(__name__)
 
 def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, dict]:
     # need to open the file using the absolute path
@@ -25,6 +28,13 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
             graphname, schema
         )
     )
+
+    supportai_queries = [
+        "common/gsql/supportai/Scan_For_Updates.gsql",
+        "common/gsql/supportai/Update_Vertices_Processing_Status.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Overlap_Display.gsql",
+        "common/gsql/supportai/retrievers/GraphRAG_Community_Display.gsql",
+    ]
 
     if embedding_store_type == "tigergraph":
         if int(ver[0]) >= 4 and int(ver[1]) >= 2:
@@ -39,6 +49,23 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
         else:
             raise Execption(f"Vector feature is not supported by the current TigerGraph version: {ver}")
 
+        supportai_queries += [
+            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Vector_Search.gsql",
+            "common/gsql/supportai/retrievers/HNSW_Content_Vector_Search.gsql",
+            "common/gsql/supportai/retrievers/HNSW_Overlap_Vector_Search.gsql",
+            "common/gsql/supportai/retrievers/GraphRAG_Community_Vector_Search.gsql",
+        ]
+    else:
+        supportai_queries += [
+            "common/gsql/supportai/retrievers/HNSW_Search_Sub.gsql",
+            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",
+            "common/gsql/supportai/retrievers/HNSW_Content_Search.gsql",
+            "common/gsql/supportai/retrievers/HNSW_Overlap_Search.gsql",
+            "common/gsql/supportai/retrievers/GraphRAG_Community_Search.gsql",
+            #"common/gsql/supportai/retrievers/GraphRAG_Community_Retriever.gsql",
+            #"common/gsql/supportai/retrievers/Entity_Relationship_Retrieval.gsql",
+        ]
+
     file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
     with open(file_path) as f:
         index = f.read()
@@ -48,27 +75,17 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
         )
     )
 
-    file_path = "common/gsql/supportai/Scan_For_Updates.gsql"
-    with open(file_path) as f:
-        scan_for_updates = f.read()
-    res = conn.gsql(
-        "USE GRAPH "
-        + conn.graphname
-        + "\n"
-        + scan_for_updates
-        + "\n INSTALL QUERY Scan_For_Updates"
-    )
-
-    file_path = "common/gsql/supportai/Update_Vertices_Processing_Status.gsql"
-    with open(file_path) as f:
-        update_vertices = f.read()
-    res = conn.gsql(
-        "USE GRAPH "
-        + conn.graphname
-        + "\n"
-        + update_vertices
-        + "\n INSTALL QUERY Update_Vertices_Processing_Status"
-    )
+    for filename in supportai_queries:
+        logger.info(f"Installing support ai query {filename}")
+        with open(f"{filename}", "r") as f:
+            q_body = f.read()
+        q_name, extension = os.path.splitext(os.path.basename(filename))
+        q_res = conn.gsql(
+            """USE GRAPH {}\nBEGIN\n{}\nEND\nINSTALL QUERY {}""".format(
+                conn.graphname, q_body, q_name
+            )
+        )
+        logger.info(f"Done installing support ai query {q_name} with status {q_res}")
 
     return schema_res, index_res
 

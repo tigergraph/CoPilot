@@ -134,8 +134,6 @@ def search(
 ):
     check_embedding_store_status()
     conn = conn.state.conn
-    if "combine" not in query.method_params:
-        query.method_params["combine"] = False
     if "verbose" not in query.method_params:
         query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":
@@ -148,7 +146,6 @@ def search(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
-            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
@@ -162,7 +159,6 @@ def search(
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
-            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
@@ -178,7 +174,6 @@ def search(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
-            query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
@@ -197,7 +192,6 @@ def search(
             query.method_params["community_level"],
             query.method_params["top_k"],
             query.method_params["with_chunk"],
-            query.method_params["combine"],
             query.method_params["verbose"],
         )
     return res

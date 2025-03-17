@@ -4,4 +4,3 @@ from .HNSWOverlapRetriever import HNSWOverlapRetriever
 from .HNSWSiblingRetriever import HNSWSiblingRetriever
 from .EntityRelationshipRetriever import EntityRelationshipRetriever
 from .GraphRAGRetriever import GraphRAGRetriever
-from .GraphRAG import GraphRAG

@@ -27,5 +27,5 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
             @@final_retrieval += (s.id -> s.description)
           END;
     
-  PRINT @@final_retrieval;     
+  PRINT @@final_retrieval as final_retrieval;     
 }
