@@ -89,8 +89,8 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
   ```
   gadmin config set GSQL.UDF.EnablePutTgExpr true
   gadmin config set GSQL.UDF.Policy.Enable false
-  gadmin config apply
-  gadmin restart GSQL
+  gadmin config apply -y
+  gadmin restart GSQL -y
   ```
   4. Enter a GSQL shell, and run the following command to install the UDF files.
   ```
@@ -101,8 +101,8 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
   ```
   gadmin config set GSQL.UDF.EnablePutTgExpr false
   gadmin config set GSQL.UDF.Policy.Enable true
-  gadmin config apply
-  gadmin restart GSQL
+  gadmin config apply -y
+  gadmin restart GSQL -y
   ```
 
 #### Configurations
