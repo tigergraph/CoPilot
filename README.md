@@ -82,9 +82,9 @@ If you don’t need to extend the source code of CoPilot, the quickest way is to
 
   Now, simply run `docker compose up -d` and wait for all the services to start.
 
-* Step 5: Install UDFs
+* Step 5 (Optional): Install UDFs
 
-  This step is not needed for TigerGraph databases version 4.x. For TigerGraph 3.x, we need to install a few user defined functions (UDFs) for CoPilot to work.
+  This step is not needed for TigerGraph databases version 4.x. For TigerGraph 3.x, we need to install a few user defined functions (UDFs) for CoPilot to work with Milvus.
 
   1. On the machine that hosts the TigerGraph database, switch to the user of TigerGraph: `sudo su - tigergraph`. If TigerGraph is running on a cluster, you can do this on any one of the machines.
   2. Download the two files [ExprFunctions.hpp](https://raw.githubusercontent.com/tigergraph/CoPilot/dev/copilot/udfs/milvus/rest/ExprFunctions.hpp) and [ExprUtil.hpp](https://raw.githubusercontent.com/tigergraph/CoPilot/dev/copilot/udfs/milvus/rest/ExprUtil.hpp).

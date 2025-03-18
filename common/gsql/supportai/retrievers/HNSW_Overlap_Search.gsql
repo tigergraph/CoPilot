@@ -64,7 +64,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STR
           IF s.type == "Relationship" THEN
             s.@context += s.definition
           ELSE IF s.type == "Entity" THEN
-            STRING tmp_dsc = s.definition,
+            STRING tmp_dsc = s.id + " " + s.definition,
             FOREACH dsc IN s.description DO
               tmp_dsc = tmp_dsc + dsc +";"
             END,

@@ -1,12 +1,16 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_type,
   LIST<FLOAT> query_vector, UINT top_k=5, UINT lookback=3, INT lookahead=3, BOOL verbose = False) { 
+  TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
+  MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
   MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@final_retrieval;
   OrAccum @touched;
   SetAccum<VERTEX> @@start_set;
+  SetAccum<VertexTypes> @@start_set_type;
+  SetAccum<VertexTypes> @@sibling_set_type;
   
   all_chunks = {v_type.*};
   result = SELECT v FROM all_chunks:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
@@ -16,11 +20,14 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_ty
   END;
 
   seeds = {@@start_set};
-  start = SELECT s FROM seeds:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  start = SELECT s FROM seeds:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE, @@start_set_type += VertexTypes(s, s.type);
+
+  @@verbose_info += ("start_set" -> @@start_set_type);
+
   FOREACH i IN RANGE[1, lookback] DO
     start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
           ACCUM 
-            tgt.@touched += TRUE,
+            tgt.@touched += TRUE, @@sibling_set_type += VertexTypes(tgt, tgt.type),
             FOREACH (key, val) IN s.@distances DO
               tgt.@distances += (key -> -1*i)
             END;
@@ -30,7 +37,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_ty
   FOREACH i IN RANGE[1, lookahead] DO
     start = SELECT tgt FROM start:s -(reverse_IS_AFTER)-> :tgt
             ACCUM
-              tgt.@touched += TRUE,
+              tgt.@touched += TRUE, @@sibling_set_type += VertexTypes(tgt, tgt.type),
               FOREACH (key, val) IN s.@distances DO
                 tgt.@distances += (key -> i)
               END;
@@ -46,6 +53,12 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_ty
             @@final_retrieval += (key -> (s -> ("content" -> s.@content)))
           END;
   
+  @@verbose_info += ("selected_set" -> @@sibling_set_type);
+
   PRINT @@final_retrieval as final_retrieval;
+
+  IF verbose THEN
+      PRINT @@verbose_info as verbose;
+  END;
   
 }

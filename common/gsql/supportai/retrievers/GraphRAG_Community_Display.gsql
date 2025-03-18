@@ -1,5 +1,5 @@
 CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_ids, UINT community_level = 2, BOOL with_chunk = true) { 
-  MapAccum<Vertex, SetAccum<String>> @@result_set;
+  MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
   SetAccum<EDGE> @@edges;
   SetAccum<STRING> @context;
   SetAccum<Vertex> @children;
@@ -26,7 +26,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_
   END;
 
   selected_comms = SELECT c FROM selected_comms:c WHERE c.type == "Community"
-      ACCUM c.@context += c.description, @@start_set += c POST-ACCUM(c) @@result_set += (c -> c.@context);
+      ACCUM c.@context += c.description, @@start_set += c POST-ACCUM(c) @@final_retrieval += (c -> c.@context);
+ 
+  PRINT @@final_retrieval as final_retrieval;
 
   PRINT @@edges as results;
 }

@@ -390,11 +390,12 @@ async def communities(conn: AsyncTigerGraphConnection, comm_process_chan: Channe
             )
         mod = res[0]["mod"]
         logger.info(f"mod pass {i+1}: {mod} (diff= {abs(prev_mod - mod)})")
+        # write iter to chan for layer to be processed
+        await stream_communities(conn, i + 1, comm_process_chan)
+
         if mod == 0 or mod - prev_mod <= -0.05:
             break
 
-        # write iter to chan for layer to be processed
-        await stream_communities(conn, i + 1, comm_process_chan)
 
     # TODO: erase last run since it's ∆q to the run before it will be small
     logger.info("closing communities chan")

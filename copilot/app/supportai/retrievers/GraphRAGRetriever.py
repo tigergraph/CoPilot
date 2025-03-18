@@ -111,9 +111,7 @@ class GraphRAGRetriever(BaseRetriever):
                         combine: bool = False,
                         verbose: bool = False):
         retrieved = self.search(question, community_level, top_k, with_chunk, verbose)
-        context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
-        if combine:
-            context = ["\n".join(context)]
+        context = ["\n ".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
         
         with ThreadPoolExecutor() as executor:
             res = executor.submit(self.gather_candidates, question, context).result()
@@ -124,9 +122,13 @@ class GraphRAGRetriever(BaseRetriever):
         new_context = [{"candidate_answer": x.answer,
                         "score": x.quality_score} for x in res[:top_k]]
         
-        resp = self._generate_response(question, new_context)
+        if combine:
+            resp = self._generate_response(question, new_context)
+        else:
+            resp = self._generate_response(question, new_context[:1])
 
         if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
             resp["verbose"] = retrieved[1]["verbose"]
+            resp["verbose"]["final_retrieval"] = retrieved[0]["final_retrieval"]
 
         return resp

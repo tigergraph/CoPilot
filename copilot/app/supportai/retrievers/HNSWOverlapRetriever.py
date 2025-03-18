@@ -59,13 +59,15 @@ class HNSWOverlapRetriever(BaseRetriever):
 
     def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, combine: bool = False, verbose: bool = False):
         retrieved = self.search(question, index, top_k, num_hops, num_seen_min, verbose)
-        context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
+        context = ["\n ".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
+
         if combine:
-            context = ["\n".join(context)]
+            context = ["\n ".join(context)]
 
         resp = self._generate_response(question, context)
         
         if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
             resp["verbose"] = retrieved[1]["verbose"]
+            resp["verbose"]["final_retrieval"] = retrieved[0]["final_retrieval"]
       
         return resp

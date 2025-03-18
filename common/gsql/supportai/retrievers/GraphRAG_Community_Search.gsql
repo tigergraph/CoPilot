@@ -37,7 +37,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host
           POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
   END;
 
-  selected_comms = SELECT c FROM selected_comms:c -(HAS_PARENT>*1..)- start_comms:s WHERE s.type == c.type and c.type == "Community"
+  selected_comms = SELECT c FROM selected_comms:c -(HAS_PARENT>*0..)- start_comms:s WHERE s.type == c.type and c.type == "Community"
       ACCUM s.@context += s.description, s.@context += c.@context
       POST-ACCUM(s) @@final_retrieval += (s -> s.@context);
 
