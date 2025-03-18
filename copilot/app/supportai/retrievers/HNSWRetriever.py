@@ -54,4 +54,13 @@ class HNSWRetriever(BaseRetriever):
 
     def retrieve_answer(self, question, index, top_k=1, withHyDE=False, combine: bool=False, verbose=False):
         retrieved = self.search(question, index, top_k, withHyDE, verbose)
-        return self._generate_response(question, retrieved)
+        context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
+        if combine:
+            context = ["\n".join(context)]
+
+        resp = self._generate_response(question, context)
+
+        if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
+            resp["verbose"] = retrieved[1]["verbose"]
+
+        return resp

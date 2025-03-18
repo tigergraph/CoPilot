@@ -46,7 +46,6 @@ class GraphRAGRetriever(BaseRetriever):
             self._check_query_install("GraphRAG_Community_Search")
 
             query_embedding = self._generate_embedding(question)
-            self.logger.info(f"Using embedding: {query_embedding}")
 
             res = self.conn.runInstalledQuery(
                 "GraphRAG_Community_Search",

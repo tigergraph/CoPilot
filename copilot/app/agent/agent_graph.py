@@ -290,7 +290,7 @@ class TigerGraphAgentGraph:
 
         state["context"] = {
             "function_call": "GraphRAG_Community_Search",
-            "result": {"@@final_retrieval": step[0]},
+            "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
                 "GraphRAG_Community_Search"
             )["output"],
@@ -326,7 +326,7 @@ class TigerGraphAgentGraph:
 
         if state["lookup_source"] == "supportai":
             answer = step.generate_answer(
-                state["question"], state["context"]["result"]["@@final_retrieval"]
+                state["question"], state["context"]["result"]
             )
         elif state["lookup_source"] == "inquiryai":
             try:
