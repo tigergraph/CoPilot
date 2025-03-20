@@ -44,6 +44,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             vector_queries = [
                 "vertices_have_embedding",
                 "check_embedding_exists",
+                "get_vertices_with_vector",
                 "get_topk_similar",
                 "get_topk_closest",
             ]

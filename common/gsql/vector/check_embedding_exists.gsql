@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY check_embedding_exists(String vertex_type, String vertex_id, Bool verbose = false) SYNTAX V2 {
+CREATE OR REPLACE DISTRIBUTED QUERY check_embedding_exists(String vertex_type, String vertex_id, Bool p = false) SYNTAX V2 {
     vset = {vertex_type.*};
   
     results = SELECT v FROM vset:v where v.id == vertex_id;

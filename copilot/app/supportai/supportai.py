@@ -46,8 +46,14 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
                     graphname, schema
                 )
             )
+
+            logger.info(f"Installing GDS library")
+            q_res = conn.gsql(
+                """USE GLOBAL\nimport package gds\ninstall function gds.**"""
+            )
+            logger.info(f"Done installing GDS library with status {q_res}")
         else:
-            raise Execption(f"Vector feature is not supported by the current TigerGraph version: {ver}")
+            raise Exception(f"Vector feature is not supported by the current TigerGraph version: {ver}")
 
         supportai_queries += [
             "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Vector_Search.gsql",
@@ -82,7 +88,7 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
         q_name, extension = os.path.splitext(os.path.basename(filename))
         q_res = conn.gsql(
             """USE GRAPH {}\nBEGIN\n{}\nEND\n""".format(
-                conn.graphname, q_body, q_name
+                conn.graphname, q_body
             )
         )
         logger.info(f"Done installing support ai query {q_name} with status {q_res}")

@@ -1,6 +1,6 @@
 CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host,
   UINT milvus_port, STRING collection_prefix, STRING vector_field_name,
-  STRING vertex_id_field_name, STRING metric_type="COSINE", STRING query_vector_as_string, INT community_level=1, INT top_k = 3, BOOL with_chunk = true, BOOL verbose = false) {
+  STRING vertex_id_field_name, STRING metric_type="L2", STRING query_vector_as_string, INT community_level=1, INT top_k = 3, BOOL with_chunk = true, BOOL verbose = false) {
   MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
   MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
   SetAccum<STRING> @context;

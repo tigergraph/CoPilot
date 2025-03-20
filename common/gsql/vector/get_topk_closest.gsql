@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY get_topk_closest(STRING vertex_type, STRING vertex_id, UINT k=10, FLOAT threshold = 0.00) SYNTAX V2 {
+CREATE OR REPLACE DISTRIBUTED QUERY get_topk_closest(STRING vertex_type, STRING vertex_id, UINT k=10, FLOAT threshold = 0.90, BOOL verbose = False) SYNTAX V2 {
     ListAccum<Float> @@query_vector;
     MaxAccum<Float> @similarity;
     
@@ -11,5 +11,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY get_topk_closest(STRING vertex_type, STRING 
         HAVING v.@similarity >= threshold - 0.000001
         ORDER BY v.@similarity LIMIT k;
     
-    PRINT result[result.@similarity as similarity] as results;
+    IF verbose THEN
+        PRINT result WITH VECTOR;
+    ELSE
+        PRINT result[result.@similarity as similarity] as results;
+    END;
 }

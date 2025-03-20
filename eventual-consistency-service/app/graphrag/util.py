@@ -84,6 +84,7 @@ async def init(
         "common/gsql/graphRAG/get_community_children",
         "common/gsql/graphRAG/entities_have_resolution",
         "common/gsql/graphRAG/communities_have_desc",
+        "common/gsql/graphRAG/get_vertices_or_remove",
         "common/gsql/graphRAG/louvain/graphrag_louvain_init",
         "common/gsql/graphRAG/louvain/graphrag_louvain_communities",
         "common/gsql/graphRAG/louvain/modularity",
