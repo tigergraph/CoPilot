@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Dict, List, Optional
 
@@ -17,6 +16,7 @@ from typing_extensions import TypedDict
 
 from common.logs.log import req_id_cv
 from common.py_schemas import CoPilotResponse, MapQuestionToSchemaResponse
+from common.config import embedding_store_type
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,9 @@ class TigerGraphAgentGraph:
         self.supportai_enabled = True
         self.supportai_retriever = supportai_retriever.lower()
         try:
-            self.db_connection.getQueryMetadata("HNSW_Search_Sub")
+            self.db_connection.getQueryMetadata("HNSW_Overlap_Display")
         except TigerGraphException as e:
-            logger.info("HNSW_Search_Sub not found in the graph. Disabling supportai.")
+            logger.info("HNSW_Overlap_Display not found in the graph. Disabling supportai.")
             self.supportai_enabled = False
 
     def emit_progress(self, msg):
@@ -207,11 +207,15 @@ class TigerGraphAgentGraph:
             num_hops=2,
         )
 
+        if embedding_store_type == "milvus":
+            query_name = "HNSW_Overlap_Search"
+        else:
+            query_name = "HNSW_Overlap_Vector_Search"
         state["context"] = {
-            "function_call": "HNSW_Overlap_Search",
+            "function_call": query_name,
             "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
-                "HNSW_Overlap_Search"
+                query_name
             )["output"],
         }
         state["lookup_source"] = "supportai"
@@ -235,11 +239,15 @@ class TigerGraphAgentGraph:
             top_k=5
         )
 
+        if embedding_store_type == "milvus":
+            query_name = "HNSW_Content_Search"
+        else:
+            query_name = "HNSW_Content_Vector_Search"
         state["context"] = {
-            "function_call": "HNSW_Search",
+            "function_call": query_name,
             "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
-                "HNSW_Content_Search"
+                query_name
             )["output"],
         }
         state["lookup_source"] = "supportai"
@@ -262,11 +270,15 @@ class TigerGraphAgentGraph:
             top_k=3
         )
 
+        if embedding_store_type == "milvus":
+            query_name = "HNSW_Chunk_Sibling_Search"
+        else:
+            query_name = "HNSW_Chunk_Sibling_Vector_Search"
         state["context"] = {
-            "function_call": "HNSW_Chunk_Sibling_Search",
+            "function_call": query_name,
             "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
-                "HNSW_Chunk_Sibling_Search"
+                query_name
             )["output"],
         }
         state["lookup_source"] = "supportai"
@@ -285,14 +297,18 @@ class TigerGraphAgentGraph:
         )
         step = retriever.search(
             state["question"],
-            community_level=3
+            community_level=2
         )
 
+        if embedding_store_type == "milvus":
+            query_name = "GraphRAG_Community_Search"
+        else:
+            query_name = "GraphRAG_Community_Vector_Search"
         state["context"] = {
-            "function_call": "GraphRAG_Community_Search",
+            "function_call": query_name,
             "result": step[0],
             "query_output_format": self.db_connection.getQueryMetadata(
-                "GraphRAG_Community_Search"
+                query_name
             )["output"],
         }
         state["lookup_source"] = "supportai"

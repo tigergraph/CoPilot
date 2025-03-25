@@ -43,5 +43,5 @@ class CommunitySummarizer:
                 }
             )
         except Exception as e:
-            return {"error": True, "summary": ""}
+            return {"error": True, "summary": "", "message": str(e)}
         return {"error": False, "summary": summary.summary}

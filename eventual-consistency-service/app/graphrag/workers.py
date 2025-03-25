@@ -443,7 +443,10 @@ async def resolve_entity(
 
         # merge all entities into the ResolvedEntity vertex
         # use the longest v_id as the resolved entity's v_id
-        resolved_entity_id = entity_id
+        if isinstance(entity_id, tuple):
+          resolved_entity_id = entity_id[0]
+        else:
+          resolved_entity_id = entity_id
         for v in results:
             if len(v) > len(resolved_entity_id):
                 resolved_entity_id = v
@@ -519,8 +522,10 @@ async def process_community(
             summarizer = community_summarizer.CommunitySummarizer(llm)
             summary = await summarizer.summarize(comm_id, children)
             if summary["error"]:
-                logger.error(f"Failed to summarize community {comm_id}")
-                err = True
+                summary = await summarizer.summarize(comm_id, children)
+                if summary["error"]:
+                    logger.error(f"Failed to summarize community {comm_id} with message {summary['message']}")
+                summary = "Should ignore due to summary error."
             else:
                 summary = summary["summary"]
 
