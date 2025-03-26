@@ -27,5 +27,16 @@ class SemanticChunker(BaseChunker):
 
         return [x.page_content for x in chunks]
 
+    def split_documents(self, input_docs, ):
+        text_splitter = LangChainSemanticChunker(
+            self.emb_model.embeddings,
+            breakpoint_threshold_type=self.btt,
+            breakpoint_threshold_amount=self.bta,
+        )
+
+        chunks = text_splitter.split_documents(input_docs)
+
+        return chunks
+
     def __call__(self, input_string):
         return self.chunk(input_string)
