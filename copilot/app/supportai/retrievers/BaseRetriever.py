@@ -45,12 +45,15 @@ class BaseRetriever:
         else:
             return True
 
-    def _generate_response(self, question, retrieved):
+    def _generate_response(self, question, retrieved, verbose):
         model = self.llm_service.llm
         prompt = self.llm_service.supportai_response_prompt
 
         prompt = ChatPromptTemplate.from_template(prompt)
         output_parser = StrOutputParser()
+
+        if verbose:
+            self.logger.info("Prompt to LLM:\n" + prompt.invoke({"question": question, "sources": retrieved}).to_string())
 
         chain = prompt | model | output_parser
 

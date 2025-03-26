@@ -13,7 +13,7 @@ class HNSWOverlapRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1, verbose=False):
+    def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1, chunk_only=False, verbose=False):
         if embedding_store_type == "milvus":
             self._check_query_install("HNSW_Search_Sub")
             self._check_query_install("HNSW_Overlap_Search")
@@ -30,6 +30,7 @@ class HNSWOverlapRetriever(BaseRetriever):
                         "top_k": top_k,
                         "num_hops": num_hops,
                         "num_seen_min": num_seen_min,
+                        "chunk_only": chunk_only,
                         "verbose": verbose,
                     }
                 ),
@@ -48,6 +49,7 @@ class HNSWOverlapRetriever(BaseRetriever):
                     "top_k": top_k,
                     "num_hops": num_hops,
                     "num_seen_min": num_seen_min,
+                        "chunk_only": chunk_only,
                     "verbose": verbose,
                 },
                 usePost=True
@@ -57,14 +59,18 @@ class HNSWOverlapRetriever(BaseRetriever):
             self.logger.info(f"Retrived HNSWOverlap query verbose info: {verbose_info}")
         return res
 
-    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, combine: bool = False, verbose: bool = False):
-        retrieved = self.search(question, index, top_k, num_hops, num_seen_min, verbose)
-        context = ["\n ".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
+    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, chunk_only: bool = False, combine: bool = False, verbose: bool = False):
+        retrieved = self.search(question, index, top_k, num_hops, num_seen_min, chunk_only, verbose)
 
+        context = []
         if combine:
-            context = ["\n ".join(context)]
+            for x in retrieved[0]["final_retrieval"]:
+                context += retrieved[0]["final_retrieval"][x]
+            context = ["\n".join(set(context))]
+        else:
+            context = ["\n".join(retrieved[0]["final_retrieval"][x]) for x in retrieved[0]["final_retrieval"]]
 
-        resp = self._generate_response(question, context)
+        resp = self._generate_response(question, context, verbose)
         
         if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
             resp["verbose"] = retrieved[1]["verbose"]

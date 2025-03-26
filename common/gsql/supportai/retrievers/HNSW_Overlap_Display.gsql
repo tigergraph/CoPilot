@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False) {
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;
@@ -55,9 +55,11 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
           END
         POST-ACCUM
           @@tmp_start_set += s, @@edges += s.@paths,
-          FOREACH v IN s.@parents DO
-            IF v IN @@start_set THEN
-              @@result_set += (v -> s.@context)
+          IF NOT chunk_only THEN
+            FOREACH v IN s.@parents DO
+              IF v IN @@start_set THEN
+                @@result_set += (v -> s.@context)
+              END
             END
           END;
 

@@ -70,11 +70,11 @@ class HNSWSiblingRetriever(BaseRetriever):
         for x in retrieved[0]["final_retrieval"]:
             content[x] = [retrieved[0]["final_retrieval"][x][y]["content"] for y in retrieved[0]["final_retrieval"][x]]
 
-        context = ["\n ".join(content[x]) for x in content]
+        context = ["\n".join(content[x]) for x in content]
         if combine:
             context = ["\n ".join(context)]
 
-        resp = self._generate_response(question, context)
+        resp = self._generate_response(question, context, verbose)
 
         if verbose and len(retrieved) > 1 and "verbose" in retrieved[1]:
             resp["verbose"] = retrieved[1]["verbose"]

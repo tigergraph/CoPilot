@@ -1,5 +1,5 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_types,
-  LIST<FLOAT> query_vector, UINT top_k=3, UINT num_hops=5, UINT num_seen_min=1, BOOL verbose = False) {
+  LIST<FLOAT> query_vector, UINT top_k=3, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only = False, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
@@ -59,19 +59,23 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
           IF s.type == "Relationship" THEN
             s.@context += s.definition
           ELSE IF s.type == "Entity" THEN
-            STRING tmp_dsc = s.id + " " + s.definition,
+            STRING tmp_dsc = "Entity: " + replace(s.id, "_", " ") + ", Description: " + s.definition,
             FOREACH dsc IN s.description DO
-              tmp_dsc = tmp_dsc + dsc +";"
+              tmp_dsc = tmp_dsc + " " + dsc +";"
             END,
             s.@context += tmp_dsc
           ELSE IF s.type == "DocumentChunk" THEN
             @@to_retrieve_content += s
           END
         POST-ACCUM
-          @@tmp_start_set_type += VertexTypes(s, s.type), @@edges += s.@paths,
-          FOREACH v IN s.@parents DO
-            IF v IN @@start_set THEN
-              @@result_set += (v -> s.@context)
+          IF NOT chunk_only OR chunk_only AND s.type == "DocumentChunk" THEN
+            @@tmp_start_set_type += VertexTypes(s, s.type), @@edges += s.@paths
+          END,
+          IF NOT chunk_only THEN
+            FOREACH v IN s.@parents DO
+              IF v IN @@start_set THEN
+                @@result_set += (v -> s.@context)
+              END
             END
           END;
 

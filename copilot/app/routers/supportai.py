@@ -140,12 +140,15 @@ def search(
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
+        if "chunk_only" not in query.method_params:
+            query.method_params["chunk_only"] = False
         res = retriever.search(
             query.question,
             query.method_params["indices"],
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["chunk_only"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
@@ -216,12 +219,15 @@ def answer_question(
         retriever = HNSWOverlapRetriever(
             embedding_service, embedding_store, get_llm_service(llm_config), conn
         )
+        if "chunk_only" not in query.method_params:
+            query.method_params["chunk_only"] = False
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["indices"],
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["chunk_only"],
             query.method_params["combine"],
             query.method_params["verbose"],
         )
