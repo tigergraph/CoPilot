@@ -29,13 +29,9 @@ def get_chunker():
             overlap_size=doc_processing_config["chunker_config"].get("overlap_size", 0),
         )
     elif chunker_type == "markdown":
-        s_chunker = semantic_chunker.SemanticChunker(
-            embedding_service,
-            "percentile",
-            0.90,
-        )
         chunker = markdown_chunker.MarkdownChunker(
-            s_chunker
+            chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
+            chunk_overlap=doc_processing_config["chunker_config"].get("overlap_size", 0),
         )
     else:
         raise ValueError(f"Invalid chunker type: {chunker_type}")

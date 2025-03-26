@@ -1,35 +1,26 @@
 from common.chunkers.base_chunker import BaseChunker
-from common.chunkers.semantic_chunker import SemanticChunker
 from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
+    Language,
     RecursiveCharacterTextSplitter
 )
 
 class MarkdownChunker(BaseChunker):
-    chunker = None
-    headers_to_split_on = [
-        ("#", "Header 1"),
-        ("##", "Header 2"),
-        ("###", "Header 3"),
-        ("####", "Header 4"),
-    ]
     
     def __init__(
         self,
-        chunker: SemanticChunker
+        chunk_size: int = 1024,
+        chunk_overlap: int = 0
     ):
-        self.chunker = chunker
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
 
     def chunk(self, input_string):
-        md_splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=self.headers_to_split_on, strip_headers=False
+        md_splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.MARKDOWN, chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
         )
+        md_chunks = md_splitter.create_documents([input_string])
 
-        md_chunks = md_splitter.split_text(input_string)
-
-        chunks = self.chunker.split_documents(md_chunks)
-
-        return [x.page_content for x in chunks]
+        return [x.page_content for x in md_chunks]
 
     def __call__(self, input_string):
         return self.chunk(input_string)
