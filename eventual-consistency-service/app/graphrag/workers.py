@@ -2,6 +2,7 @@ import asyncio
 import base64
 import logging
 import time
+import json
 import traceback
 from urllib.parse import quote_plus
 from typing import Iterable, List, Optional, Tuple
@@ -75,8 +76,13 @@ async def chunk_doc(
         await util.loading_event.wait()
 
     async with chunk_sem:
-        chunker = ecc_util.get_chunker()
-        chunks = chunker.chunk(doc["attributes"]["text"])
+        if "ctype" in doc["attributes"]:
+            chunker_type = doc["attributes"]["ctype"].lower().strip()
+        else:
+            chunker_type = ""
+        chunker = ecc_util.get_chunker(chunker_type)
+        # decode the text return from tigergraph as it was encoded when written into jsonl file for uploading
+        chunks = chunker.chunk(doc["attributes"]["text"].encode('utf-8').decode('unicode_escape'))
         v_id = util.process_id(doc["v_id"])
         if v_id != doc["v_id"]:
             await upsert_chan.put((upsert_doc, (conn, doc["v_id"], v_id, doc["attributes"]["text"])))
@@ -84,6 +90,8 @@ async def chunk_doc(
         logger.info(f"Chunking {v_id}")
         for i, chunk in enumerate(chunks):
             chunk_id = f"{v_id}_chunk_{i}"
+            logger.info(f"Processing chunk {chunk_id} with content: {chunk}")
+
             # send chunks to be upserted (func, args)
             logger.info("chunk writes to upsert_chan")
             await upsert_chan.put((upsert_chunk, (conn, v_id, chunk_id, chunk)))

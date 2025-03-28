@@ -1,4 +1,4 @@
-from common.chunkers import character_chunker, regex_chunker, semantic_chunker
+from common.chunkers import character_chunker, regex_chunker, semantic_chunker, markdown_chunker
 from common.config import doc_processing_config, embedding_service, llm_config
 from common.llm_services import (
     AWS_SageMaker_Endpoint,
@@ -11,25 +11,31 @@ from common.llm_services import (
     OpenAI,
 )
 
-
-def get_chunker():
-    if doc_processing_config.get("chunker") == "semantic":
+def get_chunker(chunker_type):
+    if not chunker_type:
+        chunker_type = doc_processing_config.get("chunker")
+    if chunker_type == "semantic":
         chunker = semantic_chunker.SemanticChunker(
             embedding_service,
             doc_processing_config["chunker_config"].get("method", "percentile"),
             doc_processing_config["chunker_config"].get("threshold", 0.95),
         )
-    elif doc_processing_config.get("chunker") == "regex":
+    elif chunker_type == "regex":
         chunker = regex_chunker.RegexChunker(
             pattern=doc_processing_config["chunker_config"].get("pattern", "\\r?\\n")
         )
-    elif doc_processing_config.get("chunker") == "character":
+    elif chunker_type == "character":
         chunker = character_chunker.CharacterChunker(
             chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
             overlap_size=doc_processing_config["chunker_config"].get("overlap_size", 0),
         )
+    elif chunker_type == "markdown":
+        chunker = markdown_chunker.MarkdownChunker(
+            chunk_size=doc_processing_config["chunker_config"].get("chunk_size", 1024),
+            chunk_overlap=doc_processing_config["chunker_config"].get("overlap_size", 0),
+        )
     else:
-        raise ValueError("Invalid chunker type")
+        raise ValueError(f"Invalid chunker type: {chunker_type}")
 
     return chunker
 

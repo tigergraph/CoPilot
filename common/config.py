@@ -197,7 +197,7 @@ if DOC_PROCESSING_CONFIG is None or (
         "chunker": "semantic",
         "chunker_config": {"method": "percentile", "threshold": 0.90},
         "extractor": "llm",
-        "extractor_config": {},
+        "extractor_config": {}
     }
 elif DOC_PROCESSING_CONFIG.endswith(".json"):
     with open(DOC_PROCESSING_CONFIG, "r") as f:

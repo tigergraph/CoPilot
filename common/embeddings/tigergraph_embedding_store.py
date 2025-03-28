@@ -185,7 +185,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 logger.info(f"Return result {res} for has_embeddings({v_ids})")
                 found = False
                 if "results" in res[0]:
-                    for v in r["results"]:
+                    for v in res[0]["results"]:
                         if v["v_id"] == v_id:
                             found = True
                             break
