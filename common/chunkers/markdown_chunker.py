@@ -1,8 +1,5 @@
 from common.chunkers.base_chunker import BaseChunker
-from langchain_text_splitters import (
-    Language,
-    RecursiveCharacterTextSplitter
-)
+from langchain_text_splitters.markdown import ExperimentalMarkdownSyntaxTextSplitter
 
 class MarkdownChunker(BaseChunker):
     
@@ -15,10 +12,9 @@ class MarkdownChunker(BaseChunker):
         self.chunk_overlap = chunk_overlap
 
     def chunk(self, input_string):
-        md_splitter = RecursiveCharacterTextSplitter.from_language(
-            language=Language.MARKDOWN, chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
-        )
-        md_chunks = md_splitter.create_documents([input_string])
+        md_splitter = ExperimentalMarkdownSyntaxTextSplitter()
+
+        md_chunks = md_splitter.split_text(input_string)
 
         return [x.page_content for x in md_chunks]
 

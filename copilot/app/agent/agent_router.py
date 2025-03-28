@@ -26,7 +26,7 @@ class TigerGraphAgentRouter:
         Returns:
             str: The datasource to use for the question.
         """
-        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY route_question")
+        LogWriter.info(f"request_id={req_id_cv.get()} ENTRY route_question with {question}")
         v_types = self.db_conn.getVertexTypes()
         e_types = self.db_conn.getEdgeTypes()
 
@@ -52,5 +52,5 @@ Format: {format_instructions}\
 
         question_router = prompt | self.llm.model | router_parser
         res = question_router.invoke({"question": question, "v_types": v_types, "e_types": e_types})
-        LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question")
+        LogWriter.info(f"request_id={req_id_cv.get()} EXIT route_question with {res}")
         return res

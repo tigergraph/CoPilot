@@ -11,8 +11,9 @@ from common.llm_services import (
     OpenAI,
 )
 
-def get_chunker():
-    chunker_type = doc_processing_config.get("chunker")
+def get_chunker(chunker_type):
+    if not chunker_type:
+        chunker_type = doc_processing_config.get("chunker")
     if chunker_type == "semantic":
         chunker = semantic_chunker.SemanticChunker(
             embedding_service,
