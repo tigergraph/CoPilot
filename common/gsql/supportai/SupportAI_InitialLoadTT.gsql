@@ -1,0 +1,8 @@
+CREATE LOADING JOB load_documents_content_tt_@uuid@ {
+    DEFINE FILENAME DocumentContent;
+    LOAD DocumentContent TO TEMP_TABLE tc (doc_id, doc_type, content) VALUES (flatten_json_array($0, $"doc_id", $"doc_type", $"content")) USING SEPARATOR="|||||||||||";
+
+    LOAD TEMP_TABLE tc TO VERTEX Document VALUES($"doc_id", gsql_current_time_epoch(0), _, _);
+    LOAD TEMP_TABLE tc TO VERTEX Content VALUES($"doc_id", $"doc_type", $"content", gsql_current_time_epoch(0));
+    LOAD TEMP_TABLE tc TO EDGE HAS_CONTENT VALUES($"doc_id" Document, $"doc_id" Content);
+}

@@ -5,9 +5,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;
   SetAccum<VertexTypes> @@start_set_type;
-  SetAccum<VERTEX> @@tmp_start_set;
-  SetAccum<VertexTypes> @@tmp_start_set_type;
-  SetAccum<EDGE> @@edges;
+  SetAccum<VERTEX> @@tmp_set;
+  SetAccum<VertexTypes> @@tmp_set_type;
   SumAccum<INT> @num_times_seen;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
   MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
@@ -15,7 +14,6 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   SetAccum<STRING> @context;
   SetAccum<VERTEX> @parents;
   SetAccum<EDGE> @paths;
-  INT inc_top_k = top_k * 2;
 
   FOREACH v_type IN v_types DO
     IF v_type == "Document" THEN
@@ -31,28 +29,28 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   END;
 
   start = {@@start_set};
-  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_start_set += s, @@start_set_type += VertexTypes(s, s.type);
+  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_set += s, @@start_set_type += VertexTypes(s, s.type);
 
   @@verbose_info += ("start_set" -> @@start_set_type);
   
   FOREACH i IN RANGE[0, num_hops-1] DO
     start = SELECT t FROM start:s -((RELATIONSHIP>|
                                      CONTAINS_ENTITY>|
+                                     reverse_CONTAINS_ENTITY>|
                                      IS_AFTER>|
-                                     <reverse_CONTAINS_ENTITY|
                                      IS_HEAD_OF>|
                                      HAS_TAIL>):e)- :t
             WHERE t NOT IN s.@parents
-            ACCUM t.@parents += s, t.@paths += s.@paths, t.@paths += e
-            POST-ACCUM t.@num_times_seen += 1, @@tmp_start_set += t;
+            ACCUM t.@num_times_seen += 1, t.@parents += s, t.@paths += s.@paths, t.@paths += e
+            POST-ACCUM @@tmp_set += t;
 
     IF start.size() == 0 THEN
       BREAK;
     END;
   END;
   
-  start = {@@tmp_start_set};
-  @@tmp_start_set.clear();
+  start = {@@tmp_set};
+  @@tmp_set.clear();
 
   res = SELECT s FROM start:s WHERE s.@num_times_seen >= num_seen_min AND s.type != "Document"
         ACCUM
@@ -69,7 +67,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
           END
         POST-ACCUM
           IF NOT chunk_only OR chunk_only AND s.type == "DocumentChunk" THEN
-            @@tmp_start_set_type += VertexTypes(s, s.type), @@edges += s.@paths
+            @@tmp_set_type += VertexTypes(s, s.type)
           END,
           IF NOT chunk_only THEN
             FOREACH v IN s.@parents DO
@@ -79,7 +77,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
             END
           END;
 
-  @@verbose_info += ("selected_set" -> @@tmp_start_set_type);
+  @@verbose_info += ("selected_set" -> @@tmp_set_type);
 
   doc_chunks = {@@to_retrieve_content};
 

@@ -1,9 +1,8 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT top_k=5, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False) {
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
-  HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
   SetAccum<VERTEX> @@start_set;
-  SetAccum<VERTEX> @@tmp_start_set;
-  SetAccum<EDGE> @@edges;
+  SetAccum<VERTEX> @@tmp_set;
+  MapAccum<STRING, SetAccum<EDGE>> @@edges;
   SumAccum<INT> @num_times_seen;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
@@ -19,26 +18,33 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
 
   start = {@@start_set};
 
-  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_start_set += s;
+  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_set += s;
   
   FOREACH i IN RANGE[0, num_hops-1] DO
+    STRING hierachy = "hop_" + to_string(i+1);
+
     start = SELECT t FROM start:s -((RELATIONSHIP>|
                                      CONTAINS_ENTITY>|
+                                     reverse_CONTAINS_ENTITY>|
                                      IS_AFTER>|
-                                     <reverse_CONTAINS_ENTITY|
                                      IS_HEAD_OF>|
                                      HAS_TAIL>):e)- :t
             WHERE t NOT IN s.@parents
-            ACCUM t.@parents += s, t.@paths += s.@paths, t.@paths += e
-            POST-ACCUM t.@num_times_seen += 1, @@tmp_start_set += t;
+            ACCUM t.@num_times_seen += 1, t.@parents += s, t.@paths += s.@paths, t.@paths += e
+            POST-ACCUM(t) @@tmp_set += t,
+                IF NOT chunk_only OR chunk_only AND t.type == "DocumentChunk" THEN
+                    IF t.@num_times_seen >= num_seen_min THEN
+                        @@edges += (hierachy -> t.@paths)
+                    END
+                END;
 
     IF start.size() == 0 THEN
       BREAK;
     END;
   END;
   
-  start = {@@tmp_start_set};
-  @@tmp_start_set.clear();
+  start = {@@tmp_set};
+  @@tmp_set.clear();
 
   res = SELECT s FROM start:s WHERE s.@num_times_seen >= num_seen_min AND s.type != "Document"
         ACCUM
@@ -53,8 +59,10 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
           ELSE IF s.type == "DocumentChunk" THEN
             @@to_retrieve_content += s
           END
-        POST-ACCUM
-          @@tmp_start_set += s, @@edges += s.@paths,
+        POST-ACCUM(s)
+          IF NOT chunk_only OR chunk_only AND s.type == "DocumentChunk" THEN
+            @@tmp_set += s
+          END,
           IF NOT chunk_only THEN
             FOREACH v IN s.@parents DO
               IF v IN @@start_set THEN
@@ -66,13 +74,15 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
   doc_chunks = {@@to_retrieve_content};
 
   res = SELECT t FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
-        ACCUM s.@context += t.text, @@edges += e
-        POST-ACCUM
+        ACCUM s.@context += t.text, @@edges += ("final_hop" -> e)
+        POST-ACCUM(s)
           FOREACH v IN s.@parents DO
             IF v IN @@start_set THEN
               @@result_set += (v -> s.@context)
             END
           END;
 
-  PRINT @@edges as results;
+  v_set = {@@tmp_set};
+
+  PRINT @@edges as results, v_set[v_set.@num_times_seen as num_seen] as selected_set;
 }

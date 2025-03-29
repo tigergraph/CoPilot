@@ -116,8 +116,10 @@ def create_ingest(
         ingest_template = ingest_template.replace("@uuid@", str(uuid.uuid4().hex))
         doc_id = ingest_config.loader_config.get("doc_id_field", "doc_id")
         doc_text = ingest_config.loader_config.get("content_field", "content")
+        doc_type = ingest_config.loader_config.get("doc_type", "")
         ingest_template = ingest_template.replace('"doc_id"', '"{}"'.format(doc_id))
         ingest_template = ingest_template.replace('"content"', '"{}"'.format(doc_text))
+        ingest_template = ingest_template.replace('"doc_type"', '"{}"'.format(doc_type))
 
     if ingest_config.file_format.lower() == "csv":
         file_path = "common/gsql/supportai/SupportAI_InitialLoadCSV.gsql"
