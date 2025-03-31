@@ -36,7 +36,14 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 graphname=conn.graphname,
                 restppPort=conn.restppPort,
                 gsPort=conn.gsPort,
-            )
+                tgCloud=conn.tgCloud,
+                useCert=conn.useCert,
+                certPath=conn.certPath,
+                sslPort = conn.sslPort,
+                jwtToken = conn.jwtToken,
+             )
+        if conn.apiToken:
+            self.conn.getToken()
 
         tg_version = self.conn.getVer()
         ver = tg_version.split(".")
@@ -231,13 +238,26 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             Document results for search.
         """
         try:
-            LogWriter.info(
-                f"request_id={req_id_cv.get()} Milvus ENTRY similarity_search_by_vector()"
-            )
+            logger.info(f"Fetch {k} similar entries from Content")
 
             start_time = time()
+            verts = self.conn.runInstalledQuery(
+                "get_topk_similar",
+                params={
+                    "vertex_type": "Content",
+                    "query_vector": query_embedding,
+                    "k": k,
+                }
+            )
             end_time = time()
-            return similar
+            logger.info(f"Got k similar entries: {verts}")
+            result = []
+            for r in verts:
+                if "results" in r:
+                    for v in r["results"]:
+                        result.append(v["v_id"])
+            logger.info(f"Returning {result}")
+            return set(result)
         except Exception as e:
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             LogWriter.error(error_message)

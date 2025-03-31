@@ -148,6 +148,8 @@ def create_ingest(
     )
 
     # check the data source and create the appropriate connection
+    res = {}
+
     if ingest_config.data_source.lower() == "s3":
         data_conn = ingest_config.data_source_config
         if (
@@ -209,24 +211,22 @@ def create_ingest(
         data_stream_conn = data_stream_conn.replace(
             "@source_config@", json.dumps(connector)
         )
+    elif ingest_config.data_source.lower() == "local":
+        res["load_tag_name"] = "DocumentContent"
+        res["load_file_name"] = "__GSQL_FILENAME_0__"
+        if ingest_config.data_source_config:
+            res["load_file_name"] = ingest_config.data_source_config.get("local_file_name", "__GSQL_FILENAME_0__")
     else:
         raise Exception("Data source not implemented")
 
     load_job_created = conn.gsql("USE GRAPH {}\n".format(graphname) + ingest_template)
 
-    data_source_created = conn.gsql(
-        "USE GRAPH {}\n".format(graphname) + data_stream_conn
-    )
+    res["load_job_id"] = load_job_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")
 
-    return {
-        "load_job_id": load_job_created.split(":")[1]
-        .strip(" [")
-        .strip(" ")
-        .strip(".")
-        .strip("]"),
-        "data_source_id": data_source_created.split(":")[1]
-        .strip(" [")
-        .strip(" ")
-        .strip(".")
-        .strip("]"),
-    }
+    if "load_tag_name" not in res:
+        data_source_created = conn.gsql(
+            "USE GRAPH {}\n".format(graphname) + data_stream_conn
+        )
+        res["data_source_id"] = data_source_created.split(":")[1].strip(" [").strip(" ").strip(".").strip("]")
+
+    return res
