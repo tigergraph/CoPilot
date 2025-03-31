@@ -297,7 +297,8 @@ class TigerGraphAgentGraph:
         )
         step = retriever.search(
             state["question"],
-            community_level=2
+            community_level=2,
+            top_k=5,
         )
 
         if embedding_store_type == "milvus":

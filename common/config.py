@@ -3,6 +3,7 @@ import os
 
 from fastapi.security import HTTPBasic
 from pymilvus.exceptions import MilvusException
+from pyTigerGraph import TigerGraphConnection
 
 from common.embeddings.embedding_services import (
     AWS_Bedrock_Embedding,
@@ -185,6 +186,22 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
             service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
             raise
     else:
+        conn = TigerGraphConnection(
+            host=db_config.get("hostname", "http://tigergraph"),
+            username=db_config.get("username", "tigergraph"),
+            password=db_config.get("password", "tigergraph"),
+            gsPort=db_config.get("gsPort", "14240"),
+            restppPort=db_config.get("restppPort", "9000"),
+        )
+        conn.graphname = db_config.get("supportai_graphname", "tg_support_documents")
+        if db_config.get("getToken"):
+            conn.getToken()
+
+        embedding_store = TigerGraphEmbeddingStore(
+            conn,
+            embedding_service,
+            support_ai_instance=True,
+        )
         service_status["embedding_store"] = {"status": "ok", "error": None}
         # Does not need it to get TG connection params
         embedding_store = None
