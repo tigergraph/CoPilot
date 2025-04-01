@@ -15,7 +15,7 @@ class CommunityAnswer(BaseModel):
     answer: str = Field(description="The answer to the question, based off of the context provided.")
     quality_score: int = Field(description="The quality of the answer, based on how well it answers the question. Rate the answer from 0 (poor) to 100 (excellent).")
 
-output_parser = PydanticOutputParser(pydantic_object=CommunityAnswer)
+answer_parser = PydanticOutputParser(pydantic_object=CommunityAnswer)
 
 ANSWER_PROMPT = PromptTemplate(template = """
 You are a helpful assistant responsible for generating an answer to the question below using the data provided.
@@ -27,7 +27,7 @@ Context: {context}
 {format_instructions}
 """,
 input_variables=["question", "context"],
-partial_variables={"format_instructions": output_parser.get_format_instructions()}
+partial_variables={"format_instructions": answer_parser.get_format_instructions()}
 )
 
 
@@ -85,7 +85,7 @@ class GraphRAGRetriever(BaseRetriever):
     async def _generate_candidate(self, question, context):
         model = self.llm_service.model
 
-        chain = ANSWER_PROMPT | model | output_parser
+        chain = ANSWER_PROMPT | model | answer_parser
 
         answer = await chain.ainvoke(
             {
@@ -93,6 +93,7 @@ class GraphRAGRetriever(BaseRetriever):
                 "context": context,
             }
         )
+
         return answer
     
     def gather_candidates(self, question, context):

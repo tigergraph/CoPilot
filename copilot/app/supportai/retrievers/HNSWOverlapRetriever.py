@@ -14,6 +14,10 @@ class HNSWOverlapRetriever(BaseRetriever):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
     def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1, chunk_only=False, verbose=False):
+
+        new_question = self._generate_question(question, top_k, verbose)
+        self.logger.info(f"Retrived HNSWOverlap query new questions: {new_question}")
+
         if embedding_store_type == "milvus":
             self._check_query_install("HNSW_Search_Sub")
             self._check_query_install("HNSW_Overlap_Search")

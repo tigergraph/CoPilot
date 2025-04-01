@@ -2,10 +2,28 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services.base_llm import LLM_Model
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from common.py_schemas import QuestionScore, QuestionGenerator
+
+from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from langchain.output_parsers import OutputFixingParser
 
 import logging
+
+question_parser = PydanticOutputParser(pydantic_object=QuestionGenerator)
+
+QUESTION_PROMPT = PromptTemplate(template = """
+You are a helpful assistant responsible for generating 10 new questions similar to the original question below to represent its meaning in a more clear way.
+Include a quality score for the answer, based on how well it represents the meaning of the original question. The quality score should be between 0 (poor) and 100 (excellent).
+
+Question: {question}
+
+{format_instructions}
+""",
+input_variables=["question"],
+partial_variables={"format_instructions": question_parser.get_format_instructions()}
+)
 
 class BaseRetriever:
     def __init__(
@@ -44,6 +62,25 @@ class BaseRetriever:
             return self._install_query(query_name)
         else:
             return True
+
+    def _generate_question(self, question, top_k, verbose):
+        model = self.llm_service.model
+        new_parser = OutputFixingParser.from_llm(parser=question_parser, llm=model)
+
+        chain = QUESTION_PROMPT | model | question_parser
+
+        answer = chain.invoke({"question": question})
+
+        if verbose:
+            self.logger.info(f"Answer from LLM: {answer}")
+
+        # sort list by quality score
+        res = answer.questions
+        res.sort(key=lambda x: x.quality_score, reverse=True)
+
+        questions = [x.candidate for x in res[:top_k]]
+
+        return questions
 
     def _generate_response(self, question, retrieved, verbose):
         model = self.llm_service.llm

@@ -103,3 +103,12 @@ class CommunitySummary(BaseModel):
     summary: str = Field(
         ..., description="The community summary derived from the input documents"
     )
+
+
+class QuestionScore(BaseModel):
+    candidate: str = Field(description="The candidate question similar to the original question.")
+    quality_score: int = Field(description="The quality of the candidate question, based on how well it represents the meaning of the original question. Rate the candidate from 0 (poor) to 100 (excellent).")
+
+
+class QuestionGenerator(BaseModel):
+    questions: List[QuestionScore] = Field(..., description="List of candidate questions with quality scores")
