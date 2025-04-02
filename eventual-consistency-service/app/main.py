@@ -9,7 +9,6 @@ from threading import Thread
 from typing import Annotated, Callable
 
 import asyncio
-import ecc_util
 import graphrag
 import supportai
 from eventual_consistency_checker import EventualConsistencyChecker
@@ -120,8 +119,6 @@ def initialize_eventual_consistency_checker(
                         alias=milvus_config.get("alias", "default"),
                     )
 
-        chunker = ecc_util.get_chunker()
-
         if doc_processing_config.get("extractor") == "llm":
             from common.extractors import LLMEntityRelationshipExtractor
 
@@ -143,7 +140,6 @@ def initialize_eventual_consistency_checker(
             index_names,
             index_stores,
             conn,
-            chunker,
             extractor,
             batch_size,
         )

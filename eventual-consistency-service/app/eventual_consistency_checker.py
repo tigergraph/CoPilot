@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Dict, List
 
+import ecc_util
 from common.logs.logwriter import LogWriter
 from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore
@@ -24,7 +25,6 @@ class EventualConsistencyChecker:
         embedding_indices: List[str],
         embedding_stores: Dict[str, EmbeddingStore],
         conn: TigerGraphConnectionProxy,
-        chunker: BaseChunker,
         extractor: BaseExtractor,
         batch_size = 10,
         run_forever = True
@@ -38,7 +38,6 @@ class EventualConsistencyChecker:
         self.embedding_service = embedding_service
         self.embedding_indices = embedding_indices
         self.embedding_stores = embedding_stores
-        self.chunker = chunker
         self.extractor = extractor
         self.batch_size = batch_size
         self.run_forever = run_forever
@@ -80,10 +79,11 @@ class EventualConsistencyChecker:
             return True
 
     def _chunk_document(self, content):
-        return self.chunker.chunk(content)
+        chunker = ecc_util.get_chunker(content["ctype"])
+        return chunker.chunk(content["text"])
 
     def _extract_entities(self, content):
-        return self.extractor.extract(content)
+        return self.extractor.extract(content["text"])
 
     # TODO: Change to loading job for all chunks in document at once
     def _upsert_chunk(self, doc_id, chunk_id, chunk):
@@ -235,9 +235,9 @@ class EventualConsistencyChecker:
         LogWriter.info(f"Embedding content from vertex type: {v_type}")
         for vertex_id, content in vertex_ids_content_map.items():
             if content:
-                vec = self.embedding_service.embed_query(content)
+                vec = self.embedding_service.embed_query(content["text"])
                 self.embedding_stores[vector_index].add_embeddings(
-                    [(content, vec)], [{self.vertex_field: vertex_id}]
+                    [(text, vec)], [{self.vertex_field: vertex_id}]
                 )
 
             if v_type == "Document":

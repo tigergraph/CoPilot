@@ -120,7 +120,7 @@ async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, co
         conn,
         "Content",
         new_doc_id,
-        attributes={"text": content_text, "epoch_added": date_added},
+        attributes={"text": content_text, "epoch_added": date_added, "epoch_processed": date_added},
     )
     await util.upsert_edge(
         conn, "Document", new_doc_id, "HAS_CONTENT", "Content", new_doc_id
@@ -436,7 +436,7 @@ async def resolve_entity(
         try:
             logger.info(f"Resolving Entity {entity_id}")
             results = await embed_store.aget_k_closest(entity_id)
-            logger.info(f"{results}")
+            logger.info(f"Resolving Entity {entity_id} to {results}")
 
         except Exception:
             err = traceback.format_exc()
