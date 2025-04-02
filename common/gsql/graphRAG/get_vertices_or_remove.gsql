@@ -1,6 +1,6 @@
 CREATE OR REPLACE DISTRIBUTED QUERY get_vertices_or_remove(STRING v_type, STRING keyword = "", STRING with_edge = "", BOOL remove = FALSE) { 
   SetAccum<EDGE> @@edges;
-  vset = {v_type.*};
+  vset = {v_type};
   STRING pattern = "%"+keyword+"%";
   
   result = SELECT s from vset:s -(:e)- :t WHERE s.id LIKE pattern AND (with_edge == "" OR e.type == with_edge) ACCUM @@edges += e
