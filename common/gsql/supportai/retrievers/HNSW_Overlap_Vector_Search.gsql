@@ -1,5 +1,5 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_types,
-  LIST<FLOAT> query_vector, UINT top_k=3, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only = False, BOOL verbose = False) {
+  LIST<FLOAT> query_vector, UINT top_k=5, UINT num_hops=3, UINT num_seen_min=1, BOOL chunk_only = False, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
@@ -8,6 +8,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   SetAccum<VERTEX> @@tmp_set;
   SetAccum<VertexTypes> @@tmp_set_type;
   SumAccum<INT> @num_times_seen;
+  SumAccum<INT> @visited;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
   MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
@@ -40,9 +41,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
                                      IS_AFTER>|
                                      IS_HEAD_OF>|
                                      HAS_TAIL>):e)- :t
-            WHERE t NOT IN s.@parents
-            ACCUM t.@num_times_seen += 1, t.@parents += s, t.@paths += s.@paths, t.@paths += e
-            POST-ACCUM @@tmp_set += t;
+            WHERE s.@visited < 1 AND t NOT IN s.@parents
+            ACCUM s.@visited += 1, t.@num_times_seen += 1, t.@parents += s, t.@parents += s.@parents, t.@paths += s.@paths, t.@paths += e
+            POST-ACCUM(t) @@tmp_set += t;
 
     IF start.size() == 0 THEN
       BREAK;

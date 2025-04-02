@@ -3,14 +3,21 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
   SetAccum<VERTEX> @@start_set;
   SetAccum<VERTEX> @@tmp_set;
   MapAccum<STRING, SetAccum<EDGE>> @@edges;
+  SumAccum<INT> @visited;
   SumAccum<INT> @num_times_seen;
+  SetAccum<STRING> @seen_in_hop;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
   SetAccum<STRING> @context;
   SetAccum<VERTEX> @parents;
   SetAccum<EDGE> @paths;
 
-  JSONARRAY vts = parse_json_array(json_list_vts);
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
+  END;
+
+  JSONARRAY vts = parse_json_array(json_list);
   FOREACH i IN RANGE[0, vts.size()-1] DO
     JSONOBJECT vt = vts.getJsonObject(i);
     @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
@@ -18,8 +25,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
 
   start = {@@start_set};
 
-  start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_set += s;
-  
+  start = SELECT s FROM start:s ACCUM s.@seen_in_hop += "start", s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_set += s;
+
   FOREACH i IN RANGE[0, num_hops-1] DO
     STRING hierachy = "hop_" + to_string(i+1);
 
@@ -29,9 +36,9 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
                                      IS_AFTER>|
                                      IS_HEAD_OF>|
                                      HAS_TAIL>):e)- :t
-            WHERE t NOT IN s.@parents
-            ACCUM t.@num_times_seen += 1, t.@parents += s, t.@paths += s.@paths, t.@paths += e
-            POST-ACCUM(t) @@tmp_set += t,
+            WHERE s.@visited < 1 AND t NOT IN s.@parents
+            ACCUM s.@visited += 1, t.@num_times_seen += 1, t.@parents += s, t.@parents += s.@parents, t.@paths += s.@paths, t.@paths += e
+            POST-ACCUM(t) @@tmp_set += t, t.@seen_in_hop += to_string(hierachy),
                 IF NOT chunk_only OR chunk_only AND t.type == "DocumentChunk" THEN
                     IF t.@num_times_seen >= num_seen_min THEN
                         @@edges += (hierachy -> t.@paths)
@@ -42,7 +49,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
       BREAK;
     END;
   END;
-  
+
   start = {@@tmp_set};
   @@tmp_set.clear();
 
@@ -73,8 +80,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
 
   doc_chunks = {@@to_retrieve_content};
 
-  res = SELECT t FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
-        ACCUM s.@context += t.text, @@edges += ("final_hop" -> e)
+  res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
+        ACCUM s.@context += t.text
         POST-ACCUM(s)
           FOREACH v IN s.@parents DO
             IF v IN @@start_set THEN
@@ -84,5 +91,5 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, U
 
   v_set = {@@tmp_set};
 
-  PRINT @@edges as results, v_set[v_set.@num_times_seen as num_seen] as selected_set;
+  PRINT @@edges as results, v_set[v_set.@num_times_seen as num_seen, v_set.@seen_in_hop as hop, v_set.@parents as parents] as selected_set, replace(json_list_vts, "\"" , "'") as start_set;
 }

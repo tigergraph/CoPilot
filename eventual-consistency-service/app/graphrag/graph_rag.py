@@ -277,8 +277,8 @@ async def stream_entities(
     for i in range(ttl_batches):
         ids = await stream_ids(conn, "Entity", i, ttl_batches)
         if ids["error"]:
+            logger.info(f"""Error streaming batch {i}: got {ids["error"]}""")
             # continue to the next batch.
-            # These docs will not be marked as processed, so the ecc will process it eventually.
             continue
 
         for i in ids["ids"]:

@@ -1,6 +1,6 @@
 CREATE OR REPLACE DISTRIBUTED QUERY StreamIds(INT current_batch, INT ttl_batches, STRING v_type) {
-    /* 
-     * Get the IDs of entities that have not already been processed 
+    /*
+     * Get the IDs of entitiess that have not already been processed
      * (one batch at a time)
      */
     ListAccum<STRING> @@ids;
@@ -10,7 +10,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY StreamIds(INT current_batch, INT ttl_batches
            WHERE vertex_to_int(v) % ttl_batches == current_batch
              AND v.epoch_processed == 0
            ACCUM @@ids += v.id
-           POST-ACCUM v.epoch_processing = datetime_to_epoch(now()); // set the processing time
-    
+           POST-ACCUM v.epoch_processed = datetime_to_epoch(now()); // set the processing time
+
     PRINT @@ids;
 }

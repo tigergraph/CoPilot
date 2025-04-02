@@ -10,7 +10,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY StreamDocIds(INT current_batch, INT ttl_batc
            WHERE vertex_to_int(d) % ttl_batches == current_batch
              AND d.epoch_processed == 0
            ACCUM @@doc_ids += d.id
-           POST-ACCUM d.epoch_processing = datetime_to_epoch(now()); // set the processing time
+           POST-ACCUM d.epoch_processed = datetime_to_epoch(now()); // set the processing time
     
     PRINT @@doc_ids;
 }
