@@ -66,7 +66,11 @@ async def chunk_doc(
     Places the resulting chunks into the upsert channel (to be upserted to TG)
     and the embed channel (to be embedded and written to the vector store)
     """
-    chunker = ecc_util.get_chunker()
+    if "ctype" in doc["attributes"]:
+        chunker_type = doc["attributes"]["ctype"].lower().strip()
+    else:
+        chunker_type = ""
+    chunker = ecc_util.get_chunker(chunker_type)
     chunks = chunker.chunk(doc["attributes"]["text"])
     v_id = util.process_id(doc["v_id"])
     logger.info(f"Chunking {v_id}")

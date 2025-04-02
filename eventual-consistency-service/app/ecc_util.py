@@ -11,7 +11,7 @@ from common.llm_services import (
     OpenAI,
 )
 
-def get_chunker(chunker_type):
+def get_chunker(chunker_type: str = ""):
     if not chunker_type:
         chunker_type = doc_processing_config.get("chunker")
     if chunker_type == "semantic":
