@@ -34,6 +34,10 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
         "common/gsql/supportai/Update_Vertices_Processing_Status.gsql",
         "common/gsql/supportai/retrievers/HNSW_Overlap_Display.gsql",
         "common/gsql/supportai/retrievers/GraphRAG_Community_Display.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Content_Search.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Overlap_Search.gsql",
+        "common/gsql/supportai/retrievers/GraphRAG_Community_Search.gsql",
     ]
 
     if embedding_store_type == "tigergraph":
@@ -54,23 +58,6 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
             logger.info(f"Done installing GDS library with status {q_res}")
         else:
             raise Exception(f"Vector feature is not supported by the current TigerGraph version: {ver}")
-
-        supportai_queries += [
-            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Content_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Overlap_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/GraphRAG_Community_Vector_Search.gsql",
-        ]
-    else:
-        supportai_queries += [
-            "common/gsql/supportai/retrievers/HNSW_Search_Sub.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Content_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Overlap_Search.gsql",
-            "common/gsql/supportai/retrievers/GraphRAG_Community_Search.gsql",
-            #"common/gsql/supportai/retrievers/GraphRAG_Community_Retriever.gsql",
-            #"common/gsql/supportai/retrievers/Entity_Relationship_Retrieval.gsql",
-        ]
 
     file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
     with open(file_path) as f:

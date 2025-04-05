@@ -1,5 +1,4 @@
 CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Display(STRING json_list_vts, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False) {
-  TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   SetAccum<VERTEX> @@start_set;
   SetAccum<VERTEX> @@tmp_set;
   MapAccum<STRING, SetAccum<EDGE>> @@edges;

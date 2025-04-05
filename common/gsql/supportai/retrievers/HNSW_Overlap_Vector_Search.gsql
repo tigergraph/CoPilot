@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_types,
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> vertex_types,
   LIST<FLOAT> query_vector, UINT top_k=5, UINT num_hops=3, UINT num_seen_min=1, BOOL chunk_only = False, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
@@ -16,12 +16,12 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Vector_Search(Set<STRING> v_typ
   SetAccum<VERTEX> @parents;
   SetAccum<EDGE> @paths;
 
-  FOREACH v_type IN v_types DO
+  FOREACH vertex_type IN vertex_types DO
     IF v_type == "Document" THEN
         CONTINUE;
     END;
 
-    vset = {v_type.*};
+    vset = {vertex_type};
     result = SELECT v FROM vset:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
   END;
 

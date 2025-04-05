@@ -1,9 +1,25 @@
-CREATE OR REPLACE DISTRIBUTED QUERY get_topk_similar(String vertex_type, LIST<Float> query_vector, UINT top_k=10) SYNTAX V2 {
-  TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
+CREATE OR REPLACE DISTRIBUTED QUERY get_topk_similar(SET<String> vertex_types, LIST<Float> query_vector, UINT top_k=10, STRING expr="", BOOL verbose=false) SYNTAX V2 {
+  TYPEDEF tuple<Vertex v_id, String v_type, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
-  vset = {vertex_type.*};
+  MaxAccum<FLOAT> @similarity;
 
-  result = SELECT v FROM vset:v ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
+  INT all_top_k = top_k*vertex_types.size();
+  HeapAccum<Similarity_Results>(all_top_k, score DESC) @@all_topk_sets;
+
+  STRING pattern = "%";
+  IF NOT expr == "" AND instr(expr, "%") >= 0 THEN
+    pattern = expr;
+  END;
+
+  FOREACH vertex_type IN vertex_types DO
+    vset = {vertex_type.*};
+    result = SELECT v FROM vset:v WHERE v.id LIKE pattern AND v.embedding.size() > 0 ACCUM v.@similarity = 1 - gds.vector.distance(query_vector, v.embedding, "COSINE")
+        POST-ACCUM @@topk_set += Similarity_Results(v, v.type, v.@similarity), @@all_topk_sets += Similarity_Results(v, v.type, v.@similarity);
+  END;
 
   PRINT @@topk_set as results;
+ 
+  IF verbose THEN
+    PRINT @@all_topk_sets as verbose;
+  END;
 }

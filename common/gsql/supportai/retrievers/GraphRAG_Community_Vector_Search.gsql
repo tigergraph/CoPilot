@@ -4,9 +4,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Vector_Search(LIST<FLOAT>
   SetAccum<STRING> @context;
   SetAccum<Vertex> @children;
   SetAccum<Vertex> @@start_set;
-  comms = {Community.*};
   
-  filtered_comms = SELECT c FROM comms:c WHERE c.iteration == community_level and length(c.description) > 0;
+  filtered_comms = SELECT c FROM Community:c WHERE c.iteration == community_level and length(c.description) > 0;
   start_comms = vectorSearch({Community.embedding}, query_vector, top_k, {candidate_set: filtered_comms});
 
   start_comms = SELECT c FROM start_comms:c WHERE c.type == "Community"

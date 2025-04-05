@@ -161,9 +161,8 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
         LogWriter.info(
             f"Setting up Milvus embedding store for SupportAI with collection_name: {support_collection_name}"
         )
-        vertex_field = milvus_config.get("vertex_field", "vertex_id")
         try:
-            support_ai_embedding_store = MilvusEmbeddingStore(
+            supportai_embedding_store = MilvusEmbeddingStore(
                 embedding_service,
                 host=milvus_config["host"],
                 port=milvus_config["port"],
@@ -173,17 +172,17 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
                 password=milvus_config.get("password", ""),
                 vector_field=milvus_config.get("vector_field", "document_vector"),
                 text_field=milvus_config.get("text_field", "document_content"),
-                vertex_field=vertex_field,
+                vertex_field=milvus_config.get("vertex_field", "vertex_id"),
                 alias=milvus_config.get("alias", "default"),
             )
-            service_status["support_ai_embedding_store"] = {"status": "ok", "error": None}
+            service_status["supportai_embedding_store"] = {"status": "ok", "error": None}
         except MilvusException as e:
-            support_ai_embedding_store = None
-            service_status["support_ai_embedding_store"] = {"status": "milvus error", "error": str(e)}
+            supportai_embedding_store = None
+            service_status["supportai_embedding_store"] = {"status": "milvus error", "error": str(e)}
             raise
         except Exception as e:
-            support_ai_embedding_store = None
-            service_status["support_ai_embedding_store"] = {"status": "embedding error", "error": str(e)}
+            supportai_embedding_store = None
+            service_status["supportai_embedding_store"] = {"status": "embedding error", "error": str(e)}
             raise
     else:
         conn = TigerGraphConnection(
@@ -202,9 +201,9 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
             embedding_service,
             support_ai_instance=True,
         )
+        supportai_embedding_store = embedding_store
         service_status["embedding_store"] = {"status": "ok", "error": None}
-        # Does not need it to get TG connection params
-        embedding_store = None
+        service_status["supportai_embedding_store"] = {"status": "ok", "error": None}
 
 if DOC_PROCESSING_CONFIG is None or (
     DOC_PROCESSING_CONFIG.endswith(".json")

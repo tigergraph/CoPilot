@@ -1,46 +1,37 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STRING milvus_host,
-  UINT milvus_port, STRING collection_prefix, STRING vector_field_name,
-  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT num_hops=3, UINT num_seen_min=1, BOOL chunk_only = False, BOOL verbose = False) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   SetAccum<VERTEX> @@start_set;
   SetAccum<VertexTypes> @@start_set_type;
   SetAccum<VERTEX> @@tmp_set;
-  SetAccum<VertexTypes> @@tmp_set_type;
-  SumAccum<INT> @num_times_seen;
+  SetAccum<VertexTypes> @@selected_set_type;
   SumAccum<INT> @visited;
+  SumAccum<INT> @num_times_seen;
   MapAccum<Vertex, SetAccum<String>> @@result_set;
   MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
   SetAccum<STRING> @context;
   SetAccum<VERTEX> @parents;
   SetAccum<EDGE> @paths;
-  INT inc_top_k = top_k * 2;
 
-  FOREACH v_type IN v_types DO
-    IF v_type == "Document" THEN
-        CONTINUE;
-    END;
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
+  END;
 
-    @@tmp_set = HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
-
-    WHILE @@tmp_set.size() < top_k LIMIT 5 DO
-      @@tmp_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
-      inc_top_k = inc_top_k * 2;
-    END;
-
-    tmp = {@@tmp_set};
-    tmp2 = SELECT s FROM tmp:s LIMIT top_k;
-    tmp3 = SELECT s FROM tmp2:s POST-ACCUM @@start_set += s;
-    @@tmp_set.clear();
+  JSONARRAY vts = parse_json_array(json_list);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
   END;
 
   start = {@@start_set};
-
   start = SELECT s FROM start:s ACCUM s.@parents += s POST-ACCUM s.@num_times_seen = num_seen_min, @@tmp_set += s, @@start_set_type += VertexTypes(s, s.type);
 
   @@verbose_info += ("start_set" -> @@start_set_type);
 
   FOREACH i IN RANGE[0, num_hops-1] DO
+    STRING hierachy = "hop_" + to_string(i+1);
+
     start = SELECT t FROM start:s -((RELATIONSHIP>|
                                      CONTAINS_ENTITY>|
                                      reverse_CONTAINS_ENTITY>|
@@ -64,17 +55,17 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STR
           IF s.type == "Relationship" THEN
             s.@context += s.definition
           ELSE IF s.type == "Entity" THEN
-            STRING tmp_dsc = "Entity: " + replace(s.id, "_", " ") + ", Description: " + s.definition,
+            STRING tmp_dsc = s.id + " " + s.definition,
             FOREACH dsc IN s.description DO
-              tmp_dsc = tmp_dsc + " " + dsc +";"
+              tmp_dsc = tmp_dsc + dsc +";"
             END,
             s.@context += tmp_dsc
           ELSE IF s.type == "DocumentChunk" THEN
             @@to_retrieve_content += s
           END
-        POST-ACCUM
+        POST-ACCUM(s)
           IF NOT chunk_only OR chunk_only AND s.type == "DocumentChunk" THEN
-            @@tmp_set_type += VertexTypes(s, s.type)
+            @@selected_set_type += VertexTypes(s, s.type)
           END,
           IF NOT chunk_only THEN
             FOREACH v IN s.@parents DO
@@ -84,13 +75,13 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(Set<STRING> v_types, STR
             END
           END;
 
-  @@verbose_info += ("selected_set" -> @@tmp_set_type);
+  @@verbose_info += ("selected_set" -> @@selected_set_type);
 
   doc_chunks = {@@to_retrieve_content};
 
-  res = SELECT t FROM doc_chunks:s -(HAS_CONTENT>)- Content:t
+  res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
         ACCUM s.@context += t.text
-        POST-ACCUM
+        POST-ACCUM(s)
           FOREACH v IN s.@parents DO
             IF v IN @@start_set THEN
               @@result_set += (v -> s.@context)

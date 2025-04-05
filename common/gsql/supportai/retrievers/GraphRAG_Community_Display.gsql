@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_ids, UINT community_level = 2, BOOL with_chunk = true) { 
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_vts, UINT community_level = 2, BOOL with_chunk = true) { 
   MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
   SetAccum<EDGE> @@edges;
   SetAccum<STRING> @context;
@@ -6,14 +6,18 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Display(STRING json_list_
   SetAccum<Vertex> @@start_set;
   SetAccum<STRING> @@start_vids;
 
-  JSONARRAY v_ids = parse_json_array(json_list_ids);
-  FOREACH i IN RANGE[0, v_ids.size()-1] DO
-    @@start_vids += v_ids.getString(i);
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
   END;
 
-  comms = {Community.*};
-  
-  selected_comms = SELECT c FROM comms:c WHERE c.id IN @@start_vids;
+  JSONARRAY vts = parse_json_array(json_list);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
+  END;
+
+  selected_comms = {@@start_set};
 
   IF with_chunk THEN
       FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
