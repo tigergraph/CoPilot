@@ -207,10 +207,7 @@ class TigerGraphAgentGraph:
             num_hops=2,
         )
 
-        if embedding_store_type == "milvus":
-            query_name = "HNSW_Overlap_Search"
-        else:
-            query_name = "HNSW_Overlap_Vector_Search"
+        query_name = "HNSW_Overlap_Search"
         state["context"] = {
             "function_call": query_name,
             "result": step[0],
@@ -239,10 +236,7 @@ class TigerGraphAgentGraph:
             top_k=5
         )
 
-        if embedding_store_type == "milvus":
-            query_name = "HNSW_Content_Search"
-        else:
-            query_name = "HNSW_Content_Vector_Search"
+        query_name = "HNSW_Content_Search"
         state["context"] = {
             "function_call": query_name,
             "result": step[0],
@@ -270,10 +264,7 @@ class TigerGraphAgentGraph:
             top_k=3
         )
 
-        if embedding_store_type == "milvus":
-            query_name = "HNSW_Chunk_Sibling_Search"
-        else:
-            query_name = "HNSW_Chunk_Sibling_Vector_Search"
+        query_name = "HNSW_Chunk_Sibling_Search"
         state["context"] = {
             "function_call": query_name,
             "result": step[0],
@@ -301,10 +292,7 @@ class TigerGraphAgentGraph:
             top_k=5,
         )
 
-        if embedding_store_type == "milvus":
-            query_name = "GraphRAG_Community_Search"
-        else:
-            query_name = "GraphRAG_Community_Vector_Search"
+        query_name = "GraphRAG_Community_Search"
         state["context"] = {
             "function_call": query_name,
             "result": step[0],

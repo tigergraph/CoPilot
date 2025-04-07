@@ -1,39 +1,46 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STRING milvus_host, 
-  UINT milvus_port, STRING collection_name, STRING vector_field_name, 
-  STRING vertex_id_field_name, STRING metric_type="L2",  STRING query_vector_as_string, UINT top_k=5, UINT lookback=3, INT lookahead=3, BOOL verbose = False) { 
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING json_list_vts, STRING v_type, UINT lookback=3, INT lookahead=3, BOOL verbose = False) {
+  TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
+  MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   MapAccum<VERTEX, INT> @distances;
   SumAccum<STRING> @content;
   MapAccum<VERTEX, MapAccum<VERTEX, MapAccum<STRING, STRING>>> @@final_retrieval;
   OrAccum @touched;
   SetAccum<VERTEX> @@start_set;
-  INT inc_top_k = top_k * 2;
+  SetAccum<VertexTypes> @@start_set_type;
+  SetAccum<VertexTypes> @@sibling_set_type;
   
   all_chunks = {v_type};
-  @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string);
 
-  WHILE @@start_set.size() < top_k LIMIT 5 DO
-    @@start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_name, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string);
-    inc_top_k = inc_top_k * 2;
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
   END;
 
+  JSONARRAY vts = parse_json_array(json_list);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
+  END;
 
-  seeds = {@@start_set};
-  start = SELECT s FROM seeds:s LIMIT top_k;
-  start = SELECT s FROM start:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE;
+  start = {@@start_set};
+  start = SELECT s FROM start:s ACCUM s.@distances += (s -> 0), s.@touched += TRUE, @@start_set_type += VertexTypes(s, s.type);
+
+  @@verbose_info += ("start_set" -> @@start_set_type);
+
   FOREACH i IN RANGE[1, lookback] DO
     start = SELECT tgt FROM start:s -(IS_AFTER)-> :tgt
           ACCUM 
-            tgt.@touched += TRUE,
+            tgt.@touched += TRUE, @@sibling_set_type += VertexTypes(tgt, tgt.type),
             FOREACH (key, val) IN s.@distances DO
               tgt.@distances += (key -> -1*i)
             END;
   END;
   
-  start = seeds;
+  start = {@@start_set};
   FOREACH i IN RANGE[1, lookahead] DO
     start = SELECT tgt FROM start:s -(reverse_IS_AFTER)-> :tgt
             ACCUM
-              tgt.@touched += TRUE,
+              tgt.@touched += TRUE, @@sibling_set_type += VertexTypes(tgt, tgt.type),
               FOREACH (key, val) IN s.@distances DO
                 tgt.@distances += (key -> i)
               END;
@@ -49,6 +56,11 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING v_type, STR
             @@final_retrieval += (key -> (s -> ("content" -> s.@content)))
           END;
   
+  @@verbose_info += ("selected_set" -> @@sibling_set_type);
+
   PRINT @@final_retrieval as final_retrieval;
-  
+
+  IF verbose THEN
+      PRINT @@verbose_info as verbose;
+  END;
 }

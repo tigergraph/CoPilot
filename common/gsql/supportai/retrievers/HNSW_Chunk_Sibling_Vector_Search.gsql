@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_type,
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING vertex_type,
   LIST<FLOAT> query_vector, UINT top_k=5, UINT lookback=3, INT lookahead=3, BOOL verbose = False) { 
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
@@ -12,7 +12,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Vector_Search(STRING v_ty
   SetAccum<VertexTypes> @@start_set_type;
   SetAccum<VertexTypes> @@sibling_set_type;
   
-  all_chunks = {v_type.*};
+  all_chunks = {vertex_type.*};
   result = SELECT v FROM all_chunks:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
 
   FOREACH item IN @@topk_set DO

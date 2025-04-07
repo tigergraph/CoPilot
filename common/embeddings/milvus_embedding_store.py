@@ -78,6 +78,16 @@ class MilvusEmbeddingStore(EmbeddingStore):
         if not self.support_ai_instance:
             self.load_documents()
 
+    def set_collection_name(self, collection_name: str = "tg_documents", vector_field: str = None, text_field: str = None, vertex_field: str = None):
+        self.collection_name = collection_name
+        if vector_field:
+            self.vector_field = vector_field
+        if text_field:
+            self.text_field = text_field
+        if vertex_field:
+            self.vertex_field = vertex_field
+        self.connect_to_milvus()
+
     def connect_to_milvus(self):
         retry_attempt = 0
         while retry_attempt < self.max_retry_attempts:
@@ -86,7 +96,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 # metrics.milvus_active_connections.labels(self.collection_name).inc
                 LogWriter.info(
                     f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
-                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, alias={self.milvus_connection.get('alias', 'unknown')}, collection={self.collection_name}"""
+                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, alias={self.milvus_connection.get('alias', 'unknown')}, collection={self.collection_name}, vector_field={self.vector_field}, text_field={self.text_field}, vertex_field={self.vertex_field}"""
                 )
                 LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 self.milvus = Milvus(
@@ -473,6 +483,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
             raise e
 
     def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None):
+        res = retrieve_similar_with_score(query_embedding, top_k, filter_expr)
+        similar = [doc[0] for doc in res]
+        return similar
+
+    def retrieve_similar_with_score(self, query_embedding, top_k=10, filter_expr: str = None):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -493,7 +508,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
             metrics.milvus_query_total.labels(
                 self.collection_name, "similarity_search_by_vector"
             ).inc()
-            similar = self.milvus.similarity_search_by_vector(
+            similar = self.milvus.similarity_search_with_score_by_vector(
                 embedding=query_embedding, k=top_k, expr=filter_expr
             )
             end_time = time()
@@ -501,13 +516,13 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 self.collection_name, "similarity_search_by_vector"
             ).observe(end_time - start_time)
 
-            sim_ids = [doc.metadata.get("function_header") for doc in similar]
+            sim_ids = [doc[0].metadata.get("function_header") for doc in similar]
             logger.debug(
                 f"request_id={req_id_cv.get()} Milvus similarity_search_by_vector() retrieved={sim_ids}"
             )
             # Convert pk from int to str for each document
             for doc in similar:
-                doc.metadata["pk"] = str(doc.metadata["pk"])
+                doc[0].metadata["pk"] = str(doc[0].metadata["pk"])
             LogWriter.info(
                 f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()"
             )

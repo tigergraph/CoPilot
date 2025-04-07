@@ -9,7 +9,6 @@ from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from supportai.retrievers import BaseRetriever
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services import LLM_Model
-from common.config import embedding_store_type
 
 class CommunityAnswer(BaseModel):
     answer: str = Field(description="The answer to the question, based off of the context provided.")
@@ -41,45 +40,32 @@ class GraphRAGRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, community_level: int, top_k: int = 5, with_chunk: bool = True, verbose: bool = False):
-        if embedding_store_type == "milvus":
-            self._check_query_install("GraphRAG_Community_Search")
-
-            query_embedding = self._generate_embedding(question)
-
-            res = self.conn.runInstalledQuery(
-                "GraphRAG_Community_Search",
-                self.embedding_store.add_connection_parameters(
-                    {
-                        "collection_prefix": self.conn.graphname,
-                        "query_vector_as_string": query_embedding,
-                        "community_level": community_level,
-                        "top_k": top_k,
-                        "with_chunk": with_chunk,
-                        "verbose": verbose,
-                    }
-                ),
-                usePost=True
-            )
+    def search(self, question, community_level: int, top_k: int = 5, expand: bool = False, with_chunk: bool = True, verbose: bool = False):
+        if expand:
+            questions = self._expand_question(question, top_k, verbose=verbose)
         else:
-            self._check_query_install("GraphRAG_Community_Vector_Search")
+            questions = [question]
+        filter_expr = f"vertex_id like \"%"
+        for i in range(1, community_level+1):
+            filter_expr += f"_{i}"
+        filter_expr += "\""  
+        start_set = self._generate_start_set(questions, ["Community"], top_k, filter_expr=filter_expr, verbose=verbose)
 
-            query_embedding = self._generate_embedding(question, False)
-
-            res = self.conn.runInstalledQuery(
-                "GraphRAG_Community_Vector_Search",
-                params = {
-                    "community_level": community_level,
-                    "query_vector": query_embedding,
-                    "top_k": top_k,
-                    "with_chunk": with_chunk,
-                    "verbose": verbose,
-                },
-                usePost=True
-            )
+        self._check_query_install("GraphRAG_Community_Search")
+        res = self.conn.runInstalledQuery(
+            "GraphRAG_Community_Search",
+            params = {
+                "json_list_vts": str(start_set),
+                "community_level": community_level,
+                "with_chunk": with_chunk,
+                "verbose": verbose,
+            },
+            usePost=True
+        )
         if len(res) > 1 and "verbose" in res[1]:
             verbose_info = json.dumps(res[1]['verbose'])
             self.logger.info(f"Retrived GraphRAG query verbose info: {verbose_info}")
+            res[1]["verbose"]["expanded_questions"] = questions
         return res
     
     async def _generate_candidate(self, question, context):
@@ -108,10 +94,11 @@ class GraphRAGRetriever(BaseRetriever):
                         question: str,
                         community_level: int,
                         top_k: int = 1,
+                        expand: bool = False,
                         with_chunk: bool = False,
                         combine: bool = False,
                         verbose: bool = False):
-        retrieved = self.search(question, community_level, top_k, with_chunk, verbose)
+        retrieved = self.search(question, community_level, top_k, expand, with_chunk, verbose)
         
         context = []
         if combine:

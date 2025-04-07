@@ -225,7 +225,12 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         #TBD
         return
 
-    def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None):
+    def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None, vertex_types: List[str] = ["DocumentChunk"]):
+        res = retrieve_similar_with_score(query_embedding, top_k, filter_expr, vertex_types)
+        similar = [x[0] for x in res]
+        return similar
+
+    def retrieve_similar_with_score(self, query_embedding, top_k=10, filter_expr: str = None, vertex_types: List[str] = ["DocumentChunk"]):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -238,26 +243,30 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             Document results for search.
         """
         try:
-            logger.info(f"Fetch {k} similar entries from Content")
+            logger.info(f"Fetch {top_k} similar entries from {vertex_types} with filter {filter_expr}")
 
             start_time = time()
             verts = self.conn.runInstalledQuery(
                 "get_topk_similar",
                 params={
-                    "vertex_type": "Content",
+                    "vertex_types": vertex_types,
                     "query_vector": query_embedding,
-                    "k": k,
+                    "top_k": top_k,
+                    "expr": filter_expr,
                 }
             )
             end_time = time()
-            logger.info(f"Got k similar entries: {verts}")
+            logger.info(f"Got {top_k} similar entries: {verts}")
             result = []
             for r in verts:
                 if "results" in r:
                     for v in r["results"]:
-                        result.append(v["v_id"])
-            logger.info(f"Returning {result}")
-            return set(result)
+                        document = Document(
+                            page_content="",
+                            metadata={"vertex_id": v["v_id"], "vertex_type": v["v_type"]}
+                        )
+                        result.append((document, v["score"]))
+            return result
         except Exception as e:
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             LogWriter.error(error_message)
@@ -278,8 +287,6 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
     async def aget_k_closest(
         self, vertex: Tuple[str, str], k=10, threshold_similarity=0.90, edit_dist_threshold_pct=0.75
     ) -> list[Document]:
-        threshold_dist = 1 - threshold_similarity
-
         logger.info(f"Fetch {k} closest entries for {vertex} with threshold {threshold_similarity}")
         # Get all vectors with this ID
         (v_id, v_type) = vertex
@@ -292,7 +299,6 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 "threshold": threshold_similarity,
             }
         )
-        logger.info(f"Got k closest entries for {vertex}: {verts}")
         result = []
         for r in verts:
             if "results" in r:

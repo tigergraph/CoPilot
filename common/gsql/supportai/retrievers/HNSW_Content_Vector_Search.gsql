@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING vertex_type,
   INT top_k=5, LIST<FLOAT> query_vector, BOOL verbose = False) { 
   TYPEDEF tuple<Vertex v, Float score> Similarity_Results;
   HeapAccum<Similarity_Results>(top_k, score DESC) @@topk_set;
@@ -6,7 +6,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Vector_Search(STRING v_type,
   MapAccum<STRING, STRING> @@final_retrieval;
   INT inc_top_k = top_k * 2;
   
-  vset = {v_type.*};
+  vset = {vertex_type.*};
   result = SELECT v FROM vset:v POST-ACCUM @@topk_set += Similarity_Results(v, 1 - gds.vector.distance(query_vector, v.embedding, "COSINE"));
 
   FOREACH item IN @@topk_set DO

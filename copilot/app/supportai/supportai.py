@@ -20,69 +20,69 @@ logger = logging.getLogger(__name__)
 def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, dict]:
     # need to open the file using the absolute path
     ver = conn.getVer().split(".")
-    file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
-    with open(file_path, "r") as f:
-        schema = f.read()
-    schema_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
-            graphname, schema
+
+    current_schema = conn.gsql("""USE GRAPH {}\n ls""".format(graphname))
+
+    if "- VERTEX ResolvedEntity" in current_schema:
+        schema_res="Schema already exists, skipped"
+    else:
+        file_path = "common/gsql/supportai/SupportAI_Schema.gsql"
+        with open(file_path, "r") as f:
+            schema = f.read()
+        schema_res = conn.gsql(
+            """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_schema""".format(
+                graphname, schema
+            )
         )
-    )
+
+    if embedding_store_type == "tigergraph":
+        if "- embedding(Dimension=" in current_schema:
+            schema_res+=" Embeddding schema already exists, skipped"
+        else:
+            if int(ver[0]) >= 4 and int(ver[1]) >= 2:
+                file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
+                with open(file_path, "r") as f:
+                    schema = f.read()
+                schema_res += " "
+                schema_res += conn.gsql(
+                    """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_vector""".format(
+                        graphname, schema
+                    )
+                )
+
+                logger.info(f"Installing GDS library")
+                q_res = conn.gsql(
+                    """USE GLOBAL\nimport package gds\ninstall function gds.**"""
+                )
+                logger.info(f"Done installing GDS library with status {q_res}")
+            else:
+                raise Exception(f"Vector feature is not supported by the current TigerGraph version: {ver}")
+
+    if "- doc_chunk_epoch_processed_index" in current_schema:
+        index_res="Index already exists, skipped"
+    else:
+        file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
+        with open(file_path) as f:
+            index = f.read()
+        index_res = conn.gsql(
+            """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(
+                graphname, index
+            )
+        )
 
     supportai_queries = [
         "common/gsql/supportai/Scan_For_Updates.gsql",
         "common/gsql/supportai/Update_Vertices_Processing_Status.gsql",
         "common/gsql/supportai/retrievers/HNSW_Overlap_Display.gsql",
         "common/gsql/supportai/retrievers/GraphRAG_Community_Display.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Content_Search.gsql",
+        "common/gsql/supportai/retrievers/HNSW_Overlap_Search.gsql",
+        "common/gsql/supportai/retrievers/GraphRAG_Community_Search.gsql",
     ]
 
-    if embedding_store_type == "tigergraph":
-        if int(ver[0]) >= 4 and int(ver[1]) >= 2:
-            file_path = "common/gsql/supportai/SupportAI_Schema_Native_Vector.gsql"
-            with open(file_path, "r") as f:
-                schema = f.read()
-            schema_res = conn.gsql(
-                """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_vector""".format(
-                    graphname, schema
-                )
-            )
-
-            logger.info(f"Installing GDS library")
-            q_res = conn.gsql(
-                """USE GLOBAL\nimport package gds\ninstall function gds.**"""
-            )
-            logger.info(f"Done installing GDS library with status {q_res}")
-        else:
-            raise Exception(f"Vector feature is not supported by the current TigerGraph version: {ver}")
-
-        supportai_queries += [
-            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Content_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Overlap_Vector_Search.gsql",
-            "common/gsql/supportai/retrievers/GraphRAG_Community_Vector_Search.gsql",
-        ]
-    else:
-        supportai_queries += [
-            "common/gsql/supportai/retrievers/HNSW_Search_Sub.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Content_Search.gsql",
-            "common/gsql/supportai/retrievers/HNSW_Overlap_Search.gsql",
-            "common/gsql/supportai/retrievers/GraphRAG_Community_Search.gsql",
-            #"common/gsql/supportai/retrievers/GraphRAG_Community_Retriever.gsql",
-            #"common/gsql/supportai/retrievers/Entity_Relationship_Retrieval.gsql",
-        ]
-
-    file_path = "common/gsql/supportai/SupportAI_IndexCreation.gsql"
-    with open(file_path) as f:
-        index = f.read()
-    index_res = conn.gsql(
-        """USE GRAPH {}\n{}\nRUN SCHEMA_CHANGE JOB add_supportai_indexes""".format(
-            graphname, index
-        )
-    )
-
     for filename in supportai_queries:
-        logger.info(f"Installing support ai query {filename}")
+        logger.info(f"Creating supportai query {filename}")
         with open(f"{filename}", "r") as f:
             q_body = f.read()
         q_name, extension = os.path.splitext(os.path.basename(filename))
@@ -91,16 +91,17 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
                 conn.graphname, q_body
             )
         )
-        logger.info(f"Done installing support ai query {q_name} with status {q_res}")
+        logger.info(f"Done creating supportai query {q_name} with status {q_res}")
 
-    q_res = conn.gsql(
+    logger.info(f"Installing supportai queries all together")
+    query_res = conn.gsql(
         """USE GRAPH {}\nINSTALL QUERY ALL\n""".format(
             conn.graphname
         )
     )
-    logger.info(f"Done installing support ai query all with status {q_res}")
+    logger.info(f"Done installing supportai query all with status {query_res}")
 
-    return schema_res, index_res
+    return schema_res, index_res, query_res
 
 
 def create_ingest(

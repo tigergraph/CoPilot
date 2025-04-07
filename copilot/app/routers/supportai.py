@@ -22,7 +22,7 @@ from supportai.retrievers import (
 from common.config import (
     db_config,
     embedding_service,
-    embedding_store,
+    supportai_embedding_store,
     get_llm_service,
     llm_config,
     service_status,
@@ -43,9 +43,9 @@ security = HTTPBase(scheme="basic", auto_error=False)
 
 
 def check_embedding_store_status():
-    if service_status["embedding_store"]["error"]:
+    if service_status["supportai_embedding_store"]["error"]:
         return HTTPException(
-            status_code=503, detail=service_status["embedding_store"]["error"]
+            status_code=503, detail=service_status["supportai_embedding_store"]["error"]
         )
 
 
@@ -58,11 +58,12 @@ def initialize(
     conn = conn.state.conn
 
     resp = supportai.init_supportai(conn, graphname)
-    schema_res, index_res = resp[0], resp[1]
+    schema_res, index_res, query_res = resp[0], resp[1], resp[2]
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
         "index_creation_status": json.dumps(index_res),
+        "query_creation_status": json.dumps(query_res),
     }
 
 
@@ -134,11 +135,13 @@ def search(
 ):
     check_embedding_store_status()
     conn = conn.state.conn
+    if "expand" not in query.method_params:
+        query.method_params["expand"] = False
     if "verbose" not in query.method_params:
         query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         if "chunk_only" not in query.method_params:
             query.method_params["chunk_only"] = False
@@ -148,6 +151,7 @@ def search(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["expand"],
             query.method_params["chunk_only"],
             query.method_params["verbose"],
         )
@@ -155,20 +159,21 @@ def search(
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
         retriever = HNSWRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.search(
             query.question,
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["expand"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "sibling":
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
         retriever = HNSWSiblingRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.search(
             query.question,
@@ -177,16 +182,17 @@ def search(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["expand"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.search(query.question, query.method_params["top_k"])
     elif query.method.lower() == "graphrag":
         retriever = GraphRAGRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         if "with_chunk" not in query.method_params:
             query.method_params["with_chunk"] = True
@@ -194,6 +200,7 @@ def search(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
+            query.method_params["expand"],
             query.method_params["with_chunk"],
             query.method_params["verbose"],
         )
@@ -213,11 +220,13 @@ def answer_question(
     resp.response_type = "supportai"
     if "combine" not in query.method_params:
         query.method_params["combine"] = False
+    if "expand" not in query.method_params:
+        query.method_params["expand"] = False
     if "verbose" not in query.method_params:
         query.method_params["verbose"] = False
     if query.method.lower() == "hnswoverlap":
         retriever = HNSWOverlapRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         if "chunk_only" not in query.method_params:
             query.method_params["chunk_only"] = False
@@ -227,6 +236,7 @@ def answer_question(
             query.method_params["top_k"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
+            query.method_params["expand"],
             query.method_params["chunk_only"],
             query.method_params["combine"],
             query.method_params["verbose"],
@@ -235,13 +245,14 @@ def answer_question(
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
         retriever = HNSWRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["index"],
             query.method_params["top_k"],
             query.method_params["withHyDE"],
+            query.method_params["expand"],
             query.method_params["combine"],
             query.method_params["verbose"],
         )
@@ -249,7 +260,7 @@ def answer_question(
         if "index" not in query.method_params:
             raise Exception("Index name not provided")
         retriever = HNSWSiblingRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.retrieve_answer(
             query.question,
@@ -258,18 +269,19 @@ def answer_question(
             query.method_params["lookback"],
             query.method_params["lookahead"],
             query.method_params["withHyDE"],
+            query.method_params["expand"],
             query.method_params["combine"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "entityrelationship":
         retriever = EntityRelationshipRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         res = retriever.retrieve_answer(query.question, query.method_params["top_k"])
 
     elif query.method.lower() == "graphrag":
         retriever = GraphRAGRetriever(
-            embedding_service, embedding_store, get_llm_service(llm_config), conn
+            embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
         if "with_chunk" not in query.method_params:
             query.method_params["with_chunk"] = True
@@ -277,6 +289,7 @@ def answer_question(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
+            query.method_params["expand"],
             query.method_params["with_chunk"],
             query.method_params["combine"],
             query.method_params["verbose"],

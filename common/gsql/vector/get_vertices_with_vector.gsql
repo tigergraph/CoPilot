@@ -1,9 +1,9 @@
-CREATE OR REPLACE DISTRIBUTED QUERY get_vertices_with_vector(STRING v_type, STRING keyword = "", STRING with_edge = "", BOOL with_vector = FALSE) { 
+CREATE OR REPLACE DISTRIBUTED QUERY get_vertices_with_vector(STRING vertex_type, STRING keyword = "", STRING with_edge = "", BOOL with_vector = FALSE) { 
   SetAccum<EDGE> @@edges;
-  vset = {v_type.*};
+  vset = {vertex_type.*};
   STRING pattern = "%"+keyword+"%";
   
-  result = SELECT s from vset:s -(:e)- vset:t WHERE s.id LIKE pattern AND (with_edge == "" OR e.type == with_edge) ACCUM @@edges += e;
+  result = SELECT s from vset:s -(:e)- :t WHERE s.id LIKE pattern AND (with_edge == "" OR e.type == with_edge) ACCUM @@edges += e;
   
   IF with_vector THEN
     PRINT result.size() as size, @@edges as edges, result WITH VECTOR;

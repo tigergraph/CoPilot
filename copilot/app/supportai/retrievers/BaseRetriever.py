@@ -3,12 +3,14 @@ from common.embeddings.base_embedding_store import EmbeddingStore
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services.base_llm import LLM_Model
 from common.py_schemas import QuestionScore, QuestionGenerator
+from common.config import embedding_store_type
 
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langchain.output_parsers import OutputFixingParser
 
+import re
 import logging
 
 question_parser = PydanticOutputParser(pydantic_object=QuestionGenerator)
@@ -63,7 +65,7 @@ class BaseRetriever:
         else:
             return True
 
-    def _generate_question(self, question, top_k, verbose):
+    def _expand_question(self, question, top_k, verbose):
         model = self.llm_service.model
         new_parser = OutputFixingParser.from_llm(parser=question_parser, llm=model)
 
@@ -72,7 +74,7 @@ class BaseRetriever:
         answer = chain.invoke({"question": question})
 
         if verbose:
-            self.logger.info(f"Answer from LLM: {answer}")
+            self.logger.info(f"Expanded question \"{question}\" from LLM: {answer}")
 
         # sort list by quality score
         res = answer.questions
@@ -98,7 +100,7 @@ class BaseRetriever:
 
         return {"response": generated, "retrieved": retrieved}
 
-    def _generate_embedding(self, text, str_mode: bool = True) -> str:
+    def _generate_embedding(self, text, str_mode: bool = False) -> str:
         embedding = self.emb_service.embed_query(text)
         if str_mode:
             return (
@@ -110,7 +112,7 @@ class BaseRetriever:
         else:
             return embedding
 
-    def _hyde_embedding(self, text, str_mode: bool = True) -> str:
+    def _hyde_embedding(self, text, str_mode: bool = False) -> str:
         model = self.llm_service.llm
         prompt = self.llm_service.hyde_prompt
 
@@ -127,6 +129,49 @@ class BaseRetriever:
     def _get_entities_relationships(self, text: str, extractor: BaseExtractor):
         return extractor.extract(text)
     """
+
+    def _generate_start_set(self, questions, indices, top_k, filter_expr: str = None, withHyDE: bool = False, verbose: bool = False):
+        if not isinstance(questions, list):
+            questions = [questions]
+
+        candidate_set = []
+        for question in questions:
+            if withHyDE:
+                query_embedding = self._hyde_embedding(question)
+            else:
+                query_embedding = self._generate_embedding(question)
+            if embedding_store_type == "tigergraph":
+                if filter_expr and "\"%" in filter_expr:
+                    filter_expr = re.findall(r'"(%[^"]*)"', filter_expr)[0]
+                res = self.embedding_store.retrieve_similar_with_score(
+                    query_embedding=query_embedding,
+                    top_k=top_k,
+                    vertex_types=indices,
+                    filter_expr=filter_expr,
+                )
+                verbose and self.logger.info(f"Retrived topk similar for query \"{question}\": {res}")
+                candidate_set += res
+            else:
+                #old_collection_name = self.embedding_store.collection_name
+                for v_type in indices:
+                    self.embedding_store.set_collection_name(self.conn.graphname+"_"+v_type)
+                    res = self.embedding_store.retrieve_similar_with_score(
+                        query_embedding=query_embedding,
+                        top_k=top_k,
+                        filter_expr=filter_expr,
+                    )
+                    for doc in res:
+                        doc[0].metadata["vertex_type"] = v_type
+                    verbose and self.logger.info(f"Retrived topk similar for query \"{question}\": {res}")
+                    candidate_set += res
+                #self.embedding_store.set_collection_name(old_collection_name)
+        candidate_set.sort(key=lambda x: x[1], reverse=True)
+        start_set = []
+        for document, _ in candidate_set:
+            start_set.append({"v": document.metadata["vertex_id"], "t": document.metadata["vertex_type"]})
+        start_set = [dict(d) for d in {tuple(vt.items()) for vt in start_set}][:top_k]
+        verbose and self.logger.info(f"Search using start_set: {str(start_set)}")
+        return start_set
 
     def search(self, question):
         pass

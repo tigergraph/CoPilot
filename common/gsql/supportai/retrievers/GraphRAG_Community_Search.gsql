@@ -1,37 +1,33 @@
-CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING milvus_host,
-  UINT milvus_port, STRING collection_prefix, STRING vector_field_name,
-  STRING vertex_id_field_name, STRING metric_type="L2", STRING query_vector_as_string, INT community_level=1, INT top_k = 3, BOOL with_chunk = true, BOOL verbose = false) {
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING json_list_vts, INT community_level=2, BOOL with_chunk = true, BOOL verbose = false) { 
   MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
   MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
   SetAccum<STRING> @context;
   SetAccum<Vertex> @children;
-  SetAccum<Vertex> @@tmp_start_set;
   SetAccum<Vertex> @@start_set;
-  INT inc_top_k = top_k * 2;
 
-  STRING v_type = "Community";
-  @@tmp_start_set = HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, top_k, query_vector_as_string, community_level);
-
-  WHILE @@tmp_start_set.size() < top_k LIMIT 5 DO
-      @@tmp_start_set += HNSW_Search_Sub(v_type, milvus_host, milvus_port, collection_prefix+"_"+v_type, vector_field_name, vertex_id_field_name, metric_type, inc_top_k, query_vector_as_string, community_level);
-      inc_top_k = inc_top_k * 2;
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
   END;
 
-  tmp = {@@tmp_start_set};
-  tmp2 = SELECT s FROM tmp:s WHERE s.iteration == community_level LIMIT top_k;
-  tmp3 = SELECT s FROM tmp2:s POST-ACCUM @@start_set += s;
-
+  JSONARRAY vts = parse_json_array(json_list);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
+  END;
+  
   @@verbose_info += ("start_set" -> @@start_set);
 
   start_comms = {@@start_set};
   selected_comms = start_comms;
+
   IF with_chunk THEN
       FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
           selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT)- Community:c
               WHERE s.iteration == i
               ACCUM s.@children += c
               POST-ACCUM @@verbose_info += ("community_level_"+to_string(i-1) -> s.@children);
-      END;        
+      END;
       related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- DocumentChunk:d -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
           ACCUM m.@context += c.text, m.@children += d
           POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
