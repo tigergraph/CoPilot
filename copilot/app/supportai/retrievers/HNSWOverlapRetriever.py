@@ -35,6 +35,7 @@ class HNSWOverlapRetriever(BaseRetriever):
         if len(res) > 1 and "verbose" in res[1]:
             verbose_info = json.dumps(res[1]['verbose'])
             self.logger.info(f"Retrived HNSWOverlap query verbose info: {verbose_info}")
+            res[1]["verbose"]["expanded_questions"] = questions
         return res
 
     def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, expand: bool = False, chunk_only: bool = False, combine: bool = False, verbose: bool = False):

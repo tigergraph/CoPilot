@@ -58,11 +58,12 @@ def initialize(
     conn = conn.state.conn
 
     resp = supportai.init_supportai(conn, graphname)
-    schema_res, index_res = resp[0], resp[1]
+    schema_res, index_res, query_res = resp[0], resp[1], resp[2]
     return {
         "host_name": conn._tg_connection.host,  # include host_name for debugging from client. Their pyTG conn might not have the same host as what's configured in copilot
         "schema_creation_status": json.dumps(schema_res),
         "index_creation_status": json.dumps(index_res),
+        "query_creation_status": json.dumps(query_res),
     }
 
 

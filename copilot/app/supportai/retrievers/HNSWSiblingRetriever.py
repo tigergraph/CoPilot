@@ -36,6 +36,7 @@ class HNSWSiblingRetriever(BaseRetriever):
         if len(res) > 1 and "verbose" in res[1]:
             verbose_info = json.dumps(res[1]['verbose'])
             self.logger.info(f"Retrived HNSWChunkSibling query verbose info: {verbose_info}")
+            res[1]["verbose"]["expanded_questions"] = questions
         return res
 
     def retrieve_answer(

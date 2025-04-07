@@ -65,6 +65,7 @@ class GraphRAGRetriever(BaseRetriever):
         if len(res) > 1 and "verbose" in res[1]:
             verbose_info = json.dumps(res[1]['verbose'])
             self.logger.info(f"Retrived GraphRAG query verbose info: {verbose_info}")
+            res[1]["verbose"]["expanded_questions"] = questions
         return res
     
     async def _generate_candidate(self, question, context):
