@@ -17,9 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
@@ -34,7 +31,7 @@ jobs:
         echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT${{ needs.setup.outputs.image }} 
  
     - name: Build and push Docker image CoPilot
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./copilot/Dockerfile
@@ -44,7 +41,7 @@ jobs:
            tigergraphml/copilot:latest
  
     - name: Build and push Docker image ECC
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./eventual-consistency-service/Dockerfile
@@ -54,7 +51,7 @@ jobs:
            tigergraphml/ecc:latest
 
     - name: Build and push Docker image chat-history
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: chat-history/
         file: ./chat-history/Dockerfile
@@ -64,7 +61,7 @@ jobs:
           tigergraphml/chat-history:latest
      
     - name: Build and push Docker image copilot-ui
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: copilot-ui/
         file: ./copilot-ui/Dockerfile
