@@ -45,6 +45,22 @@ class OpenAI(LLM_Model):
         )
 
     @property
+    def graphrag_scoring_prompt(self):
+        filepath = self.prompt_path + "graphrag_scoring.txt"
+        if os.path.exists(filepath):
+            return self._read_prompt_file(filepath)
+        else:
+            return super().graphrag_scoring_prompt
+
+    @property
+    def question_expansion_prompt(self):
+        filepath = self.prompt_path + "question_expansion.txt"
+        if os.path.exists(filepath):
+            return self._read_prompt_file(filepath)
+        else:
+            return super().question_expansion_prompt
+
+    @property
     def supportai_response_prompt(self):
         filepath = self.prompt_path + "supportai_response.txt"
         if os.path.exists(filepath):

@@ -112,3 +112,7 @@ class QuestionScore(BaseModel):
 
 class QuestionGenerator(BaseModel):
     questions: List[QuestionScore] = Field(..., description="List of candidate questions with quality scores")
+
+class CommunityAnswer(BaseModel):
+    answer: str = Field(description="The answer to the question, based off of the context provided.")
+    quality_score: int = Field(description="The quality of the answer, based on how well it answers the question. Rate the answer from 0 (poor) to 100 (excellent).")

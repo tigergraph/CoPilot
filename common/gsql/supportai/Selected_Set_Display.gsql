@@ -1,0 +1,40 @@
+CREATE OR REPLACE DISTRIBUTED QUERY Selected_Set_Display(STRING json_list_vts) {
+  SetAccum<VERTEX> @@start_set;
+  SetAccum<VERTEX<DocumentChunk>> @@to_retrieve_content;
+  ListAccum<STRING> @context;
+
+  STRING json_list = json_list_vts;
+  IF instr(json_list_vts, "'v'") > 0 AND instr(json_list_vts, "'t'") > 0 THEN
+      json_list = replace(json_list_vts, "'", "\"");
+  END;
+
+  JSONARRAY vts = parse_json_array(json_list);
+  FOREACH i IN RANGE[0, vts.size()-1] DO
+    JSONOBJECT vt = vts.getJsonObject(i);
+    @@start_set += to_vertex(vt.getString("v"), vt.getString("t"));
+  END;
+
+  start = {@@start_set};
+
+  res = SELECT s FROM start:s
+        POST-ACCUM
+          IF s.type == "Relationship" THEN
+            s.@context += s.definition
+          ELSE IF s.type == "Entity" THEN
+            STRING tmp_dsc = s.id + " " + s.definition,
+            FOREACH dsc IN s.description DO
+              tmp_dsc = tmp_dsc + dsc +";"
+            END,
+            s.@context += tmp_dsc
+          ELSE IF s.type == "DocumentChunk" THEN
+            @@to_retrieve_content += s
+          END;
+
+  doc_chunks = {@@to_retrieve_content};
+
+  res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
+        ACCUM s.@context += t.text;
+
+  PRINT start[start.@context as context] as results;
+}
+

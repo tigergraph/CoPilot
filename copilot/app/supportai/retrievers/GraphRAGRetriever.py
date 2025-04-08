@@ -9,10 +9,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from supportai.retrievers import BaseRetriever
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services import LLM_Model
-
-class CommunityAnswer(BaseModel):
-    answer: str = Field(description="The answer to the question, based off of the context provided.")
-    quality_score: int = Field(description="The quality of the answer, based on how well it answers the question. Rate the answer from 0 (poor) to 100 (excellent).")
+from common.py_schemas import CommunityAnswer
 
 answer_parser = PydanticOutputParser(pydantic_object=CommunityAnswer)
 
@@ -69,6 +66,14 @@ class GraphRAGRetriever(BaseRetriever):
         return res
     
     async def _generate_candidate(self, question, context):
+        answer_parser = PydanticOutputParser(pydantic_object=CommunityAnswer)
+
+        ANSWER_PROMPT = PromptTemplate(
+            template = self.llm_service.graphrag_scoring_prompt,
+            input_variables=["question", "context"],
+            partial_variables={"format_instructions": answer_parser.get_format_instructions()}
+        )
+
         model = self.llm_service.model
 
         chain = ANSWER_PROMPT | model | answer_parser

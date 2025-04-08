@@ -39,6 +39,16 @@ class LLM_Model:
         return "Answer this question: {question}\nUse this information: {sources}"
 
     @property
+    def question_expansion_prompt(self):
+        """Property to get the prompt for the Question Expension response."""
+        return """You are a helpful assistant responsible for generating 10 new questions similar to the original question below to represent its meaning in a more clear way.\nInclude a quality score for the answer, based on how well it represents the meaning of the original question. The quality score should be between 0 (poor) and 100 (excellent).\n\nQuestion: {question}\n\n{format_instructions}\n"""
+
+    @property
+    def graphrag_scoring_prompt(self):
+        """Property to get the prompt for the GraphRAG Scoring response."""
+        return """You are a helpful assistant responsible for generating an answer to the question below using the data provided.\nInclude a quality score for the answer, based on how well it answers the question. The quality score should be between 0 (poor) and 100 (excellent).\n\nQuestion: {question}\nContext: {context}\n\n{format_instructions}\n"""
+
+    @property
     def model(self):
         """Property to get the external LLM model."""
         raise ("model not supported in base class")

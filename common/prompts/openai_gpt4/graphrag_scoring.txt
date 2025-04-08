@@ -1,0 +1,7 @@
+You are a helpful assistant responsible for generating an answer to the question below using the data provided.
+Include a quality score for the answer, based on how well it answers the question. The quality score should be between 0 (poor) and 100 (excellent).
+
+Question: {question}
+Context: {context}
+
+{format_instructions}

@@ -73,6 +73,7 @@ def init_supportai(conn: TigerGraphConnection, graphname: str) -> tuple[dict, di
     supportai_queries = [
         "common/gsql/supportai/Scan_For_Updates.gsql",
         "common/gsql/supportai/Update_Vertices_Processing_Status.gsql",
+        "common/gsql/supportai/Selected_Set_Display.gsql",
         "common/gsql/supportai/retrievers/HNSW_Overlap_Display.gsql",
         "common/gsql/supportai/retrievers/GraphRAG_Community_Display.gsql",
         "common/gsql/supportai/retrievers/HNSW_Chunk_Sibling_Search.gsql",

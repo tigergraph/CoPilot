@@ -1,0 +1,6 @@
+You are a helpful assistant responsible for generating 10 new questions similar to the original question below to represent its meaning in a more clear way.
+Include a quality score for the answer, based on how well it represents the meaning of the original question. The quality score should be between 0 (poor) and 100 (excellent).
+
+Question: {question}
+
+{format_instructions}

@@ -13,20 +13,6 @@ from langchain.output_parsers import OutputFixingParser
 import re
 import logging
 
-question_parser = PydanticOutputParser(pydantic_object=QuestionGenerator)
-
-QUESTION_PROMPT = PromptTemplate(template = """
-You are a helpful assistant responsible for generating 10 new questions similar to the original question below to represent its meaning in a more clear way.
-Include a quality score for the answer, based on how well it represents the meaning of the original question. The quality score should be between 0 (poor) and 100 (excellent).
-
-Question: {question}
-
-{format_instructions}
-""",
-input_variables=["question"],
-partial_variables={"format_instructions": question_parser.get_format_instructions()}
-)
-
 class BaseRetriever:
     def __init__(
         self,
@@ -66,8 +52,15 @@ class BaseRetriever:
             return True
 
     def _expand_question(self, question, top_k, verbose):
+        question_parser = PydanticOutputParser(pydantic_object=QuestionGenerator)
+
+        QUESTION_PROMPT = PromptTemplate(
+            template = self.llm_service.question_expansion_prompt,
+            input_variables=["question"],
+            partial_variables={"format_instructions": question_parser.get_format_instructions()}
+        )
+
         model = self.llm_service.model
-        new_parser = OutputFixingParser.from_llm(parser=question_parser, llm=model)
 
         chain = QUESTION_PROMPT | model | question_parser
 
