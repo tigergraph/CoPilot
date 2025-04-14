@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING json_list_vts, INT community_level=2, BOOL with_chunk = true, BOOL verbose = false) { 
+CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING json_list_vts="[]", INT community_level=2, BOOL with_chunk = true, BOOL with_doc = false, BOOL verbose = false) { 
   MapAccum<Vertex, SetAccum<String>> @@final_retrieval;
   MapAccum<STRING, SetAccum<Vertex>> @@verbose_info;
   SetAccum<STRING> @context;
@@ -21,16 +21,22 @@ CREATE OR REPLACE DISTRIBUTED QUERY GraphRAG_Community_Search(STRING json_list_v
   start_comms = {@@start_set};
   selected_comms = start_comms;
 
-  IF with_chunk THEN
+  IF with_chunk or with_doc THEN
       FOREACH i IN RANGE[community_level, 2].STEP(-1) DO
           selected_comms = SELECT c FROM selected_comms:s -(<HAS_PARENT)- Community:c
               WHERE s.iteration == i
               ACCUM s.@children += c
               POST-ACCUM @@verbose_info += ("community_level_"+to_string(i-1) -> s.@children);
       END;
-      related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- DocumentChunk:d -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
-          ACCUM m.@context += c.text, m.@children += d
-          POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
+      IF with_doc THEN
+          related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- Document:d -(HAS_CHILD>)- DocumentChunk:dc -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
+              ACCUM m.@context += c.text, m.@children += d
+              POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
+      ELSE
+          related_chunks = SELECT c FROM Content:c -(<HAS_CONTENT)- DocumentChunk:d -(CONTAINS_ENTITY>)- Entity:v -(RESOLVES_TO>)- ResolvedEntity:r -(IN_COMMUNITY>)- selected_comms:m
+              ACCUM m.@context += c.text, m.@children += d
+              POST-ACCUM @@verbose_info += ("related_chunks" -> m.@children);
+      END;
   END;
 
   selected_comms = SELECT c FROM selected_comms:c -(HAS_PARENT>*0..)- start_comms:s WHERE s.type == c.type and c.type == "Community"

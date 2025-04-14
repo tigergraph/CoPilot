@@ -143,8 +143,12 @@ def search(
         retriever = HNSWOverlapRetriever(
             embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
+        if "method" not in query.method_params:
+            query.method_params["method"] = "Similarity"
         if "chunk_only" not in query.method_params:
             query.method_params["chunk_only"] = False
+        if "doc_only" not in query.method_params:
+            query.method_params["doc_only"] = False
         res = retriever.search(
             query.question,
             query.method_params["indices"],
@@ -152,7 +156,9 @@ def search(
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
             query.method_params["expand"],
+            query.method_params["method"],
             query.method_params["chunk_only"],
+            query.method_params["doc_only"],
             query.method_params["verbose"],
         )
     elif query.method.lower() == "vdb":
@@ -196,12 +202,15 @@ def search(
         )
         if "with_chunk" not in query.method_params:
             query.method_params["with_chunk"] = True
+        if "with_doc" not in query.method_params:
+            query.method_params["with_doc"] = False
         res = retriever.search(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
             query.method_params["expand"],
             query.method_params["with_chunk"],
+            query.method_params["with_doc"],
             query.method_params["verbose"],
         )
     return res
@@ -228,8 +237,12 @@ def answer_question(
         retriever = HNSWOverlapRetriever(
             embedding_service, supportai_embedding_store, get_llm_service(llm_config), conn
         )
+        if "method" not in query.method_params:
+            query.method_params["method"] = "Similarity"
         if "chunk_only" not in query.method_params:
             query.method_params["chunk_only"] = False
+        if "doc_only" not in query.method_params:
+            query.method_params["doc_only"] = False
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["indices"],
@@ -237,7 +250,9 @@ def answer_question(
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
             query.method_params["expand"],
+            query.method_params["method"],
             query.method_params["chunk_only"],
+            query.method_params["doc_only"],
             query.method_params["combine"],
             query.method_params["verbose"],
         )
@@ -285,12 +300,15 @@ def answer_question(
         )
         if "with_chunk" not in query.method_params:
             query.method_params["with_chunk"] = True
+        if "with_doc" not in query.method_params:
+            query.method_params["with_doc"] = False
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
             query.method_params["expand"],
             query.method_params["with_chunk"],
+            query.method_params["with_doc"],
             query.method_params["combine"],
             query.method_params["verbose"],
         )

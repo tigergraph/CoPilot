@@ -1,0 +1,41 @@
+CREATE OR REPLACE DISTRIBUTED QUERY Keyword_Search(SET<STRING> keywords, STRING mode = "ANY", INT top_k = 5, BOOL doc_only = False, BOOL verbose = False) {
+  TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
+  SetAccum<VERTEX> @@selected_set;
+  SetAccum<VertexTypes> @@selected_set_type;
+  SetAccum<VERTEX> @@tmp_set;
+  MapAccum<Vertex, SetAccum<String>> @@result_set;
+  MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
+  SumAccum<INT> @num_times_seen;
+  
+  BOOL to_init = True;
+
+  FOREACH key IN keywords DO
+    @@tmp_set.clear();
+    STRING pattern = "%" + replace(key, " ", "%") + "%";
+    result = SELECT s FROM DocumentChunk:s -(HAS_CONTENT>:e)- Content:t WHERE t.text LIKE pattern ACCUM s.@num_times_seen += 1 POST-ACCUM @@tmp_set += s;
+    IF upper(mode) == "ANY" OR to_init THEN
+        @@selected_set += @@tmp_set;
+        to_init = False;
+    ELSE
+        @@selected_set = @@selected_set INTERSECT @@tmp_set;
+    END;
+  END;
+
+  doc_chunks = {@@selected_set};
+  doc_chunks = SELECT s FROM doc_chunks:s ORDER BY s.@num_times_seen LIMIT top_k;
+  IF doc_only THEN
+      res = SELECT s FROM doc_chunks:s -(<HAS_CHILD:e1)- Document:d -(HAS_CONTENT>:e2)- Content:t
+          ACCUM @@result_set += (d -> t.text), @@selected_set_type += VertexTypes(d, d.type);
+  ELSE
+      res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
+          ACCUM @@result_set += (s -> t.text), @@selected_set_type += VertexTypes(s, s.type);
+  END;
+  @@verbose_info += ("selected_set" -> @@selected_set_type);
+
+  PRINT @@result_set as final_retrieval;
+  PRINT @@selected_set_type as selected_set;
+
+  IF verbose THEN
+      PRINT doc_chunks as verbose;
+  END;
+}

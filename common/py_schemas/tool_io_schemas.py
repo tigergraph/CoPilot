@@ -105,13 +105,13 @@ class CommunitySummary(BaseModel):
     )
 
 
-class QuestionScore(BaseModel):
-    candidate: str = Field(description="The candidate question similar to the original question.")
-    quality_score: int = Field(description="The quality of the candidate question, based on how well it represents the meaning of the original question. Rate the candidate from 0 (poor) to 100 (excellent).")
+class CandidateScore(BaseModel):
+    candidate: str = Field(description="The candidate answer according to the prompt.")
+    quality_score: int = Field(description="The quality of the candidate answer, based on how well it meets the requirement in the prompt. Rate the candidate from 0 (poor) to 100 (excellent).")
 
 
-class QuestionGenerator(BaseModel):
-    questions: List[QuestionScore] = Field(..., description="List of candidate questions with quality scores")
+class CandidateGenerator(BaseModel):
+    candidates: List[CandidateScore] = Field(..., description="List of candidate questions with quality scores")
 
 class CommunityAnswer(BaseModel):
     answer: str = Field(description="The answer to the question, based off of the context provided.")

@@ -37,7 +37,7 @@ class GraphRAGRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, community_level: int, top_k: int = 5, expand: bool = False, with_chunk: bool = True, verbose: bool = False):
+    def search(self, question, community_level: int, top_k: int = 5, expand: bool = False, with_chunk: bool = True, with_doc: bool = False, verbose: bool = False):
         if expand:
             questions = self._expand_question(question, top_k, verbose=verbose)
         else:
@@ -55,6 +55,7 @@ class GraphRAGRetriever(BaseRetriever):
                 "json_list_vts": str(start_set),
                 "community_level": community_level,
                 "with_chunk": with_chunk,
+                "with_doc": with_doc,
                 "verbose": verbose,
             },
             usePost=True
@@ -101,9 +102,10 @@ class GraphRAGRetriever(BaseRetriever):
                         top_k: int = 1,
                         expand: bool = False,
                         with_chunk: bool = False,
+                        with_doc: bool = False,
                         combine: bool = False,
                         verbose: bool = False):
-        retrieved = self.search(question, community_level, top_k, expand, with_chunk, verbose)
+        retrieved = self.search(question, community_level, top_k, expand, with_chunk, with_doc, verbose)
         
         context = []
         if combine:

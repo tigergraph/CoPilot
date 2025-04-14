@@ -22,8 +22,11 @@ class OpenAI(LLM_Model):
             ]
 
         model_name = config["llm_model"]
+        base_url = config.get("base_url")
         self.llm = ChatOpenAI(
-            temperature=config["model_kwargs"]["temperature"], model_name=model_name
+            temperature=config["model_kwargs"]["temperature"],
+            model_name=model_name,
+            base_url=base_url
         )
         self.prompt_path = config["prompt_path"]
         LogWriter.info(
@@ -52,6 +55,13 @@ class OpenAI(LLM_Model):
         else:
             return super().graphrag_scoring_prompt
 
+    @property
+    def keyword_extraction_prompt(self):
+        filepath = self.prompt_path + "keyword_extraction.txt"
+        if os.path.exists(filepath):
+            return self._read_prompt_file(filepath)
+        else:
+            return super().keyword_extraction_prompt
     @property
     def question_expansion_prompt(self):
         filepath = self.prompt_path + "question_expansion.txt"
