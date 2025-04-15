@@ -22,7 +22,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY Keyword_Search(SET<STRING> keywords, STRING 
   END;
 
   doc_chunks = {@@selected_set};
-  doc_chunks = SELECT s FROM doc_chunks:s ORDER BY s.@num_times_seen LIMIT top_k;
+  doc_chunks = SELECT s FROM doc_chunks:s ORDER BY s.@num_times_seen DESC LIMIT top_k;
   IF doc_only THEN
       res = SELECT s FROM doc_chunks:s -(<HAS_CHILD:e1)- Document:d -(HAS_CONTENT>:e2)- Content:t
           ACCUM @@result_set += (d -> t.text), @@selected_set_type += VertexTypes(d, d.type);
