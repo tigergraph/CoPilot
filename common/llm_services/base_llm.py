@@ -39,6 +39,11 @@ class LLM_Model:
         return "Answer this question: {question}\nUse this information: {sources}"
 
     @property
+    def keyword_extraction_prompt(self):
+        """Property to get the prompt for the Question Expension response."""
+        return """You are a helpful assistant responsible for extracting key terms (glossary) from all the questions below to represent their original meaning as much as possible. Each term should only contain a couple of words. Include a quality score for the each extracted glossary, based on how important and frequent it's in the given questions. The quality score should range from 0 (poor) to 100 (excellent), with higher scores indicating terms that are both significant and frequent in the context of the questions.\nThe output should only contain the extracted terms and their quality scores using the required format.\n\nQuestion: {question}\n\n{format_instructions}\n"""
+
+    @property
     def question_expansion_prompt(self):
         """Property to get the prompt for the Question Expension response."""
         return """You are a helpful assistant responsible for generating 10 new questions similar to the original question below to represent its meaning in a more clear way.\nInclude a quality score for the answer, based on how well it represents the meaning of the original question. The quality score should be between 0 (poor) and 100 (excellent).\n\nQuestion: {question}\n\n{format_instructions}\n"""

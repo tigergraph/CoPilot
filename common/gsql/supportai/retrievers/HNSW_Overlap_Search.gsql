@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts, UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False, BOOL verbose = False) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts = "[]", UINT num_hops=5, UINT num_seen_min=1, BOOL chunk_only=False, BOOL doc_only = False, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   SetAccum<VERTEX> @@start_set;
   SetAccum<VertexTypes> @@start_set_type;
@@ -64,10 +64,10 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts, UI
             @@to_retrieve_content += s
           END
         POST-ACCUM(s)
-          IF NOT chunk_only OR chunk_only AND s.type == "DocumentChunk" THEN
+          IF NOT (chunk_only OR doc_only) OR (chunk_only OR doc_only) AND s.type == "DocumentChunk" THEN
             @@selected_set_type += VertexTypes(s, s.type)
           END,
-          IF NOT chunk_only THEN
+          IF NOT (chunk_only OR doc_only) THEN
             FOREACH v IN s.@parents DO
               IF v IN @@start_set THEN
                 @@result_set += (v -> s.@context)
@@ -75,11 +75,22 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts, UI
             END
           END;
 
-  @@verbose_info += ("selected_set" -> @@selected_set_type);
 
   doc_chunks = {@@to_retrieve_content};
 
-  res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
+  IF doc_only THEN
+      @@selected_set_type.clear();
+      res = SELECT s FROM doc_chunks:s -(reverse_HAS_CHILD>:e1)- Document:d -(HAS_CONTENT>:e2)- Content:t
+        ACCUM s.@context += t.text, @@selected_set_type += VertexTypes(d, d.type)
+        POST-ACCUM(s)
+          FOREACH v IN s.@parents DO
+            IF v IN @@start_set THEN
+              @@result_set += (v -> s.@context)
+            END
+          END;
+      @@verbose_info += ("selected_set" -> @@selected_set_type);
+  ELSE
+      res = SELECT s FROM doc_chunks:s -(HAS_CONTENT>:e)- Content:t
         ACCUM s.@context += t.text
         POST-ACCUM(s)
           FOREACH v IN s.@parents DO
@@ -87,6 +98,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Overlap_Search(STRING json_list_vts, UI
               @@result_set += (v -> s.@context)
             END
           END;
+      @@verbose_info += ("selected_set" -> @@selected_set_type);
+  END;
 
   PRINT @@result_set as final_retrieval;
 

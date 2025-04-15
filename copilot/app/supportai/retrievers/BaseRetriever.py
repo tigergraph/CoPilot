@@ -2,7 +2,7 @@ from common.embeddings.embedding_services import EmbeddingModel
 from common.embeddings.base_embedding_store import EmbeddingStore
 from common.metrics.tg_proxy import TigerGraphConnectionProxy
 from common.llm_services.base_llm import LLM_Model
-from common.py_schemas import QuestionScore, QuestionGenerator
+from common.py_schemas import CandidateScore, CandidateGenerator
 from common.config import embedding_store_type
 
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
@@ -51,8 +51,37 @@ class BaseRetriever:
         else:
             return True
 
+    def _question_to_keywords(self, question, top_k, verbose):
+        keyword_parser = PydanticOutputParser(pydantic_object=CandidateGenerator)
+
+        keyword_prompt = PromptTemplate(
+            template = self.llm_service.keyword_extraction_prompt,
+            input_variables=["question"],
+            partial_variables={"format_instructions": keyword_parser.get_format_instructions()}
+        )
+
+        if verbose:
+            self.logger.info("Prompt to LLM:\n" + keyword_prompt.invoke({"question": question}).to_string())
+
+        model = self.llm_service.model
+
+        chain = keyword_prompt | model | keyword_parser
+
+        answer = chain.invoke({"question": question})
+
+        if verbose:
+            self.logger.info(f"Extracted keywords \"{answer}\" from question \"{question}\" by LLM")
+
+        # sort list by quality score
+        res = answer.candidates
+        res.sort(key=lambda x: x.quality_score, reverse=True)
+
+        keywords = [x.candidate for x in res[:top_k]]
+
+        return keywords
+
     def _expand_question(self, question, top_k, verbose):
-        question_parser = PydanticOutputParser(pydantic_object=QuestionGenerator)
+        question_parser = PydanticOutputParser(pydantic_object=CandidateGenerator)
 
         QUESTION_PROMPT = PromptTemplate(
             template = self.llm_service.question_expansion_prompt,
@@ -63,6 +92,7 @@ class BaseRetriever:
         model = self.llm_service.model
 
         chain = QUESTION_PROMPT | model | question_parser
+        #chain = QUESTION_PROMPT | model
 
         answer = chain.invoke({"question": question})
 
@@ -70,7 +100,7 @@ class BaseRetriever:
             self.logger.info(f"Expanded question \"{question}\" from LLM: {answer}")
 
         # sort list by quality score
-        res = answer.questions
+        res = answer.candidates
         res.sort(key=lambda x: x.quality_score, reverse=True)
 
         questions = [x.candidate for x in res[:top_k]]
@@ -163,7 +193,7 @@ class BaseRetriever:
         for document, _ in candidate_set:
             start_set.append({"v": document.metadata["vertex_id"], "t": document.metadata["vertex_type"]})
         start_set = [dict(d) for d in {tuple(vt.items()) for vt in start_set}][:top_k]
-        verbose and self.logger.info(f"Search using start_set: {str(start_set)}")
+        verbose and self.logger.info(f"Returning start_set: {str(start_set)}")
         return start_set
 
     def search(self, question):

@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING json_list_vts, STRING v_type, UINT lookback=3, INT lookahead=3, BOOL verbose = False) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Chunk_Sibling_Search(STRING json_list_vts="[]", STRING v_type="DocumentChunk", UINT lookback=3, INT lookahead=3, BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
   MapAccum<VERTEX, INT> @distances;

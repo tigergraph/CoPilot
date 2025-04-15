@@ -1,4 +1,4 @@
-CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Search(STRING json_list_vts, STRING v_type, BOOL verbose = False) {
+CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Search(STRING json_list_vts="[]", STRING v_type="DocumentChunk", BOOL verbose = False) {
   TYPEDEF TUPLE<VERTEX v, STRING t> VertexTypes;
   SetAccum<VertexTypes> @@start_set_type;
   MapAccum<STRING, SetAccum<VertexTypes>> @@verbose_info;
@@ -18,7 +18,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY HNSW_Content_Search(STRING json_list_vts, ST
 
   start = {@@start_set};
 
-  res = SELECT s FROM start:s -(:e)- :tgt
+  res = SELECT s FROM start:s -(:e)- :tgt WHERE s.type == v_type
         ACCUM @@start_set_type += VertexTypes(s, s.type),
           IF (s.type == "DocumentChunk" OR s.type == "Document") AND tgt.type == "Content" THEN
             @@final_retrieval += (s.id -> tgt.text)

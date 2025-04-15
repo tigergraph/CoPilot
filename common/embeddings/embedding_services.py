@@ -17,7 +17,7 @@ class EmbeddingModel(Embeddings):
     Implements connections to the desired embedding API.
     """
 
-    def __init__(self, config: dict, model_name: str):
+    def __init__(self, config: dict, model_name: str, base_url: str = None):
         """Initialize an EmbeddingModel
         Read JSON config file and export the details as environment variables.
         """
@@ -27,6 +27,10 @@ class EmbeddingModel(Embeddings):
             ]
         self.embeddings = None
         self.model_name = model_name
+        self.base_url = config.get("base_url")
+        LogWriter.info(
+            f"request_id={req_id_cv.get()} instantiated OpenAI model_name={model_name}"
+        )
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Embed Documents.
@@ -137,7 +141,7 @@ class OpenAI_Embedding(EmbeddingModel):
         # from langchain_openai import OpenAIEmbeddings
         from langchain_community.embeddings.openai import OpenAIEmbeddings
 
-        self.embeddings = OpenAIEmbeddings()
+        self.embeddings = OpenAIEmbeddings(model=self.model_name, base_url=self.base_url)
 
 
 class VertexAI_PaLM_Embedding(EmbeddingModel):
