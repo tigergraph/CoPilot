@@ -54,7 +54,7 @@ import { FaPaperclip } from "react-icons/fa6";
 import { useEffect } from "react";
 
 // TODO make dynamic
-const WS_HISTORY_URL = "/ui/user/supportai";
+const WS_HISTORY_URL = "/ui/user";
 const WS_CONVO_URL = "/ui/conversation";
 
 const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetConversationId?: any }) => {
@@ -69,6 +69,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
   const fetchHistory2 = async () => {
     setConversationId([]);
     const creds = localStorage.getItem("creds");
+    const username = localStorage.getItem("username");
     const settings = {
       method: 'GET',
       headers: {
@@ -76,7 +77,7 @@ const SideMenu = ({ height, setGetConversationId }: { height?: string, setGetCon
         "Content-Type": "application/json",
       }
     }
-    const response = await fetch(WS_HISTORY_URL, settings);
+    const response = await fetch(`${WS_HISTORY_URL}/${username}`, settings);
     const data = await response.json();
     data.map(async (item: any) => {
       const response2 = await fetch(`${WS_CONVO_URL}/${item.conversation_id}`, settings);

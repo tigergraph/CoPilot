@@ -68,7 +68,7 @@ class TigerGraphAgentGraph:
         try:
             self.db_connection.getQueryMetadata("HNSW_Overlap_Display")
         except TigerGraphException as e:
-            logger.info("HNSW_Overlap_Display not found in the graph. Disabling supportai.")
+            logger.info(f"HNSW_Overlap_Display not found in the graph {self.db_connection.graphname}. Disabling supportai.")
             self.supportai_enabled = False
 
     def emit_progress(self, msg):
@@ -125,6 +125,7 @@ class TigerGraphAgentGraph:
         self.emit_progress("Mapping your question to the graph's schema")
         try:
             step = self.mq2s._run(state["question"], state["conversation"])
+            logger.info(f"schema_mapping: {step}")
             state["schema_mapping"] = step
             return state
         except MapQuestionToSchemaException as e:
@@ -147,6 +148,7 @@ class TigerGraphAgentGraph:
                 state["schema_mapping"].target_edge_types,
                 state["schema_mapping"].target_edge_attributes,
             )
+            logger.info(f"generate_function: {step}")
             state["context"] = step
         except Exception as e:
             state["context"] = {"error": True}
@@ -162,7 +164,8 @@ class TigerGraphAgentGraph:
         """
         self.emit_progress("Generating the Cypher to answer your question")
         cypher = self.cypher_gen._run(state["question"])
-
+        logger.info(f"cypher: {cypher}")
+         
         response = self.db_connection.gsql(cypher)
         response_lines = response.split("\n")
         try:

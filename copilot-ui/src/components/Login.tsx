@@ -59,6 +59,7 @@ export function Login() {
         setToken(res);
         localStorage.setItem("site", JSON.stringify(res));
         localStorage.setItem("creds", creds);
+        localStorage.setItem("username", data.email);
         navigate("/chat");
         return;
       }
