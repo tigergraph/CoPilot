@@ -136,7 +136,7 @@ class OpenAI_Embedding(EmbeddingModel):
 
     def __init__(self, config):
         super().__init__(
-            config, model_name=config.get("model_name", "OpenAI gpt-4-0613")
+            config, model_name=config.get("model_name", "text-embedding-3-small")
         )
         # from langchain_openai import OpenAIEmbeddings
         from langchain_community.embeddings.openai import OpenAIEmbeddings

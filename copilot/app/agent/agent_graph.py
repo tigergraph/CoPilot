@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Dict, List, Optional
 
@@ -165,7 +166,7 @@ class TigerGraphAgentGraph:
         self.emit_progress("Generating the Cypher to answer your question")
         cypher = self.cypher_gen._run(state["question"])
         logger.info(f"cypher: {cypher}")
-         
+
         response = self.db_connection.gsql(cypher)
         response_lines = response.split("\n")
         try:
@@ -178,7 +179,7 @@ class TigerGraphAgentGraph:
                     cypher
                 ),
             }
-        except:
+        except Exception as e:
             state["context"] = {
                 "error": True,
                 "cypher": cypher,

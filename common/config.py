@@ -97,6 +97,12 @@ else:
             + str(e)
         )
 
+if "model_name" not in llm_config or "model_name" not in llm_config["embedding_service"]:
+    if "model_name" not in llm_config:
+        llm_config["model_name"] = llm_config["embedding_service"]["model_name"]
+    else:
+        llm_config["embedding_service"]["model_name"] = llm_config["model_name"]
+
 if llm_config["embedding_service"]["embedding_model_service"].lower() == "openai":
     embedding_service = OpenAI_Embedding(llm_config["embedding_service"])
 elif llm_config["embedding_service"]["embedding_model_service"].lower() == "azure":

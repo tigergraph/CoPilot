@@ -130,7 +130,6 @@ async def get_user_conversations(
     auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
     try:
         async with httpx.AsyncClient() as client:
-            logger.info(f"Connecting with {auth} to {db_config['chat_history_api']}/user/{user_id}")
             res = await client.get(
                 f"{db_config['chat_history_api']}/user/{user_id}",
                 headers={"Authorization": f"Basic {auth}"},
@@ -323,6 +322,7 @@ async def chat(
     try:
         while True:
             data = await websocket.receive_text()
+            logger.info(f"Retrieving answer for chat \"{data}\"")
 
             # make message from data
             message = Message(
