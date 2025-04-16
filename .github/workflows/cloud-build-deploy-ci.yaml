@@ -29,9 +29,9 @@ jobs:
     - name: Get Image tag
       id: get-image
       run: |
-        IMAGE=tginternal/copilot:${SHA::6}
+        IMAGE=${SHA::6}
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-        echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT${{ needs.setup.outputs.image }} 
+        echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
  
     - name: Build and push Docker image CoPilot
       uses: docker/build-push-action@v5
@@ -40,7 +40,7 @@ jobs:
         file: ./copilot/Dockerfile
         push: true
         tags: |
-           ${{ env.IMAGE }}
+           tginternal/copilot:${{steps.get-image.outputs.IMAGE}}
            tginternal/copilot:cloud-latest
  
     - name: Build and push Docker image ECC
@@ -50,5 +50,5 @@ jobs:
         file: ./eventual-consistency-service/Dockerfile
         push: true
         tags: |
-           ${{ env.IMAGE }}
+           tginternal/ecc:${{steps.get-image.outputs.IMAGE}}
            tginternal/ecc:cloud-latest
