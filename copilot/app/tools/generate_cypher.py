@@ -80,6 +80,7 @@ class GenerateCypher(BaseTool):
                         Don't add the `name` attribute to the query, unless it is explicitly mentioned in the schema.
                         Do not return attributes that are not explicitly mentioned in the question. If a vertex type is mentioned in the question, only return the vertex.
                         Make sure to get the direction of the edges right.
+                        Always use double quotes for strings instead of single quotes.
 
                         You cannot use the following clauses:
                         OPTIONAL MATCH
