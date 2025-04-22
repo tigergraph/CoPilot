@@ -206,7 +206,10 @@ async def emit_progress(agent: TigerGraphAgent, ws: WebSocket):
                 content=msg,
                 response_type=ResponseType.PROGRESS,
             )
-            await ws.send_text(message.model_dump_json())
+            if ws:
+                await ws.send_text(message.model_dump_json())
+            else:
+                return message.model_dump_json()
 
 
 async def run_agent(
@@ -283,6 +286,73 @@ async def write_message_to_history(message: Message, usr_auth: str):
     else:
         LogWriter.info(f"chat-history not enabled. chat-history url: {ch}")
 
+@router.get(route_prefix + "/{graphname}/query")
+async def graph_query(
+    graphname: str,
+    creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+):
+    creds = creds[1]
+    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
+    _, conn = ws_basic_auth(auth, graphname)
+    try:
+        # create convo_id
+        conversation_history = []  # TODO: go get history instead of starting from 0
+        convo_id = str(uuid.uuid4())
+    
+        # create agent
+        # get retrieval pattern to use
+        rag_pattern = "hnsw_overlap"
+        agent = make_agent(graphname, conn, use_cypher, supportai_retriever=rag_pattern)
+    
+        prev_id = None
+        while True:
+            data = await websocket.receive_text()
+            logger.info(f"Retrieving answer for chat \"{data}\"")
+
+            # make message from data
+            message = Message(
+                conversation_id=convo_id,
+                message_id=str(uuid.uuid4()),
+                parent_id=prev_id,
+                model=llm_config["model_name"],
+                content=data,
+                role=Role.USER,
+            )
+            # save message
+            prev_id = message.message_id
+
+            # generate response and keep track of response time
+            start = time.monotonic()
+            resp = await run_agent(
+                agent, data, conversation_history, graphname, None
+            )
+            elapsed = time.monotonic() - start
+
+            # save message
+            message = Message(
+               conversation_id=convo_id,
+                message_id=str(uuid.uuid4()),
+                parent_id=prev_id,
+                model=llm_config["model_name"],
+                content=resp.natural_language_response,
+                role=Role.SYSTEM,
+                response_time=elapsed,
+                answered_question=resp.answered_question,
+                response_type=resp.response_type,
+                query_sources=resp.query_sources,
+            )
+            prev_id = message.message_id
+
+            # reply
+            return message.model_dump_json()
+    except Exception as e:
+        exc = traceback.format_exc()
+        logger.debug_pii(
+            f"/ui/{graphname}/query request_id={req_id_cv.get()} Exception Trace:\n{exc}"
+        )
+        raise e
+
+    return res.json()
 
 @router.websocket(route_prefix + "/{graphname}/chat")
 async def chat(

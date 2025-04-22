@@ -11,8 +11,8 @@ CREATE OR REPLACE DISTRIBUTED QUERY Keyword_Search(SET<STRING> keywords, STRING 
 
   FOREACH key IN keywords DO
     @@tmp_set.clear();
-    STRING pattern = "%" + replace(key, " ", "%") + "%";
-    result = SELECT s FROM DocumentChunk:s -(HAS_CONTENT>:e)- Content:t WHERE t.text LIKE pattern ACCUM s.@num_times_seen += 1 POST-ACCUM @@tmp_set += s;
+    STRING pattern = "%" + lower(replace(key, " ", "%")) + "%";
+    result = SELECT s FROM DocumentChunk:s -(HAS_CONTENT>:e)- Content:t WHERE lower(t.text) LIKE pattern ACCUM s.@num_times_seen += 1 POST-ACCUM @@tmp_set += s;
     IF upper(mode) == "ANY" OR to_init THEN
         @@selected_set += @@tmp_set;
         to_init = False;

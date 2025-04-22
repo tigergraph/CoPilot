@@ -29,6 +29,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         port: str,
         support_ai_instance: bool,
         collection_name: str = "tg_documents",
+        metric_type: str = "COSINE",
         vector_field: str = "vector_field",
         text_field: str = "text",
         vertex_field: str = "",
@@ -45,6 +46,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
         self.text_field = text_field
         self.support_ai_instance = support_ai_instance
         self.collection_name = collection_name
+        self.metric_type = metric_type.upper()
         self.milvus_alias = alias
         self.retry_interval = retry_interval
         self.max_retry_attempts = max_retry_attempts
@@ -102,6 +104,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 self.milvus = Milvus(
                     embedding_function=self.embedding_service,
                     collection_name=self.collection_name,
+                    metric_type=self.metric_type,
                     connection_args=self.milvus_connection,
                     auto_id=True,
                     drop_old=self.drop_old,
