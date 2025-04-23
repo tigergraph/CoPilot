@@ -190,12 +190,7 @@ async def embed(
             logger.info("Embed worker waiting for loading event to finish")
             await util.loading_event.wait()
         try:
-            vec = await embed_svc.aembed_query(content)
-        except Exception as e:
-            logger.error(f"Failed to embed {v_id}: {e}")
-            return
-        try:
-            await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
+            await embed_store.aadd_embeddings([(content, [])], [{vertex_field: v_id}])
         except Exception as e:
             logger.error(f"Failed to add embeddings for {v_id}: {e}")
 
@@ -249,10 +244,10 @@ async def extract(
                 # embed the entity
                 # embed with the v_id if the description is blank
                 if len(desc[0]) == 0:
-                    await embed_chan.put((v_id, v_id, "Entity"))
-                else:
-                    # (v_id, content, index_name)
-                    await embed_chan.put((v_id, desc[0], "Entity"))
+                    desc[0] = str(node.id)
+
+                # (v_id, content, index_name)
+                await embed_chan.put((v_id, desc[0], "Entity"))
 
                 await upsert_chan.put(
                     (

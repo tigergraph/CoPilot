@@ -149,10 +149,13 @@ def search(
             query.method_params["chunk_only"] = False
         if "doc_only" not in query.method_params:
             query.method_params["doc_only"] = False
+        if "similarity_threshold" not in query.method_params:
+            query.method_params["similarity_threshold"] = 0.90
         res = retriever.search(
             query.question,
             query.method_params["indices"],
             query.method_params["top_k"],
+            query.method_params["similarity_threshold"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
             query.method_params["expand"],
@@ -204,10 +207,13 @@ def search(
             query.method_params["with_chunk"] = True
         if "with_doc" not in query.method_params:
             query.method_params["with_doc"] = False
+        if "similarity_threshold" not in query.method_params:
+            query.method_params["similarity_threshold"] = 0.90
         res = retriever.search(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
+            query.method_params["similarity_threshold"],
             query.method_params["expand"],
             query.method_params["with_chunk"],
             query.method_params["with_doc"],
@@ -243,10 +249,13 @@ def answer_question(
             query.method_params["chunk_only"] = False
         if "doc_only" not in query.method_params:
             query.method_params["doc_only"] = False
+        if "similarity_threshold" not in query.method_params:
+            query.method_params["similarity_threshold"] = 0.90
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["indices"],
             query.method_params["top_k"],
+            query.method_params["similarity_threshold"],
             query.method_params["num_hops"],
             query.method_params["num_seen_min"],
             query.method_params["expand"],
@@ -302,10 +311,13 @@ def answer_question(
             query.method_params["with_chunk"] = True
         if "with_doc" not in query.method_params:
             query.method_params["with_doc"] = False
+        if "similarity_threshold" not in query.method_params:
+            query.method_params["similarity_threshold"] = 0.90
         res = retriever.retrieve_answer(
             query.question,
             query.method_params["community_level"],
             query.method_params["top_k"],
+            query.method_params["similarity_threshold"],
             query.method_params["expand"],
             query.method_params["with_chunk"],
             query.method_params["with_doc"],

@@ -73,8 +73,7 @@ INSTALL QUERY ALL
 
 async def init_embedding_index(s: MilvusEmbeddingStore, vertex_field: str):
     content = "init"
-    vec = embedding_service.embed_query(content)
-    await s.aadd_embeddings([(content, vec)], [{vertex_field: content}])
+    await s.aadd_embeddings([(content, [])], [{vertex_field: content}])
     s.remove_embeddings(expr=f"{vertex_field} in ['{content}']")
 
 

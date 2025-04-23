@@ -96,21 +96,22 @@ class MilvusEmbeddingStore(EmbeddingStore):
             try:
                 connections.connect(**self.milvus_connection)
                 # metrics.milvus_active_connections.labels(self.collection_name).inc
-                LogWriter.info(
-                    f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
-                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, alias={self.milvus_connection.get('alias', 'unknown')}, collection={self.collection_name}, vector_field={self.vector_field}, text_field={self.text_field}, vertex_field={self.vertex_field}"""
-                )
-                LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 self.milvus = Milvus(
                     embedding_function=self.embedding_service,
                     collection_name=self.collection_name,
-                    metric_type=self.metric_type,
+                    index_params={"metric_type": self.metric_type, "index_type": "HNSW", "params": {"M": 64, "efConstruction": 360}},
+                    search_params={"metric_type": self.metric_type},
                     connection_args=self.milvus_connection,
                     auto_id=True,
                     drop_old=self.drop_old,
                     text_field=self.text_field,
                     vector_field=self.vector_field,
                 )
+                LogWriter.info(
+                    f"""Initializing Milvus with host={self.milvus_connection.get("host", self.milvus_connection.get("uri", "unknown host"))},
+                    port={self.milvus_connection.get('port', 'unknown')}, username={self.milvus_connection.get('user', 'unknown')}, alias={self.milvus_connection.get('alias', 'unknown')}, collection={self.collection_name}, metric_type={self.metric_type}, vector_field={self.vector_field}, text_field={self.text_field}, vertex_field={self.vertex_field}"""
+                )
+                LogWriter.info(f"Milvus version {utility.get_server_version()}")
                 return
             except MilvusException as e:
                 retry_attempt += 1
@@ -486,11 +487,11 @@ class MilvusEmbeddingStore(EmbeddingStore):
             raise e
 
     def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None):
-        res = retrieve_similar_with_score(query_embedding, top_k, filter_expr)
+        res = retrieve_similar_with_score(query_embedding, top_k=top_k, filter_expr=filter_expr)
         similar = [doc[0] for doc in res]
         return similar
 
-    def retrieve_similar_with_score(self, query_embedding, top_k=10, filter_expr: str = None):
+    def retrieve_similar_with_score(self, query_embedding, top_k=10, similarity_threshold=0.90, filter_expr: str = None):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -512,7 +513,7 @@ class MilvusEmbeddingStore(EmbeddingStore):
                 self.collection_name, "similarity_search_by_vector"
             ).inc()
             similar = self.milvus.similarity_search_with_score_by_vector(
-                embedding=query_embedding, k=top_k, expr=filter_expr
+                embedding=query_embedding, k=top_k*2, expr=filter_expr
             )
             end_time = time()
             metrics.milvus_query_duration_seconds.labels(
@@ -529,7 +530,17 @@ class MilvusEmbeddingStore(EmbeddingStore):
             LogWriter.info(
                 f"request_id={req_id_cv.get()} Milvus EXIT similarity_search_by_vector()"
             )
-            return similar
+
+            similar.sort(key=lambda x: x[1], reverse=True)
+            i = 0
+            for i in range(len(similar)):
+                if similar[i][1] < similarity_threshold:
+                    break
+            if i <= top_k:
+                return similar[:top_k]
+            else:
+                return similar[:i]
+
         except Exception as e:
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             LogWriter.error(error_message)

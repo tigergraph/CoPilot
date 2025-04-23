@@ -3,8 +3,12 @@ CREATE OR REPLACE DISTRIBUTED QUERY get_vertices_or_remove(STRING v_type, STRING
   vset = {v_type};
   STRING pattern = "%"+keyword+"%";
   
-  result = SELECT s from vset:s -(:e)- :t WHERE s.id LIKE pattern AND (with_edge == "" OR e.type == with_edge) ACCUM @@edges += e
-      POST-ACCUM IF remove THEN delete(s) END;
+  IF remove THEN
+      result = SELECT s from vset:s POST-ACCUM delete(s);
+  ELSE
+      result = SELECT s from vset:s WHERE s.id LIKE pattern;
+      vset = SELECT s from result:s -(:e)- :t WHERE with_edge == "" OR e.type == with_edge ACCUM @@edges += e;
   
-  PRINT result, result.size() as size, @@edges as edges;
+      PRINT result, result.size() as size, @@edges as edges;
+  END;
 }
