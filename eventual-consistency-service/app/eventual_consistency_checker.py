@@ -235,9 +235,8 @@ class EventualConsistencyChecker:
         LogWriter.info(f"Embedding content from vertex type: {v_type}")
         for vertex_id, content in vertex_ids_content_map.items():
             if content:
-                vec = self.embedding_service.embed_query(content["text"])
                 self.embedding_stores[vector_index].add_embeddings(
-                    [(text, vec)], [{self.vertex_field: vertex_id}]
+                    [(text, [])], [{self.vertex_field: vertex_id}]
                 )
 
             if v_type == "Document":

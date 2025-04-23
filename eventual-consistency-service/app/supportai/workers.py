@@ -146,8 +146,7 @@ async def embed(
     """
     logger.info(f"Embedding {v_id}")
 
-    vec = await embed_svc.aembed_query(content)
-    await embed_store.aadd_embeddings([(content, vec)], [{vertex_field: v_id}])
+    await embed_store.aadd_embeddings([(content, [])], [{vertex_field: v_id}])
 
 
 async def get_vert_desc(conn, v_id, node: Node):

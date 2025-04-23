@@ -48,33 +48,61 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         tg_version = self.conn.getVer()
         ver = tg_version.split(".")
         if int(ver[0]) >= 4 and int(ver[1]) >= 2:
-            vector_queries = [
-                "vertices_have_embedding",
-                "check_embedding_exists",
-                "get_vertices_with_vector",
-                "get_topk_similar",
-                "get_topk_closest",
-            ]
-           
             logger.info(f"Installing GDS library")
             q_res = self.conn.gsql(
                 """USE GLOBAL\nimport package gds\ninstall function gds.**"""
             )
             logger.info(f"Done installing GDS library with status {q_res}")
-
-            installed_queries = [q.split("/")[-1] for q in self.conn.getEndpoints(dynamic=True) if f"/{self.conn.graphname}/" in q]
-            for q_name in vector_queries:
-                if q_name not in installed_queries:
-                    with open(f"common/gsql/vector/{q_name}.gsql", "r") as f:
-                        q_body = f.read()
-                    q_res = self.conn.gsql(
-                        """USE GRAPH {}\nBEGIN\n{}\nEND\ninstall query {}\n""".format(
-                            self.conn.graphname, q_body, q_name
-                        )
-                    )
-                    logger.info(f"Done installing vector query {q_name} with status {q_res}")
+            if not conn.graphname == "MyGraph":
+                self.install_vector_queries()
         else:
             raise Exception(f"Current TigerGraph version {ver} does not support vector feature!")
+
+    def install_vector_queries(self):
+        logger.info(f"Installing vector queries")
+        vector_queries = [
+            "vertices_have_embedding",
+            "check_embedding_exists",
+            "get_vertices_with_vector",
+            "get_topk_similar",
+            "get_topk_closest",
+        ]
+
+        installed_queries = [q.split("/")[-1] for q in self.conn.getEndpoints(dynamic=True) if f"/{self.conn.graphname}/" in q]
+        for q_name in vector_queries:
+            if q_name not in installed_queries:
+                with open(f"common/gsql/vector/{q_name}.gsql", "r") as f:
+                    q_body = f.read()
+                q_res = self.conn.gsql(
+                    """USE GRAPH {}\nBEGIN\n{}\nEND\ninstall query {}\n""".format(
+                        self.conn.graphname, q_body, q_name
+                    )
+                )
+                logger.info(f"Done installing vector query {q_name} with status {q_res}")
+        logger.info(f"TigerGraph embedding store is initialized with graph {self.conn.graphname}")
+
+    def set_graphname(self, graphname):
+        self.conn.graphname = graphname
+        self.install_vector_queries()
+
+    def set_connection(self, conn):
+        self.conn = TigerGraphConnection(
+                host=conn.host,
+                username=conn.username,
+                password=conn.password,
+                graphname=conn.graphname,
+                restppPort=conn.restppPort,
+                gsPort=conn.gsPort,
+                tgCloud=conn.tgCloud,
+                useCert=conn.useCert,
+                certPath=conn.certPath,
+                sslPort = conn.sslPort,
+                jwtToken = conn.jwtToken,
+             )
+        if conn.apiToken:
+            self.conn.getToken()
+
+        self.install_vector_queries()
 
     def map_attrs(self, attributes: Iterable[Tuple[str, List[float]]]):
         # map attrs
@@ -104,8 +132,13 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 "vertices": defaultdict(dict[str, any]),
             }
 
-            for i, (_, embedding) in enumerate(embeddings):
+            for i, (text, _) in enumerate(embeddings):
                 (v_id, v_type) = metadatas[i].get("vertex_id")
+                try:
+                    embedding = self.embedding_service.embed_query(text)
+                except Exception as e:
+                    LogWriter.error(f"Failed to embed {v_id}: {e}")
+                    return
                 attr = self.map_attrs([("embedding", embedding)])
                 batch["vertices"][v_type][v_id] = attr
             data = json.dumps(batch)
@@ -150,8 +183,13 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 "vertices": defaultdict(dict[str, any]),
             }
 
-            for i, (_, embedding) in enumerate(embeddings):
+            for i, (text, _) in enumerate(embeddings):
                 (v_id, v_type) = metadatas[i].get("vertex_id")
+                try:
+                    embedding = await self.embedding_service.aembed_query(text)
+                except Exception as e:
+                    LogWriter.error(f"Failed to embed {v_id}: {e}")
+                    return
                 attr = self.map_attrs([("embedding", embedding)])
                 batch["vertices"][v_type][v_id] = attr
             data = json.dumps(batch)
@@ -226,11 +264,11 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         return
 
     def retrieve_similar(self, query_embedding, top_k=10, filter_expr: str = None, vertex_types: List[str] = ["DocumentChunk"]):
-        res = retrieve_similar_with_score(query_embedding, top_k, filter_expr, vertex_types)
+        res = retrieve_similar_with_score(query_embedding, top_k=top_k, filter_expr=filter_expr, vertex_types=vertex_types)
         similar = [x[0] for x in res]
         return similar
 
-    def retrieve_similar_with_score(self, query_embedding, top_k=10, filter_expr: str = None, vertex_types: List[str] = ["DocumentChunk"]):
+    def retrieve_similar_with_score(self, query_embedding, top_k=10, similarity_threshold=0.90, filter_expr: str = None, vertex_types: List[str] = ["DocumentChunk"]):
         """Retireve Similar.
         Retrieve similar embeddings from the vector store given a query embedding.
         Args:
@@ -251,13 +289,13 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                 params={
                     "vertex_types": vertex_types,
                     "query_vector": query_embedding,
-                    "top_k": top_k,
+                    "top_k": top_k*2,
                     "expr": filter_expr,
                 }
             )
             end_time = time()
             logger.info(f"Got {top_k} similar entries: {verts}")
-            result = []
+            similar = []
             for r in verts:
                 if "results" in r:
                     for v in r["results"]:
@@ -265,8 +303,17 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                             page_content="",
                             metadata={"vertex_id": v["v_id"], "vertex_type": v["v_type"]}
                         )
-                        result.append((document, v["score"]))
-            return result
+                        similar.append((document, v["score"]))
+
+            similar.sort(key=lambda x: x[1], reverse=True)
+            i = 0
+            for i in range(len(similar)):
+                if similar[i][1] < similarity_threshold:
+                    break
+            if i <= top_k:
+                return similar[:top_k]
+            else:
+                return similar[:i]
         except Exception as e:
             error_message = f"An error occurred while retrieving docuements: {str(e)}"
             LogWriter.error(error_message)

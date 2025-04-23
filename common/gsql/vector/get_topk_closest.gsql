@@ -9,7 +9,7 @@ CREATE OR REPLACE DISTRIBUTED QUERY get_topk_closest(STRING vertex_type, STRING 
     result = SELECT v FROM vset:v WHERE v.embedding.size() > 0
         ACCUM v.@similarity = 1 - gds.vector.distance(@@query_vector, v.embedding, "COSINE")
         HAVING v.@similarity >= threshold - 0.000001
-        ORDER BY v.@similarity LIMIT k;
+        ORDER BY v.@similarity DESC LIMIT k;
     
     IF verbose THEN
         PRINT result WITH VECTOR;

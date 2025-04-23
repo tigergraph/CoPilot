@@ -13,7 +13,7 @@ class HNSWOverlapRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, indices, top_k=1, num_hops=2, num_seen_min=1, expand = False, method = "similarity", chunk_only=False, doc_only=False, verbose=False):
+    def search(self, question, indices, top_k=1, similarity_threshold=0.90, num_hops=2, num_seen_min=1, expand = False, method = "similarity", chunk_only=False, doc_only=False, verbose=False):
         if expand:
             questions = self._expand_question(question, top_k, verbose)
         else:
@@ -43,9 +43,9 @@ class HNSWOverlapRetriever(BaseRetriever):
                     start_set += res[1]["selected_set"]
             self.logger.info(f"Got start_set from keywords {keywords}: {str(start_set)}")
             if not method == "keywords":
-                start_set += self._generate_start_set(questions, indices, top_k, verbose=verbose)
+                start_set += self._generate_start_set(questions, indices, top_k, similarity_threshold, verbose=verbose)
         else:
-            start_set = self._generate_start_set(questions, indices, top_k, verbose=verbose)
+            start_set = self._generate_start_set(questions, indices, top_k, similarity_threshold, verbose=verbose)
 
         verbose and self.logger.info(f"Searching with start_set: {str(start_set)}")
 
@@ -68,8 +68,8 @@ class HNSWOverlapRetriever(BaseRetriever):
             res[1]["verbose"]["expanded_questions"] = questions
         return res
 
-    def retrieve_answer(self, question, index, top_k=1, num_hops=2, num_seen_min=1, expand: bool = False, method: str = "similarity", chunk_only: bool = False, doc_only: bool = False, combine: bool = False, verbose: bool = False):
-        retrieved = self.search(question, index, top_k, num_hops, num_seen_min, expand, method, chunk_only, doc_only, verbose)
+    def retrieve_answer(self, question, index, top_k=1, similarity_threshold=0.90, num_hops=2, num_seen_min=1, expand: bool = False, method: str = "similarity", chunk_only: bool = False, doc_only: bool = False, combine: bool = False, verbose: bool = False):
+        retrieved = self.search(question, index, top_k, similarity_threshold, num_hops, num_seen_min, expand, method, chunk_only, doc_only, verbose)
 
         context = []
         if combine:

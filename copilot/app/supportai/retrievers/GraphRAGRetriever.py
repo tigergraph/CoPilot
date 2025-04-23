@@ -37,7 +37,7 @@ class GraphRAGRetriever(BaseRetriever):
     ):
         super().__init__(embedding_service, embedding_store, llm_service, connection)
 
-    def search(self, question, community_level: int, top_k: int = 5, expand: bool = False, with_chunk: bool = True, with_doc: bool = False, verbose: bool = False):
+    def search(self, question, community_level: int, top_k: int = 5, similarity_threshold = 0.90, expand: bool = False, with_chunk: bool = True, with_doc: bool = False, verbose: bool = False):
         if expand:
             questions = self._expand_question(question, top_k, verbose=verbose)
         else:
@@ -46,7 +46,7 @@ class GraphRAGRetriever(BaseRetriever):
         for i in range(1, community_level+1):
             filter_expr += f"_{i}"
         filter_expr += "\""  
-        start_set = self._generate_start_set(questions, ["Community"], top_k, filter_expr=filter_expr, verbose=verbose)
+        start_set = self._generate_start_set(questions, ["Community"], top_k, similarity_threshold, filter_expr=filter_expr, verbose=verbose)
 
         self._check_query_install("GraphRAG_Community_Search")
         res = self.conn.runInstalledQuery(
@@ -100,12 +100,13 @@ class GraphRAGRetriever(BaseRetriever):
                         question: str,
                         community_level: int,
                         top_k: int = 1,
+                        similarity_threshold: float = 0.90,
                         expand: bool = False,
                         with_chunk: bool = False,
                         with_doc: bool = False,
                         combine: bool = False,
                         verbose: bool = False):
-        retrieved = self.search(question, community_level, top_k, expand, with_chunk, with_doc, verbose)
+        retrieved = self.search(question, community_level, top_k, similarity_threshold, expand, with_chunk, with_doc, verbose)
         
         context = []
         if combine:

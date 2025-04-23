@@ -148,6 +148,7 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
                 host=milvus_config["host"],
                 port=milvus_config["port"],
                 collection_name="tg_inquiry_documents",
+                metric_type=milvus_config.get("metric_type", "COSINE"),
                 support_ai_instance=False,
                 username=milvus_config.get("username", ""),
                 password=milvus_config.get("password", ""),
@@ -174,6 +175,7 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
                 port=milvus_config["port"],
                 support_ai_instance=True,
                 collection_name=support_collection_name,
+                metric_type=milvus_config.get("metric_type", "COSINE"),
                 username=milvus_config.get("username", ""),
                 password=milvus_config.get("password", ""),
                 vector_field=milvus_config.get("vector_field", "document_vector"),
@@ -198,7 +200,7 @@ if os.getenv("INIT_EMBED_STORE", "true") == "true":
             gsPort=db_config.get("gsPort", "14240"),
             restppPort=db_config.get("restppPort", "9000"),
         )
-        conn.graphname = db_config.get("supportai_graphname", "tg_support_documents")
+        #conn.graphname = db_config.get("supportai_graphname", "tg_support_documents")
         if db_config.get("getToken"):
             conn.getToken()
 

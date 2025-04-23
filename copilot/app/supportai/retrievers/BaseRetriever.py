@@ -25,6 +25,8 @@ class BaseRetriever:
         self.llm_service = llm_service
         self.conn = connection
         self.embedding_store = embedding_store
+        if embedding_store_type == "tigergraph":
+            self.embedding_store.set_graphname(connection.graphname)
         self.logger = logging.getLogger(__name__)
 
     def _install_query(self, query_name):
@@ -153,7 +155,7 @@ class BaseRetriever:
         return extractor.extract(text)
     """
 
-    def _generate_start_set(self, questions, indices, top_k, filter_expr: str = None, withHyDE: bool = False, verbose: bool = False):
+    def _generate_start_set(self, questions, indices, top_k, similarity_threshold: float = 0.90, filter_expr: str = None, withHyDE: bool = False, verbose: bool = False):
         if not isinstance(questions, list):
             questions = [questions]
 
@@ -169,6 +171,7 @@ class BaseRetriever:
                 res = self.embedding_store.retrieve_similar_with_score(
                     query_embedding=query_embedding,
                     top_k=top_k,
+                    similarity_threshold=similarity_threshold,
                     vertex_types=indices,
                     filter_expr=filter_expr,
                 )
@@ -181,6 +184,7 @@ class BaseRetriever:
                     res = self.embedding_store.retrieve_similar_with_score(
                         query_embedding=query_embedding,
                         top_k=top_k,
+                        similarity_threshold=similarity_threshold,
                         filter_expr=filter_expr,
                     )
                     for doc in res:
