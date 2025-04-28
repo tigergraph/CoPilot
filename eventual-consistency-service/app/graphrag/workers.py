@@ -90,7 +90,7 @@ async def chunk_doc(
         logger.info(f"Chunking {v_id}")
         for i, chunk in enumerate(chunks):
             chunk_id = f"{v_id}_chunk_{i}"
-            logger.info(f"Processing chunk {chunk_id} with content: {chunk}")
+            logger.info(f"Processing chunk {chunk_id}")
 
             # send chunks to be upserted (func, args)
             logger.info("chunk writes to upsert_chan")

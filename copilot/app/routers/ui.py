@@ -233,10 +233,14 @@ async def run_agent(
                 a_question_for_agent(data, conversation_history[-4:])
             )
             # sample Q and emit events
-            tg.create_task(emit_progress(agent, ws))
+            if ws:
+                tg.create_task(emit_progress(agent, ws))
+            else:
+                emit_progress(agent, ws)
         pmetrics.llm_success_response_total.labels(embedding_service.model_name).inc()
         resp = a_resp.result()
-        agent.q.clear()
+        if ws:
+            agent.q.clear()
 
     except MapQuestionToSchemaException:
         resp.natural_language_response = (
@@ -252,13 +256,13 @@ async def run_agent(
         logger.debug_pii(
             f"/{graphname}/ui/chat request_id={req_id_cv.get()} Exception Trace:\n{exc}"
         )
-    except Exception:
+    except Exception as e:
         resp.natural_language_response = "CoPilot had an issue answering your question. Please try again, or rephrase your prompt."
 
         resp.query_sources = {}
         resp.answered_question = False
         LogWriter.warning(
-            f"/{graphname}/ui/chat request_id={req_id_cv.get()} agent execution failed due to unknown exception"
+            f"/{graphname}/ui/chat request_id={req_id_cv.get()} agent execution failed due to unknown exception {e}"
         )
         exc = traceback.format_exc()
         logger.debug_pii(
@@ -290,6 +294,7 @@ async def write_message_to_history(message: Message, usr_auth: str):
 async def graph_query(
     graphname: str,
     creds: Annotated[tuple[list[str], HTTPBasicCredentials], Depends(ui_basic_auth)],
+    q: str | None = None,
 ):
     creds = creds[1]
     auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
@@ -306,7 +311,7 @@ async def graph_query(
     
         prev_id = None
         while True:
-            data = await websocket.receive_text()
+            data = q
             logger.info(f"Retrieving answer for chat \"{data}\"")
 
             # make message from data
