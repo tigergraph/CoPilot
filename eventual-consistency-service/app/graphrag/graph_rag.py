@@ -116,7 +116,7 @@ async def upsert(upsert_chan: Channel):
         while True:
             try:
                 (func, args) = await upsert_chan.get()
-                logger.info(f"{func.__name__}, {args[1]}")
+                logger.info(f"{func.__name__}, {args[1:2]}")
                 # execute the task
                 grp.create_task(func(*args))
             except ChannelClosed:
