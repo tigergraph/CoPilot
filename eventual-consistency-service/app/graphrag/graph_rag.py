@@ -116,7 +116,7 @@ async def upsert(upsert_chan: Channel):
         while True:
             try:
                 (func, args) = await upsert_chan.get()
-                logger.info(f"{func.__name__}, {args[1:2]}")
+                logger.info(f"Upserting with {func.__name__}, {args[1:3]}")
                 # execute the task
                 grp.create_task(func(*args))
             except ChannelClosed:
@@ -137,7 +137,7 @@ async def load(conn: AsyncTigerGraphConnection):
     while not load_q.closed() or not load_q.empty():
         if load_q.closed():
             logger.info(
-                f"load queue closed. Flushing load queue (final load for this stage)"
+                f"load queue closed. Flushing load_q (final load for this stage)"
             )
         # if there's `batch_size` entities in the channel, load it
         # or if the channel is closed, flush it
@@ -156,7 +156,7 @@ async def load(conn: AsyncTigerGraphConnection):
             for _ in range(size):
                 t, elem = await load_q.get()
                 if t == "FLUSH":
-                    logger.debug(f"flush recieved: {t}")
+                    logger.debug(f"flush received: {t}")
                     load_q._should_flush = False
                     break
                 match t:

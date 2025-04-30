@@ -233,7 +233,7 @@ async def upsert_batch(conn: AsyncTigerGraphConnection, data: str):
             logger.info(f"Upsert res: {res}")
         except Exception as e:
             err = traceback.format_exc()
-            logger.error(f"Upsert err:\n{err}")
+            logger.error(f"Upsert err with {data}:\n{err}")
             return {"error": True, "message": str(e)}
 
 

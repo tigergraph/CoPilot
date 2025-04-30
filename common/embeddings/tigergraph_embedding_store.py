@@ -55,6 +55,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
             logger.info(f"Done installing GDS library with status {q_res}")
             if not conn.graphname == "MyGraph":
                 self.install_vector_queries()
+            logger.info(f"TigerGraph embedding store is initialized with graph {self.conn.graphname}")
         else:
             raise Exception(f"Current TigerGraph version {ver} does not support vector feature!")
 
@@ -69,6 +70,7 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
         ]
 
         installed_queries = [q.split("/")[-1] for q in self.conn.getEndpoints(dynamic=True) if f"/{self.conn.graphname}/" in q]
+        need_install = False
         for q_name in vector_queries:
             if q_name not in installed_queries:
                 with open(f"common/gsql/vector/{q_name}.gsql", "r") as f:
@@ -78,8 +80,19 @@ class TigerGraphEmbeddingStore(EmbeddingStore):
                         self.conn.graphname, q_body, q_name
                     )
                 )
-                logger.info(f"Done installing vector query {q_name} with status {q_res}")
-        logger.info(f"TigerGraph embedding store is initialized with graph {self.conn.graphname}")
+                need_install = True
+                logger.info(f"Done creating vector query {q_name} with status {q_res}")
+        #TBD
+        if need_install and False:
+            logger.info(f"Installing supportai queries all together")
+            query_res = conn.gsql(
+                """USE GRAPH {}\nINSTALL QUERY ALL\n""".format(
+                    conn.graphname
+                )
+            )
+            logger.info(f"Done installing supportai query all with status {query_res}")
+        else:
+            logger.info(f"Query installation is not needed for supportai")
 
     def set_graphname(self, graphname):
         self.conn.graphname = graphname

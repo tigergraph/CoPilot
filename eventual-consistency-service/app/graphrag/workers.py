@@ -85,7 +85,7 @@ async def chunk_doc(
         chunks = chunker.chunk(doc["attributes"]["text"].encode('utf-8').decode('unicode_escape'))
         v_id = util.process_id(doc["v_id"])
         if v_id != doc["v_id"]:
-            await upsert_chan.put((upsert_doc, (conn, doc["v_id"], v_id, doc["attributes"]["text"])))
+            await upsert_chan.put((upsert_doc, (conn, doc["v_id"], v_id, chunker_type, doc["attributes"]["text"])))
        
         logger.info(f"Chunking {v_id}")
         for i, chunk in enumerate(chunks):
@@ -107,7 +107,7 @@ async def chunk_doc(
     return doc["v_id"]
 
 
-async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, content_text):
+async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, ctype, content_text):
     logger.info(f"Upserting doc/content {old_doc_id} -> {new_doc_id}")
     date_added = int(time.time())
     await util.upsert_vertex(
@@ -120,7 +120,7 @@ async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, co
         conn,
         "Content",
         new_doc_id,
-        attributes={"text": content_text, "epoch_added": date_added, "epoch_processed": date_added},
+        attributes={"ctype": ctype, "text": content_text, "epoch_added": date_added},
     )
     await util.upsert_edge(
         conn, "Document", new_doc_id, "HAS_CONTENT", "Content", new_doc_id
