@@ -85,7 +85,8 @@ async def chunk_doc(
         chunks = chunker.chunk(doc["attributes"]["text"].encode('utf-8').decode('unicode_escape'))
         v_id = util.process_id(doc["v_id"])
         if v_id != doc["v_id"]:
-            await upsert_chan.put((upsert_doc, (conn, doc["v_id"], v_id, chunker_type, doc["attributes"]["text"])))
+            logger.info(f"Cloning doc/content {doc["v_id"]} -> {v_id}")
+            await upsert_chan.put((upsert_doc, (conn, v_id, chunker_type, doc["attributes"]["text"])))
        
         logger.info(f"Chunking {v_id}")
         for i, chunk in enumerate(chunks):
@@ -104,26 +105,25 @@ async def chunk_doc(
             logger.info("chunk writes to embed_chan")
             await embed_chan.put((chunk_id, chunk, "DocumentChunk"))
 
-    return doc["v_id"]
+    return v_id
 
 
-async def upsert_doc(conn: AsyncTigerGraphConnection, old_doc_id, new_doc_id, ctype, content_text):
-    logger.info(f"Upserting doc/content {old_doc_id} -> {new_doc_id}")
+async def upsert_doc(conn: AsyncTigerGraphConnection, doc_id, ctype, content_text):
     date_added = int(time.time())
     await util.upsert_vertex(
         conn,
         "Document",
-        new_doc_id,
+        doc_id,
         attributes={"epoch_added": date_added, "epoch_processed": date_added},
     )
     await util.upsert_vertex(
         conn,
         "Content",
-        new_doc_id,
+        doc_id,
         attributes={"ctype": ctype, "text": content_text, "epoch_added": date_added},
     )
     await util.upsert_edge(
-        conn, "Document", new_doc_id, "HAS_CONTENT", "Content", new_doc_id
+        conn, "Document", doc_id, "HAS_CONTENT", "Content", doc_id
     )
 
 async def upsert_chunk(conn: AsyncTigerGraphConnection, doc_id, chunk_id, chunk):
@@ -315,6 +315,8 @@ async def extract(
                 )
                 for node2 in doc.nodes[i + 1:]:
                     v_id2 = util.process_id(str(node2.id))
+                    if len(v_id2) == 0:
+                        continue
                     await upsert_chan.put(
                     (
                         util.upsert_edge,
