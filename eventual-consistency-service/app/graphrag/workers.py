@@ -85,7 +85,7 @@ async def chunk_doc(
         chunks = chunker.chunk(doc["attributes"]["text"].encode('utf-8').decode('unicode_escape'))
         v_id = util.process_id(doc["v_id"])
         if v_id != doc["v_id"]:
-            logger.info(f"Cloning doc/content {doc["v_id"]} -> {v_id}")
+            logger.info(f"""Cloning doc/content {doc["v_id"]} -> {v_id}""")
             await upsert_chan.put((upsert_doc, (conn, v_id, chunker_type, doc["attributes"]["text"])))
        
         logger.info(f"Chunking {v_id}")
