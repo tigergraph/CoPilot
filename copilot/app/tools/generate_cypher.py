@@ -47,12 +47,13 @@ class GenerateCypher(BaseTool):
         for edge in edges:
             from_vertex = self.conn.getEdgeType(edge)["FromVertexTypeName"]
             to_vertex = self.conn.getEdgeType(edge)["ToVertexTypeName"]
+            direction = self.conn.getEdgeType(edge)["IsDirected"] ? "Undirected" : "Directed"
             #reverse_edge = conn.getEdgeType(edge)["Config"].get("REVERSE_EDGE")
             attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] 
                                         for attr in self.conn.getVertexType(vert)["Attributes"]])
             if attributes == "":
                 attributes = "No attributes"
-            edge_schema.append(f"""{edge}\n\tFrom Vertex: {from_vertex}\n\t
+            edge_schema.append(f"""{edge}\n{direction}\n\tFrom Vertex: {from_vertex}\n\t
                                To Vertex: {to_vertex}\n\tAttributes: \n\t\t{attributes}""")
 
         schema_rep = f"""The schema of the graph is as follows:

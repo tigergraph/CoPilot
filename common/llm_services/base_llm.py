@@ -39,6 +39,17 @@ class LLM_Model:
         return "Answer this question: {question}\nUse this information: {sources}"
 
     @property
+    def chatbot_response_prompt(self):
+        """Property to get the prompt for the SupportAI response."""
+        prompt ="""Given the answer context in JSON format, rephrase it to answer the question. \n
+                   Use only the provided information in context without adding any reasoning or additional logic. \n
+                   Make sure all information in the answer are covered in the generated answer.\n
+                   Question: {question} \n
+                   Answer: {context} \n
+                   Format: {format_instructions}"""
+        return prompt
+
+    @property
     def keyword_extraction_prompt(self):
         """Property to get the prompt for the Question Expension response."""
         return """You are a helpful assistant responsible for extracting key terms (glossary) from all the questions below to represent their original meaning as much as possible. Each term should only contain a couple of words. Include a quality score for the each extracted glossary, based on how important and frequent it's in the given questions. The quality score should range from 0 (poor) to 100 (excellent), with higher scores indicating terms that are both significant and frequent in the context of the questions.\nThe output should only contain the extracted terms and their quality scores using the required format.\n\nQuestion: {question}\n\n{format_instructions}\n"""
