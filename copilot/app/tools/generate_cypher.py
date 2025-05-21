@@ -47,7 +47,7 @@ class GenerateCypher(BaseTool):
         for edge in edges:
             from_vertex = self.conn.getEdgeType(edge)["FromVertexTypeName"]
             to_vertex = self.conn.getEdgeType(edge)["ToVertexTypeName"]
-            direction = self.conn.getEdgeType(edge)["IsDirected"] ? "undirected" : "directed"
+            direction = "directed" if self.conn.getEdgeType(edge)["IsDirected"] else "undirected"
             #reverse_edge = conn.getEdgeType(edge)["Config"].get("REVERSE_EDGE")
             attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] 
                                         for attr in self.conn.getVertexType(vert)["Attributes"]])
