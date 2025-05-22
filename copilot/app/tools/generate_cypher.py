@@ -75,12 +75,12 @@ class GenerateCypher(BaseTool):
                 Cypher query for the question.
         """
         PROMPT = PromptTemplate(
-            template="""Given the following schema: {schema}, what is the Cypher query that retrieves the {question} 
+            template="""You're an expert in OpenCypher programming. Given the following schema: {schema}, what is the OpenCypher query that retrieves the {question} 
                         Only include attributes that are found in the schema. Never include any attributes that are not found in the schema.
                         If an attribute is not found in the schema, please exclude it from the query.
                         Don't add the `name` attribute to the query, unless it is explicitly mentioned in the schema.
                         Do not return attributes that are not explicitly mentioned in the question. If a vertex type is mentioned in the question, only return the vertex.
-                        Make sure to get the direction of the edges right.
+                        Make sure to get the direction of the edges right, always use undirected edge pattern if direction information is not provided for the corresponding edge type.
                         Always use double quotes for strings instead of single quotes.
 
                         You cannot use the following clauses:
@@ -95,7 +95,7 @@ class GenerateCypher(BaseTool):
 
                         Make sure to not name result aliases that are vertex or edge types.
                         
-                        ONLY write the Cypher query in the response. Do not include any other information in the response.""",
+                        ONLY write the OpenCypher query in the response. Do not include any other information in the response.""",
             input_variables=[
                 "question",
                 "schema"
