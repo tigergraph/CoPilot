@@ -28,12 +28,7 @@ class TigerGraphAgentGenerator:
         answer_parser = PydanticOutputParser(pydantic_object=CoPilotAnswerOutput)
 
         prompt = PromptTemplate(
-            template="""Given the answer context in JSON format, rephrase it to answer the question. \n
-                        Use only the provided information in context without adding any reasoning or additional logic. \n
-                        Make sure all information in the answer are covered in the generated answer.\n
-                        Question: {question} \n
-                        Answer: {context} \n
-                        Format: {format_instructions}""",
+            template=self.llm.chatbot_response_prompt,
             input_variables=["question", "context"],
             partial_variables={
                 "format_instructions": answer_parser.get_format_instructions()

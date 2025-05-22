@@ -294,6 +294,7 @@ class TigerGraphAgentGraph:
             state["question"],
             community_level=2,
             top_k=5,
+            with_chunk=True,
         )
 
         query_name = "GraphRAG_Community_Search"

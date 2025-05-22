@@ -79,6 +79,14 @@ class OpenAI(LLM_Model):
             return super().supportai_response_prompt
 
     @property
+    def chatbot_response_prompt(self):
+        filepath = self.prompt_path + "chatbot_response.txt"
+        if os.path.exists(filepath):
+            return self._read_prompt_file(filepath)
+        else:
+            return super().chatbot_response_prompt
+
+    @property
     def hyde_prompt(self):
         filepath = self.prompt_path + "hyde.txt"
         if os.path.exists(filepath):
