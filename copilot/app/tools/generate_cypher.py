@@ -47,22 +47,28 @@ class GenerateCypher(BaseTool):
         for edge in edges:
             from_vertex = self.conn.getEdgeType(edge)["FromVertexTypeName"]
             to_vertex = self.conn.getEdgeType(edge)["ToVertexTypeName"]
-            direction = "directed" if self.conn.getEdgeType(edge)["IsDirected"] else "undirected"
+            direction = "Directed" if self.conn.getEdgeType(edge)["IsDirected"] else "Undirected"
             #reverse_edge = conn.getEdgeType(edge)["Config"].get("REVERSE_EDGE")
             attributes = "\n\t\t".join([attr["AttributeName"] + " of type " + attr["AttributeType"]["Name"] 
-                                        for attr in self.conn.getVertexType(vert)["Attributes"]])
+                                        for attr in self.conn.getEdgeType(edge)["Attributes"]])
             if attributes == "":
                 attributes = "No attributes"
-            edge_schema.append(f"""{edge}\n\tFrom Vertex: {from_vertex}\n\t
-                               To Vertex: {to_vertex}\n\tDirection: {direction}\n\tAttributes: \n\t\t{attributes}""")
+            if from_vertex == "*" or to_vertex == "*":
+                edge_pairs = self.conn.getEdgeType(edge)["EdgePairs"]
+                for an_edge in edge_pairs:
+                    edge_info = f"""From Vertex: {an_edge["From"]}\n\tTo Vertex: {an_edge["To"]}"""
+                    edge_schema.append(f"""{edge}\n\t{edge_info}\n\tEdge direction: {direction}\n\tAttributes: \n\t\t{attributes}""")
+            else:
+                edge_info = f"""From Vertex: {from_vertex}\n\tTo Vertex: {to_vertex}"""
+                edge_schema.append(f"""{edge}\n\t{edge_info}\n\tEdge direction: {direction}\n\tAttributes: \n\t\t{attributes}""")
 
         schema_rep = f"""The schema of the graph is as follows:
-        Vertex Types:
-        {chr(10).join(vertex_schema)}
+Vertex Types:
+{chr(10).join(vertex_schema)}
 
-        Edge Types:
-        {chr(10).join(edge_schema)}
-        """
+Edge Types:
+{chr(10).join(edge_schema)}
+"""
         return schema_rep
         
     def generate_cypher(self, question: str) -> str:
@@ -77,10 +83,10 @@ class GenerateCypher(BaseTool):
         PROMPT = PromptTemplate(
             template="""You're an expert in OpenCypher programming. Given the following schema: {schema}, what is the OpenCypher query that retrieves the {question} 
                         Only include attributes that are found in the schema. Never include any attributes that are not found in the schema.
-                        If an attribute is not found in the schema, please exclude it from the query.
-                        Don't add the `name` attribute to the query, unless it is explicitly mentioned in the schema.
+                        Use attributes instead of primary id if attribute name is closer to the keyword type in the question.
+                        Use as less vertex type, edge type and attributes as possible. If an attribute is not found in the schema, please exclude it from the query.
                         Do not return attributes that are not explicitly mentioned in the question. If a vertex type is mentioned in the question, only return the vertex.
-                        Make sure to get the direction of the edges right, always use undirected edge pattern if direction information is not provided for the corresponding edge type.
+                        Never use directed edge pattern in the OpenCypher query. Always use and create query using undirected pattern.
                         Always use double quotes for strings instead of single quotes.
 
                         You cannot use the following clauses:
@@ -93,7 +99,7 @@ class GenerateCypher(BaseTool):
                         UNWIND
                         SET
 
-                        Make sure to not name result aliases that are vertex or edge types.
+                        Make sure to have correct attribute names in the OpenCypher query and not to name result aliases that are vertex or edge types.
                         
                         ONLY write the OpenCypher query in the response. Do not include any other information in the response.""",
             input_variables=[
@@ -104,6 +110,8 @@ class GenerateCypher(BaseTool):
 
         schema = self._generate_schema_rep()
     
+        logger.info("Prompt to LLM:\n" + PROMPT.invoke({"question": question, "schema": schema}).to_string())
+
         chain = PROMPT | self.llm.model | StrOutputParser()
         out = chain.invoke({"question": question, "schema": schema}).strip("```cypher").strip("```")
         query_header = "USE GRAPH " + self.conn.graphname + " "+ "\n" + "INTERPRET OPENCYPHER QUERY () {" + "\n"
